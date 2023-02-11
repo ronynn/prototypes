@@ -66,9 +66,27 @@
 -------
  
 - Mass education is to restore lost individuality🇮🇳
-- Not just self reliance but moral training for salvation, as there is no long term progress without culture
+- Not just self reliance but moral training for salvation, as there is no long term progress without culture (aesthetics and fine arts)
+- Cites Japan as an example of utility and culture, but that has it's own limitations
+- The entire educational program should be so planned that it equips the youth to contribute to the material progress of the country as well as to maintaining the supreme worth of India's spiritual heritage.
+
+--------
+
 - The idea of making teaching available door to door📚
- 
+
+ > All impulses, thoughts and actions which lead one towards this goal are naturally ennobling and harmonizing, and are ethical and moral in the truest sense.
+
+> " ... the end of all education is manmaking"
+
+> " ... the defect in present-day education is that it has no definite goal to pursue"
+
+-------
+
+> If education were identical with information, the libraries would be the greatest sages in the world and encyclopedias the Rishis
+
+- The vedanta method allows the students to seek knowledge on their own under the bias free guidance of teachers.
+
+
 
 
 
