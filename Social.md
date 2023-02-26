@@ -1,4 +1,27 @@
+
+<script src="three.r134.min.js"></script>
+<script src="vanta.rings.min.js"></script>
+<script>
+VANTA.RINGS({
+  el: "#main",
+  mouseControls: true,
+  touchControls: true,
+  gyroControls: false,
+  minHeight: 200.00,
+  minWidth: 200.00,
+  scale: 1.00,
+  scaleMobile: 1.00,
+  backgroundColor: 0x84bcef,
+  color: 0xa7ac6c
+})
+</script>
+
+
+
+
+<div id="main">
 # Social Science through interdisciplinary lens
+</div>
 
 - Social science essentially is the study of humanity ❤️
     - thus impossible to study without an interdisciplinary approach
@@ -18,6 +41,7 @@
 
 -----
 
+## Why?
 - eliminates close mindedness stemming from pre-conceived notions
 - allows students to solve problems on their own through checking for subject specific biases
 - improves cognitive abilities (Miller, 2002)🧠
@@ -25,7 +49,6 @@
 - popular ideas/fields outshine need based approaches
 
 -----
-
 
 ## Criticism
 - directed more towards broadening scope 
