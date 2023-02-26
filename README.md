@@ -7,5 +7,5 @@
 - Schema Theory
 
 - [Nature and Philosophy of Social Science](nature.md)
-- [Social Science Interdisciplinary](Social.md)
+- [Social Science Interdisciplinary](Sociale.md)
     - [Logo](Social.html)
