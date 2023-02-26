@@ -1,14 +1,33 @@
-<html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+#vanta {
+	width: 100vw;
+	height: 100vh;
+	top:0;
+	left:0;
+	position:absolute;
+}
+html {
+font-size=18vw;
+align-items=center;
+}
+</style>
+</head>
+
 <body>
 <div id="main">
-<h1><center>Social Science through interdisciplinary lens <center><h1>
+Social Science through interdisciplinary lens
 </div>
 
 <script src="three.r134.min.js"></script>
 <script src="vanta.rings.min.js"></script>
 <script>
 VANTA.RINGS({
-  el: "#main",
+  el: "#vanta",
   mouseControls: true,
   touchControls: true,
   gyroControls: false,
