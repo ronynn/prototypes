@@ -1,27 +1,5 @@
 
-<script src="three.r134.min.js"></script>
-<script src="vanta.rings.min.js"></script>
-<script>
-VANTA.RINGS({
-  el: "#main",
-  mouseControls: true,
-  touchControls: true,
-  gyroControls: false,
-  minHeight: 200.00,
-  minWidth: 200.00,
-  scale: 1.00,
-  scaleMobile: 1.00,
-  backgroundColor: 0x84bcef,
-  color: 0xa7ac6c
-})
-</script>
-
-
-
-
-<div id="main">
 # Social Science through interdisciplinary lens
-</div>
 
 - Social science essentially is the study of humanity ❤️
     - thus impossible to study without an interdisciplinary approach
@@ -29,7 +7,7 @@ VANTA.RINGS({
 - disciplinary organisation is to distribute goals🧐
 
 ------
-
+## Disciplines
 - examining the roles of persons (sociology), 
 - their motivations (psychology), 
 - where they lived (geography), 
