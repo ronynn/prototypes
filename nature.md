@@ -1,12 +1,13 @@
 # Nature and Philosophy of Social Science
 
-- Diverse ways to understand society
----------
+    - Diverse ways to understand society
+--------
 ## Values
-- Logic and reason? Utilitarian?
-- Modern problems need communication
+    - Logic and reason? Utilitarian?
+    - Modern problems need communication
 -------
 ## Philosophy
+
 - Comte's positivism
 - Durkheim
 - Habermas' criticism
