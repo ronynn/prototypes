@@ -1,50 +1,50 @@
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            #title {
+                text-align: center;
+                font-size: 2.6em;
+                color: white;
+                margin-top: 200px;
+                position: relative;
+            }
+            #vanta {
+                width: 100vw;
+                height: 100vh;
+                top: 0;
+                left: 0;
+                position: absolute;
+            }
+        </style>
+    </head>
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">  
-    <style>
-        #title {
-	text-align: center;
-	font-size: 2.6em;
-	color: white;
-	margin-top: 200px;
-        position:relative;
-        } 
-        #vanta {
-	width: 100vw;
-	height: 100vh;
-	top:0;
-	left:0;
-	position:absolute;
-        }
-    </style>
-</head>
-
-  <body>
-    <div id="vanta">
-        <div id="title">
-            Social Science through an interdisciplinary lens <br/>
-            <a href="https://ronynn.github.io/prototypes/Sociale"> Main Aspects</a>
+    <body>
+        <div id="vanta">
+            <div id="title">
+                Social Science through an interdisciplinary lens <br />
+                <a href="https://ronynn.github.io/prototypes/Sociale">
+                    Main Aspects</a
+                >
+            </div>
         </div>
-    </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.rings.min.js"></script>
-    <script>
-    VANTA.RINGS({
-      el: "#vanta",
-      mouseControls: true,
-      touchControls: true,
-      gyroControls: false,
-      minHeight: 200.00,
-      minWidth: 200.00,
-      scale: 1.00,
-      scaleMobile: 1.00,
-      backgroundColor: 0x141d25,
-      color: 0x54ac97
-})
-    </script>
-
-  </body>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.21/dist/vanta.rings.min.js"></script>
+        <script>
+            VANTA.RINGS({
+                el: "#vanta",
+                mouseControls: true,
+                touchControls: true,
+                gyroControls: false,
+                minHeight: 200.0,
+                minWidth: 200.0,
+                scale: 1.0,
+                scaleMobile: 1.0,
+                backgroundColor: 0x141d25,
+                color: 0x54ac97
+            });
+        </script>
+    </body>
 </html>
