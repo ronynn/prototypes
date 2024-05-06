@@ -3,6 +3,9 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
+            body {
+                font-family: Monospace;
+            }
             #title {
                 text-align: center;
                 font-size: 2.6em;
@@ -17,6 +20,26 @@
                 left: 0;
                 position: absolute;
             }
+            a {
+                text-decoration: none;
+                color: white;
+            }
+
+            a {
+                position: relative;
+                margin-right: 1rem;
+            }
+            a:after {
+                content: "";
+                position: absolute;
+                bottom: -10px;
+                left: 0;
+                height: 7px;
+                width: 100%;
+                border: solid 2px yellow;
+                border-color: yellow transparent transparent transparent;
+                border-radius: 50%;
+            }
         </style>
     </head>
 
@@ -24,6 +47,7 @@
         <div id="vanta">
             <div id="title">
                 Social Science through an interdisciplinary lens <br />
+                <hr />
                 <a href="https://ronynn.github.io/prototypes/Sociale">
                     Main Aspects</a
                 >
@@ -42,7 +66,7 @@
                 minWidth: 200.0,
                 scale: 1.0,
                 scaleMobile: 1.0,
-                backgroundColor: 0x141d25,
+                backgroundColor: 0x54ac97,
                 color: 0x54ac97
             });
         </script>
