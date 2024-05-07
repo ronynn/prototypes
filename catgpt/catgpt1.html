@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>CatGPT App</title>
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(10px);
+                border-radius: 15px;
+                padding: 20px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                max-width: 400px;
+                width: 100%;
+            }
+            button {
+                padding: 10px 20px;
+                margin-top: 10px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            input {
+                width: calc(
+                    100% - 40px
+                ); /* Adjusted width to match the messages bar above */
+                padding: 10px;
+                margin-top: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                background: rgba(
+                    255,
+                    255,
+                    255,
+                    0.5
+                ); /* Transparent background */
+            }
+            .conversation {
+                margin-top: 20px;
+                padding: 10px;
+                background: rgba(255, 255, 255, 0.5);
+                border-radius: 5px;
+                min-height: 100px;
+                max-height: 200px; /* Set max height for scrollability */
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>CatGPT App</h1>
+            <div class="conversation" id="conversation"></div>
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Type your message..."
+                onkeydown="if(event.key === 'Enter') sendMessage()"
+            />
+            <button onclick="sendMessage()">Send Message</button>
+        </div>
+
+        <script>
+            const responses = [
+                "meow",
+                "meow meow",
+                "meowwwww",
+                "/stares blankly/",
+                "😻",
+                "❤️",
+                "🙀MEOW","😹 *hahaha*","😸","😺","😼","😽","🥱",
+            ];
+            const conversationElement = document.getElementById("conversation");
+
+            function sendMessage() {
+                const messageInput = document.getElementById("messageInput");
+                const userMessage = messageInput.value;
+                const catResponse =
+                    responses[Math.floor(Math.random() * responses.length)];
+
+                const userMessageElement = document.createElement("p");
+                userMessageElement.textContent = `You: ${userMessage}`;
+
+                const catResponseElement = document.createElement("p");
+                catResponseElement.textContent = `Cat: ${catResponse}`;
+
+                conversationElement.appendChild(userMessageElement);
+                conversationElement.appendChild(catResponseElement);
+
+                conversationElement.scrollTop =
+                    conversationElement.scrollHeight; // Scroll to bottom
+
+                messageInput.value = "";
+            }
+        </script>
+         <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker &&
+                        navigator.serviceWorker.register("./sw.js");
+                });
+            }
+        </script>
+    </body>
+</html>

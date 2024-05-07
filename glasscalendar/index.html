@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+
+        <style>
+            html {
+                background-color: #4158d0;
+                background-image: linear-gradient(
+                    90deg,
+                    #4158d0 0%,
+                    #c850c0 100%
+                );
+                color: white;
+                font-family: Times New Roman;
+            }
+
+            body {
+                position: relative;
+                font-size: 1.2em;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+                height: 100vh;
+                --width: 100vw;
+            }
+
+            .dycalendar-target-date {
+                background: rgba(255, 255, 255, 0.3);
+                color: white;
+            }
+
+            .container {
+                width: 70vw;
+                --min-height: 50%;
+                height: 55vh;
+                --margin-top: 30%;
+
+                box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+
+                position: relative;
+                --top: 25%;
+
+                --left: 15%;
+
+                display: overflow;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+
+                /* From https://css.glass */
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(2.4px);
+                -webkit-backdrop-filter: blur(4.4px);
+            }
+
+            #calendar {
+                width: 75vw;
+                padding: 10px;
+                height:65vh;
+                position:relative;
+            }
+            #calendar table {
+                width: 65vw;
+                --height:55vh;
+                margin-top: 0px;
+                border-spacing: 5px;
+                display: flex;
+                position: relative;
+                align-content: center;
+                justify-content: center;
+            }
+            #calendar table td {
+                padding: 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                width: 60vw;
+                --height: 25vh;
+                position:relative;
+            }
+            #calendar table td:hover {
+                background: rgba(255, 255, 255, 0.2);
+                color: white !important;
+            }
+
+            .dycalendar-prev-next-btn.prev-btn {
+                width: 44px;
+                height: 38px;
+                border-radius: 4px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 25px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(4.4px);
+                -webkit-backdrop-filter: blur(4.4px);
+            }
+            .dycalendar-prev-next-btn.next-btn {
+                width: 44px;
+                height: 38px;
+                border-radius: 4px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 25px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(4.4px);
+                -webkit-backdrop-filter: blur(4.4px);
+            }
+        </style>
+        <title>Calendar By Ronynn</title>
+    </head>
+    <body>
+        <section>
+            <div class="box">
+                <div class="container">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </section>
+
+        <script src="calendar.js"></script>
+        <script>
+            dycalendar.draw({
+                target: "#calendar",
+                type: "month",
+                dayformat: "full",
+                monthformat: "full",
+                highlighttargetdate: true,
+                prevnextbutton: "show"
+            });
+        </script>
+         <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker &&
+                        navigator.serviceWorker.register("./sw.js");
+                });
+            }
+        </script>
+    </body>
+</html>

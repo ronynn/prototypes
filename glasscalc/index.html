@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        
+
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/site.webmanifest">
+
+        <style>
+            html {
+                background-color: #4158d0;
+                background-image: linear-gradient(
+                    90deg,
+                    #4158d0 0%,
+                    #c850c0 100%
+                );
+                color: white;
+                font-family: Times New Roman;
+            }
+
+            body {
+                position: relative;
+                font-size: 1.2em;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                overflow: hidden;
+                height: 100vh;
+                --width: 100vw;
+            }
+
+            .calculator {
+                border-radius: 10px;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+                background-color: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(5px);
+                border-top: 1px solid rgba(255, 255, 255, 0.5);
+                border-left: 1px solid rgba(255, 255, 255, 0.5);
+                padding: 15px;
+                width: 350px;
+                height: 500px;
+                text-align: center;
+                z-index: 2;
+                position: absolute;
+            }
+
+            #display {
+                background: transparent;
+                border: none;
+                outline: none;
+                color: #f6f6f6;
+
+                font-size: 2rem;
+                text-align: right;
+                margin: 10px 0 30px;
+                height: 80px;
+                width: 100%;
+            }
+
+            input[type="button"] {
+                background: transparent;
+
+                border: none;
+                outline: none;
+                color: #fff;
+                cursor: pointer;
+                font-size: 2em;
+                height: 70px;
+                width: calc(100% / 4 - 5px);
+                transition: background-color 0.3s ease-in-out;
+            }
+
+            input[type="button"]:hover {
+                background-color: rgba(255, 255, 255, 0.15);
+            }
+        </style>
+        <title>Simple Calculator</title>
+    </head>
+    <body>
+        <div class="calculator">
+            <form action="#" name="form">
+                <input type="text" name="display" id="display" />
+                <div class="row-1">
+                    <input
+                        type="button"
+                        value="AC"
+                        onclick="form.display.value = ''"
+                    />
+                    <input
+                        type="button"
+                        value="C"
+                        onclick="form.display.value = form.display.value.substr(0, form.display.value.length - 1)"
+                    />
+                    <input
+                        type="button"
+                        value="%"
+                        onclick="form.display.value+='%'"
+                    />
+                    <input
+                        type="button"
+                        value="/"
+                        onclick="form.display.value+='/'"
+                    />
+                </div>
+                <div class="row-2">
+                    <input
+                        type="button"
+                        value="7"
+                        onclick="form.display.value+='7'"
+                    />
+                    <input
+                        type="button"
+                        value="8"
+                        onclick="form.display.value+='8'"
+                    />
+                    <input
+                        type="button"
+                        value="9"
+                        onclick="form.display.value+='9'"
+                    />
+                    <input
+                        type="button"
+                        value="*"
+                        onclick="form.display.value+='*'"
+                    />
+                </div>
+                <div class="row-3">
+                    <input
+                        type="button"
+                        value="4"
+                        onclick="form.display.value+='4'"
+                    />
+                    <input
+                        type="button"
+                        value="5"
+                        onclick="form.display.value+='5'"
+                    />
+                    <input
+                        type="button"
+                        value="6"
+                        onclick="form.display.value+='6'"
+                    />
+                    <input
+                        type="button"
+                        value="-"
+                        onclick="form.display.value+='-'"
+                    />
+                </div>
+                <div class="row-4">
+                    <input
+                        type="button"
+                        value="1"
+                        onclick="form.display.value+='1'"
+                    />
+                    <input
+                        type="button"
+                        value="2"
+                        onclick="form.display.value+='2'"
+                    />
+                    <input
+                        type="button"
+                        value="3"
+                        onclick="form.display.value+='3'"
+                    />
+                    <input
+                        type="button"
+                        value="+"
+                        onclick="form.display.value+='+'"
+                    />
+                </div>
+                <div class="row-5">
+                    <input
+                        type="button"
+                        value="0"
+                        onclick="form.display.value+='0'"
+                    />
+                    <input
+                        type="button"
+                        value="00"
+                        onclick="form.display.value+='00'"
+                    />
+                    <input
+                        type="button"
+                        value="."
+                        onclick="form.display.value+='.'"
+                    />
+                    <input
+                        type="button"
+                        value="="
+                        onclick="form.display.value = eval(form.display.value)"
+                    />
+                </div>
+            </form>
+        </div>
+         <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker &&
+                        navigator.serviceWorker.register("./sw.js");
+                });
+            }
+        </script>
+    </body>
+</html>

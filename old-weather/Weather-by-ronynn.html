@@ -1,0 +1,348 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+            :root {
+                --bg-color: skyblue; /* Default background color */
+                --bg-image: linear-gradient(to top, #4158d0 0%, #c850c0 100%);
+            }
+
+            body {
+                text-decoration: none;
+                background-color: var(--bg-color);
+
+                background-image: var(--bg-image);
+
+                color: white;
+                font-family: Consolas;
+
+                
+                background-repeat: no-repeat;
+                background-size: cover;
+            }
+            h1 {
+                font-size: 2.8em;
+            }
+            #loc {
+                text-align: center;
+            }
+            #temp {
+                font-size: 7em;
+            }
+            #other {
+                padding: 5px;
+                font-size: 1.2em;
+            }
+            #desc {
+                padding: 0px;
+                margin: 5px;
+            }
+
+            .glassmorphism-form {
+                background: rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 5px;
+                display: flex;
+                align-items: center;
+                width: 50%;
+                margin: 0 auto;
+                ::placeholder {
+                    color: white;
+                }
+            }
+
+            .glassmorphism-form input {
+                background: transparent;
+                border: none;
+                outline: none;
+                color: white;
+                flex: 1;
+                padding: 8px;
+                ::placeholder {
+                    color: white;
+                }
+            }
+
+            .panel {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                grid-template-columns: 40% 50%;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(2.4px);
+                -webkit-backdrop-filter: blur(4.4px);
+                margin: 5%;
+            }
+
+            .left-panel {
+                text-align: right;
+                margin: 10px;
+                padding: 0;
+            }
+
+            .right-panel {
+                text-align: left;
+                margin: 10px;
+                padding: 0;
+            }
+            .future,
+            .others {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                grid-template-columns: 40% 50%;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 20px;
+                box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                backdrop-filter: blur(2.4px);
+                -webkit-backdrop-filter: blur(4.4px);
+                margin: 10%;
+            }
+            .div1,
+            .div2 {
+                position: relative;
+                width: 50%;
+                text-align: center;
+                font-size: 1.2em;
+                padding: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <form id="myForm" class="glassmorphism-form">
+            <input
+                type="text"
+                id="myInput"
+                placeholder="Enter city name .."
+                onkeypress="handleKeyPress(event)"
+            />
+        </form>
+
+        <h1 id="loc"></h1>
+        <h5 id="date" style="text-align: center"></h5>
+
+        <div class="panel">
+            <center><h2 id="desc"></h2></center>
+            <div class="left-panel">
+                <h1 id="temp"></h1>
+            </div>
+            <div class="right-panel" style="font-size: 1.5em">
+                <p id="minmax"></p>
+            </div>
+        </div>
+
+        <div class="others">
+            <p id="other"></p>
+        </div>
+
+        <div class="future">
+            <div class="div1">
+                <p id="tomorrow"></p>
+            </div>
+            <div class="div2">
+                <p id="overmorrow"></p>
+            </div>
+        </div>
+    </body>
+    <noscript>
+        It's not a server based app so you need javascript to run this.
+    </noscript>
+    <script>
+        //let api_url = "https://wttr.in/Berlin?format=j1";
+        var city = "";
+        const formattedHours = "";
+
+        function saveInput() {
+            var userInput = document.getElementById("myInput").value;
+            console.log(userInput); // You can now use userInput as a variable to store the input value
+
+            city = userInput;
+            console.log(city + " is city name.");
+
+            getWeather();
+            console.log("this ran");
+        }
+
+        document
+            .getElementById("myInput")
+            .addEventListener("keypress", function (event) {
+                if (event.keyCode === 13) {
+                    event.preventDefault();
+                    saveInput();
+                }
+            });
+
+        async function getWeather() {
+            var api_url = `https://wttr.in/${city}?format=j1`;
+            console.log("API URL: " + api_url);
+
+            const response = await fetch(api_url);
+
+            const data = await response.json();
+
+            const weath = data.current_condition[0];
+
+            let loc = data.nearest_area[0].areaName[0].value;
+            let region = data.nearest_area[0].region[0].value;
+
+            let temp = weath.temp_C;
+            let maxtemp = data.weather[0].maxtempC;
+            let mintemp = data.weather[0].mintempC;
+
+            let humidity = weath.humidity;
+            let feel = weath.FeelsLikeC;
+            let time = weath.localObsDateTime;
+            let desc = weath.weatherDesc[0].value;
+            let icon = weath.weatherIconUrl[0].value;
+            let wind = weath.windspeedKmph;
+            let rain = weath.precipMM;
+            let dir = weath.winddir16Point;
+            let uv = weath.uvIndex;
+
+            let nextdaymax = data.weather[1].maxtempC;
+            let nextdaymin = data.weather[1].mintempC;
+
+            let nextnextdaymax = data.weather[2].maxtempC;
+            let nextnextdaymin = data.weather[2].mintempC;
+
+            function getCurrentDate() {
+                const months = [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec"
+                ];
+                const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+                const now = new Date();
+                const day = days[now.getDay()];
+                const date = now.getDate();
+                const month = months[now.getMonth()];
+                const year = now.getFullYear();
+                let hours = now.getHours();
+                const minutes = now.getMinutes();
+
+                const formattedHours = hours < 10 ? `0${hours}` : hours;
+                const formattedMinutes = minutes < 10 ? `0${minutes}` : minutes;
+
+                const formattedDate = `${day}, ${date} ${month} ${year}, ${formattedHours}:${formattedMinutes}`;
+
+                return formattedDate;
+            }
+
+            document.getElementById("loc").innerHTML =
+                loc + ", " + region + "<br/>";
+            document.getElementById("date").innerHTML = getCurrentDate();
+
+            document.getElementById("desc").innerHTML = desc;
+
+            document.getElementById("temp").innerHTML = temp + "&degC";
+            document.getElementById("minmax").innerHTML =
+                maxtemp + "&degC" + "<hr/>" + mintemp + "&degC";
+
+            document.getElementById("other").innerHTML =
+                "Feels like: " +
+                feel +
+                "&degC<br/>Ultraviolet Index: " +
+                uv +
+                "<br/>Humidity: " +
+                humidity +
+                "%<br/>Wind: " +
+                wind +
+                " " +
+                dir +
+                "<br/>Inches of Rain: " +
+                rain +
+                "<br/> Last Satellite Data Fetch: " +
+                time;
+
+            document.getElementById("tomorrow").innerHTML =
+                "Tomorrow" +
+                "<hr/>" +
+                "Max: " +
+                nextdaymax +
+                "&degC" +
+                "<hr/>" +
+                "Min: " +
+                nextdaymin +
+                "&degC";
+            document.getElementById("overmorrow").innerHTML =
+                "Overmorrow" +
+                "<hr/>" +
+                "Max: " +
+                nextnextdaymax +
+                "&degC" +
+                "<hr/>" +
+                "Min: " +
+                nextnextdaymin +
+                "&degC";
+
+            if (temp > 35) {
+                // Update the value of the CSS variable
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to left, #C02425 0%, #F0CB35 100%)"
+                );
+            }
+
+            if (rain > 2.0) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to top, #0b8793 0%, #360033 100%)"
+                );
+            }
+
+            if (4 < formattedHours < 7) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to top, #00223E 0%, #FFA17F 100%)"
+                );
+            }
+            if (18 < formattedHours < 20) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to right, #0B486B 0%, #F56217 100%)"
+                );
+            }
+            if (20 < formattedHours < 23) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to right, #ffd89b 0%, #19547b 100%)"
+                );
+            }
+            if (rain > 35) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to bottom,#525252 0%, #3d72b4 100%) "
+                );
+            }
+            if (temp < 35) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "url(red.png)"
+                );
+            }
+            if (rain > 2.0) {
+                document.documentElement.style.setProperty(
+                    "--bg-image",
+                    "linear-gradient(to top, #0b8793 0%, #360033 100%)"
+                );
+            }
+        }
+
+        getWeather();
+    </script>
+</html>

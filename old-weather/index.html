@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>4K Weather using Open API Data</title>
+
+        <style>
+            body {
+                background-color: lightgray;
+                font-family: Monospace;
+                
+                
+                
+                padding: 14px;
+                font-size: 1.8em;
+            }
+            .date {
+                font-size: 1em;
+                font-weight: bold;
+                color: gray;
+            }
+
+            #location {
+                font-size: 1.6em;
+                font-weight: bold;
+                color: saddlebrown;
+            }
+
+            #dropdownSearch {
+                text-indent: 10px;
+                font-size: 16px;
+                width: 70%;
+
+                border: 0px;
+
+                padding: 12px 0;
+
+                background-color: #ffffff;
+                color: #333333;
+                box-sizing: border-box;
+                
+            }
+
+            #dropdownSearch:focus {
+                outline: none;
+            }
+
+            .dropdown-list {
+                position: absolute;
+                text-indent: 10px;
+                width: 64.3%;
+                bjorder: 1px solid #cccccc;
+                kbox-sizing: border-box;
+                kborder-radius: 12px;
+                background-color: #ffffff;
+                jcolor: #333333;
+                kmax-height: 200px;
+                overflow-y: auto;
+                display: none;
+                box-shadow: 0 31px 35px -26px #080c21;
+                jz-index: 1;
+            }
+            .left-panel {
+                display: none;
+            }
+        </style>
+        <link rel="manifest" href="manifest.json" />
+    </head>
+    <body>
+        <div id="contentContainer" class="content-container">
+            <div class="dropdown">
+                <label for="dropdownSearch"></label>
+                <input
+                    type="text"
+                    id="dropdownSearch"
+                    placeholder="Enter city name..."
+                />
+                <div
+                    id="dropdownList"
+                    class="dropdown-list"
+                    aria-expanded="false"
+                    role="listbox"
+                ></div>
+            </div>
+            <br />
+            <div id="weatherCard" class="weather-card">
+                <div id="date" class="date">WEEKDAY, DAY MONTH YEAR</div>
+                <h1 id="location">CITY, STATE</h1>
+
+                <div class="weather-info">
+                    <p class="temp" style="font-size: 2em">
+                        <span id="tempInCelsius"></span>&degC,
+                        <span id="tempInFahrenheit"></span>&degF
+                    </p>
+                    <div class="panel">
+                        <div class="left-panel">
+                            <img
+                                width="95px"
+                                id="conditionImg"
+                                src="https://img.icons8.com/external-flaticons-lineal-color-flat-icons/64/external-rainbows-lighting-flaticons-lineal-color-flat-icons.png"
+                                alt="Weather condition image"
+                            />
+                        </div>
+
+                        <div class="right-panel">
+                            <p>
+                                <span id="condition">WEATHER_CONDITION</span>
+                            </p>
+                            <br />
+                            <p>
+                                <i>Humidity: </i
+                                ><span id="humidity">HUMIDITY</span>%
+                            </p>
+                            <p>
+                                <i>Wind Speed:</i>
+                                <span id="wind">WIND_METRIC</span> m/s
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="script.js"></script>
+        <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker &&
+                        navigator.serviceWorker.register("./sw.js");
+                });
+            }
+        </script>
+    </body>
+</html>
