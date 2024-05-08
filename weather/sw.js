@@ -32,7 +32,7 @@ self.addEventListener("install", event => {
 				"favicon-16x16.png", // Favicon, default
 				"favicon-32x32.png", // Favicon, Safari on Mac OS
 				"index.html", // Main HTML file
-				"Weather-by-ronynn.html",
+				"mainfest.json",
 				"logo.png", // Logo
 				"main.js", // Main Javascript file
 			//	"manifest.json", // Manifest file

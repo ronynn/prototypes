@@ -36,6 +36,7 @@ self.addEventListener("install", event => {
 				"main.js", // Main Javascript file
 				"manifest.json", // Manifest file
 				"script.js", //script I edited
+				"calendar.js",
 			]);
 		})
 	);
