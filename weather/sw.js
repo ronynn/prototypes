@@ -1,4 +1,4 @@
-var GHPATH = "/prototypes/weather";
+var GHPATH = "/weather";
 var APP_PREFIX = "weather_";
 var VERSION = "version_0.08";
 var URLS = [
