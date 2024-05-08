@@ -21,12 +21,12 @@
             href="/favicon-16x16.png"
         />
 
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        
-         <link rel="canonical" href="https://ronynn.github.io/prototypes/weather/" />
-        <link rel="manifest" href="/prototypes/weather/manifest.webmanifest" />
 
+        <link
+            rel="canonical"
+            href="https://ronynn.github.io/prototypes/weather/"
+        />
+        <link rel="manifest" href="/prototypes/weather/manifest.webmanifest" />
 
         <title>Weather by Ronynn</title>
         <style>
@@ -191,12 +191,11 @@
     </noscript>
 
     <script>
-        
         if (navigator.serviceWorker) {
-                navigator.serviceWorker.register("/prototypes/weather/sw.js", {
-                    scope: "/prototypes/weather/"
-                });
-            }
+            navigator.serviceWorker.register("/prototypes/weather/sw.js", {
+                scope: "/prototypes/weather/"
+            });
+        }
     </script>
     <script src="script.js"></script>
 </html>
