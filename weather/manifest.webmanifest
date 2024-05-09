@@ -15,6 +15,6 @@
 	"theme_color": "#ffffff",
 	"background_color": "#ffffff",
 	"display": "fullscreen",
-	"scope": "/weather/",
-	"start_url": "/weather/"
+	"scope": "prototypes/weather/",
+	"start_url": "/prototypes/weather/index.html"
 }
