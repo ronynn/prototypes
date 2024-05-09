@@ -3,7 +3,7 @@ self.addEventListener('install', (e) => {
     caches.open('weather').then((cache) => cache.addAll([
       '/prototypes/weather/',
       '/prototypes/weather/index.html',
-      '/prototypes/wearher/script.js',
+      '/prototypes/weather/script.js',
      
     ])),
   );
