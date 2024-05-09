@@ -7,6 +7,7 @@ self.addEventListener("install", e => {
                     "/prototypes/weather/",
                     "/prototypes/weather/index.html",
                     "/prototypes/weather/script.js",
+                    "/prototypes/weather/manifest.webmanifest",
                 ])
             )
     );

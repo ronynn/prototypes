@@ -14,6 +14,7 @@
 		}],
 	"theme_color": "#ffffff",
 	"background_color": "#ffffff",
-	"display": "fullscreen",
+	"display": "standalone",
 	"start_url": "/prototypes/weather/index.html"
 }
+
