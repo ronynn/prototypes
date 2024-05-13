@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flappy Bird Clone</title>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #87CEEB;
+    }
+    canvas {
+        border: 2px solid black;
+    }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let bird = { x: 50, y: canvas.height / 2, size: 20, speed: 2 };
+    let bars = [];
+    let score = 0;
+    
+    function drawBird() {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
+    }
+    
+    function drawBars() {
+        ctx.fillStyle = 'green';
+        bars.forEach(bar => {
+            ctx.fillRect(bar.x, 0, bar.width, bar.top);
+            ctx.fillRect(bar.x, bar.bottom, bar.width, canvas.height - bar.bottom);
+        });
+    }
+    
+    function drawScore() {
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Score: ${score}`, 10, 30);
+    }
+    
+    function update() {
+        bird.y += bird.speed;
+        
+        if (bird.y <= 0 || bird.y + bird.size >= canvas.height) {
+            gameOver();
+        }
+        
+        bars.forEach(bar => {
+            if (bird.x + bird.size >= bar.x && bird.x <= bar.x + bar.width) {
+                if (bird.y <= bar.top || bird.y + bird.size >= bar.bottom) {
+                    gameOver();
+                }
+            }
+            
+            if (bird.x === bar.x + bar.width) {
+                score++;
+            }
+        });
+        
+        if (bars.length === 0 || bars[bars.length - 1].x + 100 < canvas.width) {
+            createBar();
+        }
+        
+        bars = bars.filter(bar => bar.x + bar.width > 0);
+        bars.forEach(bar => bar.x -= bird.speed);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBird();
+        drawBars();
+        drawScore();
+        
+        requestAnimationFrame(update);
+    }
+    
+    function createBar() {
+        const topHeight = Math.floor(Math.random() * (canvas.height - 200)) + 50;
+        const bar = { x: canvas.width, top: topHeight, bottom: topHeight + 100, width: 20 };
+        bars.push(bar);
+    }
+    
+    function gameOver() {
+        alert(`Game Over! Your score is: ${score}`);
+        bird.y = canvas.height / 2;
+        bars = [];
+        score = 0;
+    }
+    
+    canvas.addEventListener('click', () => {
+        bird.speed = -5;
+    });
+    
+    update();
+</script>
+</body>
+</html>

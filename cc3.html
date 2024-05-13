@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas Art</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        height: 100vh;
+        background: linear-gradient(to bottom right, #87CEEB, #FF7F50); /* Nice linear gradient background */
+    }
+    canvas {
+        border: 10px solid rgba(255, 255, 255, 0.5); /* Glassmorphic border */
+        border-radius: 20px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Glassmorphic shadow */
+    }
+    #windSpeed {
+        margin-top: 20px;
+        font-size: 20px;
+    }
+</style>
+</head>
+<body>
+<canvas id="artCanvas" width="400" height="400"></canvas>
+<div id="windSpeed">Wind Speed: <span id="speedValue">0</span> km/h</div>
+<script>
+    const canvas = document.getElementById('artCanvas');
+    const ctx = canvas.getContext('2d');
+    const windSpeedDisplay = document.getElementById('speedValue');
+    
+    const numRects = 10;
+    const rectSize = canvas.width / numRects;
+    let time = 0;
+    let windSpeed = 2; // Initial wind speed in km/h
+    let increasingSpeed = true; // Flag to track wind speed direction
+    
+    function updateWindSpeed() {
+        if (increasingSpeed) {
+            windSpeed += 1;
+            if (windSpeed >= 10) {
+                increasingSpeed = false;
+            }
+        } else {
+            windSpeed -= 1;
+            if (windSpeed <= 2) {
+                increasingSpeed = true;
+            }
+        }
+        windSpeedDisplay.textContent = windSpeed.toFixed(2); // Update wind speed display
+    }
+    
+    setInterval(updateWindSpeed, 1000); // Update wind speed every second
+    
+    function draw() {
+        time += 0.1; // Increment time
+        const fastTime = time * 2; // Faster animation
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = 0; i < numRects; i++) {
+            for (let j = 0; j < numRects; j++) {
+                const x = i * rectSize;
+                const y = j * rectSize;
+                const depth = Math.sin((i + j) * 0.1 + fastTime) * 50; // Depth effect with faster animation
+                const windOffset = Math.sin(fastTime) * (windSpeed / 10); // Wind effect
+                
+                ctx.fillStyle = `rgba(${i * 25}, ${j * 25}, ${(i + j) * 20}, 0.8)`; // Color based on position
+                ctx.beginPath();
+                ctx.moveTo(x + windOffset * 10, y);
+                ctx.lineTo(x + rectSize + windOffset * 10, y);
+                ctx.lineTo(x + rectSize + windOffset * 10, y + rectSize);
+                ctx.lineTo(x + windOffset * 10, y + rectSize - depth);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+        
+        requestAnimationFrame(draw);
+    }
+    
+    draw();
+</script>
+</body>
+</html>
