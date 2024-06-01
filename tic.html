@@ -9,6 +9,7 @@
                 margin: 0;
                 height: 100vh;
                 display: flex;
+                flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 background: linear-gradient(to bottom right, #81c784, #4caf50);
@@ -19,9 +20,81 @@
                 border: 4px solid rgba(255, 255, 255, 0.2);
                 border-radius: 20px;
             }
+            
+            nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(5px);
+                color: white;
+                display: flex;
+                justify-content: left;
+                
+                z-index: 1000; /* Ensure the nav is above other content */
+            }
+            nav a {
+                display: flex;
+                align-items: center;
+                padding: 2px 2px 2px 2px; /* Adjust padding as needed */
+                text-decoration: none;
+                color: white;
+
+                margin: 0.5px;
+            }
+
+            nav a img {
+                width: 22px; /* Adjust image width as needed */
+                margin: 0.2px; /* Add spacing between image and text */
+                border-radius: 5px;
+            }
+
+            nav a:hover {
+                background-color: rgba(255, 255, 255, 0.4);
+            }
+
+            nav a:nth-child(3) {
+                margin-left: auto;
+            }
         </style>
+
+        <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749889536957447"
+            crossorigin="anonymous"
+        ></script>
     </head>
+    <script
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-MDG8SVY9GB"
+    ></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+
+        gtag("config", "G-MDG8SVY9GB");
+    </script>
+
     <body>
+        <nav>
+            <a href="https://ronynn.github.io"
+                ><img src="https://github.com/ronynn.png"
+            /></a>
+
+            <a href="https://ronynn.github.io/prototypes/tic.html"
+                >Material Tic-Tac-Toe</a
+            >
+
+            <a href="https://m.youtube.com/@ronynn89">Youtube</a>
+            <a href="https://ronynn.github.io/blog/">Blog</a>
+            <a href="https://ronynn.github.io/portfolio">Portfolio</a>
+        </nav>
+        <br />
+        <br />
         <canvas id="ticTacToeCanvas" width="300" height="300"></canvas>
 
         <script>
@@ -160,5 +233,37 @@
 
             drawBoard();
         </script>
+
+        <footer>
+            <br />
+            <br />
+            <hr />
+            <a
+                href="https://github.com/ronynn/prototypes"
+                title="Go to GitHub repo"
+                ><img
+                    src="https://img.shields.io/static/v1?label=ronynn&message=prototypes&color=blue&logo=github"
+                    alt="ronynn - prototypes"
+            /></a>
+            <a href="https://github.com/ronynn/prototypes"
+                ><img
+                    src="https://img.shields.io/github/stars/ronynn/prototypes?style=social"
+                    alt="stars - prototypes" /></a
+            ><br />
+        </footer>
+        <script
+            type="text/javascript"
+            id="cookiebanner"
+            src="https://cdn.jsdelivr.net/gh/dobarkod/cookie-banner@1.2.2/dist/cookiebanner.min.js"
+            data-height="25px"
+            data-position="bottom"
+            data-moreinfo="https://ronynn.github.io/blog/privacy"
+            data-message="We use cookies to improve your app experience."
+        ></script>
+        <noscript>
+            <div class="noscript" style="text-align: center; color: white">
+                It's not a server based app so you need javascript to run this.
+            </div>
+        </noscript>
     </body>
 </html>

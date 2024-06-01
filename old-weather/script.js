@@ -213,6 +213,7 @@ document.addEventListener("DOMContentLoaded", function () {
 * @param {number} condition - The weather condition code.
 * @return {Object} An object containing the description and image URL of the weather condition.
 */
+
 function getWmoCode(isDay, condition) {
 	const data = {
 		0: {

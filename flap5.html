@@ -1,159 +1,319 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flappy Bird Clone</title>
-<style>
-    body {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-        background-color: #87CEEB;
-    }
-    canvas {
-        border: 2px solid black;
-    }
-    .game-over {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background-color: rgba(255, 255, 255, 0.5); /* Whitish translucent background */
-        padding: 20px;
-        border-radius: 10px;
-        text-align: center;
-        backdrop-filter: blur(5px); /* Add blur effect */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow */
-        display: none; /* Hide initially */
-        transition: all 0.5s; /* Smooth transition */
-    }
-    .game-over h1, .game-over p {
-        color: black; /* Set font color */
-    }
-    .game-over button {
-        border: none; /* Remove border */
-        background-color: rgba(255, 255, 255, 0.3); /* Translucent background */
-        padding: 15px 25px; /* Increase padding */
-        margin-top: 30px; /* Add more distance to the top */
-        color: black; /* Set font color */
-        font-size: 18px; /* Adjust font size */
-        border-radius: 10px; /* Add border radius */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add shadow */
-    }
-</style>
-</head>
-<body>
-<canvas id="gameCanvas" width="400" height="400"></canvas>
-<div class="game-over">
-    <h1>Game Over</h1>
-    <p>Score: <span id="finalScore">0</span></p>
-    <p>High Score: <span id="highScore">0</span></p>
-    <button onclick="restartGame()">Replay</button>
-</div>
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    let bird = { x: 50, y: canvas.height / 2, size: 20, speedY: 0 };
-    let bars = [];
-    let score = 0;
-    let highScore = localStorage.getItem('highScore') || 0;
-    let isGameOver = false;
-    
-    function drawBird() {
-        ctx.fillStyle = 'yellow';
-        ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
-    }
-    
-    function drawBars() {
-        ctx.fillStyle = 'green';
-        bars.forEach(bar => {
-            ctx.fillRect(bar.x, 0, bar.width, bar.top);
-            ctx.fillRect(bar.x, bar.bottom, bar.width, canvas.height - bar.bottom);
-        });
-    }
-    
-    function drawScore() {
-        ctx.fillStyle = 'black';
-        ctx.font = '20px Arial';
-        ctx.fillText(`Score: ${score}`, 10, 30);
-        ctx.fillText(`High Score: ${highScore}`, 10, 60);
-    }
-    
-    function update() {
-        if (!isGameOver) {
-            bird.y += bird.speedY;
-            bird.speedY += 0.2; // Gravity effect
-            
-            if (bird.y <= 0 || bird.y + bird.size >= canvas.height) {
-                gameOver();
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Flappy Bird Clone</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #87ceeb;
+            }
+            canvas {
+                border: 2px solid black;
+            }
+            .game-over {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background-color: rgba(
+                    255,
+                    255,
+                    255,
+                    0.5
+                ); /* Whitish translucent background */
+                padding: 20px;
+                border-radius: 10px;
+                text-align: center;
+                backdrop-filter: blur(5px); /* Add blur effect */
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow */
+                display: none; /* Hide initially */
+                transition: all 0.5s; /* Smooth transition */
+            }
+            .game-over h1,
+            .game-over p {
+                color: black; /* Set font color */
+            }
+            .game-over button {
+                border: none; /* Remove border */
+                background-color: rgba(
+                    255,
+                    255,
+                    255,
+                    0.3
+                ); /* Translucent background */
+                padding: 15px 25px; /* Increase padding */
+                margin-top: 30px; /* Add more distance to the top */
+                color: black; /* Set font color */
+                font-size: 18px; /* Adjust font size */
+                border-radius: 10px; /* Add border radius */
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Add shadow */
             }
             
-            bars.forEach(bar => {
-                if (bird.x + bird.size >= bar.x && bird.x <= bar.x + bar.width) {
-                    if (bird.y <= bar.top || bird.y + bird.size >= bar.bottom) {
+            footer {
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+            padding:5px;
+            
+            text-align: center;
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+        }
+        nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(5px);
+                color: white;
+                display: flex;
+                justify-content: left;
+                font-family: "Poppins", sans-serif;
+                z-index: 1000; /* Ensure the nav is above other content */
+            }
+
+            nav a {
+                display: flex;
+                align-items: center;
+                padding: 2px 2px 2px 2px; /* Adjust padding as needed */
+                text-decoration: none;
+                color: white;
+
+                margin: 0.5px;
+            }
+
+            nav a img {
+                width: 22px; /* Adjust image width as needed */
+                margin: 0.2px; /* Add spacing between image and text */
+                border-radius: 5px;
+            }
+
+            nav a:hover {
+                background-color: rgba(255, 255, 255, 0.4);
+            }
+
+            nav a:nth-child(3) {
+                margin-left: auto;
+            }    	
+            
+        </style>
+         <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749889536957447"
+            crossorigin="anonymous"
+        ></script>
+    </head>
+    <!-- Google tag (gtag.js) -->
+    <script
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-MDG8SVY9GB"
+    ></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+
+        gtag("config", "G-MDG8SVY9GB");
+    </script>
+
+    <body>
+    	
+    	 <nav>
+            <a href="https://ronynn.github.io"
+                ><img src="https://github.com/ronynn.png"
+            /></a>
+
+            <a href="https://ronynn.github.io/prototypes">Glassmorphism Flappy Bird</a>
+
+            <a href="https://m.youtube.com/@ronynn89">Youtube</a>
+            <a href="https://ronynn.github.io/blog/">Blog</a>
+            <a href="https://ronynn.github.io/portfolio">Portfolio</a>
+        </nav>
+        <br />
+        <br />
+    	
+    	
+    	
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div class="game-over">
+            <h1>Game Over</h1>
+            <p>Score: <span id="finalScore">0</span></p>
+            <p>High Score: <span id="highScore">0</span></p>
+            <button onclick="restartGame()">Replay</button>
+            
+          
+        </div>
+        
+        
+        
+          <footer>Made by <a href="https://ronynn.github.io">Ronynn</a></footer>
+        <script>
+            const canvas = document.getElementById("gameCanvas");
+            const ctx = canvas.getContext("2d");
+
+            let bird = { x: 50, y: canvas.height / 2, size: 20, speedY: 0 };
+            let bars = [];
+            let score = 0;
+            let highScore = localStorage.getItem("highScore") || 0;
+            let isGameOver = false;
+
+            function drawBird() {
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
+            }
+
+            function drawBars() {
+                ctx.fillStyle = "green";
+                bars.forEach(bar => {
+                    ctx.fillRect(bar.x, 0, bar.width, bar.top);
+                    ctx.fillRect(
+                        bar.x,
+                        bar.bottom,
+                        bar.width,
+                        canvas.height - bar.bottom
+                    );
+                });
+            }
+
+            function drawScore() {
+                ctx.fillStyle = "black";
+                ctx.font = "20px Arial";
+                ctx.fillText(`Score: ${score}`, 10, 30);
+                ctx.fillText(`High Score: ${highScore}`, 10, 60);
+            }
+
+            function update() {
+                if (!isGameOver) {
+                    bird.y += bird.speedY;
+                    bird.speedY += 0.2; // Gravity effect
+
+                    if (bird.y <= 0 || bird.y + bird.size >= canvas.height) {
                         gameOver();
                     }
-                }
-                
-                if (bird.x === bar.x + bar.width) {
-                    score++;
-                    if (score > highScore) {
-                        highScore = score;
-                        localStorage.setItem('highScore', highScore); // Save high score to local storage
+
+                    bars.forEach(bar => {
+                        if (
+                            bird.x + bird.size >= bar.x &&
+                            bird.x <= bar.x + bar.width
+                        ) {
+                            if (
+                                bird.y <= bar.top ||
+                                bird.y + bird.size >= bar.bottom
+                            ) {
+                                gameOver();
+                            }
+                        }
+
+                        if (bird.x === bar.x + bar.width) {
+                            score++;
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem("highScore", highScore); // Save high score to local storage
+                            }
+                        }
+                    });
+
+                    if (
+                        bars.length === 0 ||
+                        bars[bars.length - 1].x + 100 < canvas.width
+                    ) {
+                        createBar();
                     }
+
+                    bars = bars.filter(bar => bar.x + bar.width > 0);
+                    bars.forEach(bar => (bar.x -= 2)); // Adjust speed here
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    drawBird();
+                    drawBars();
+                    drawScore();
+                } else {
+                    document.getElementById("finalScore").textContent = score;
+                    document.getElementById("highScore").textContent =
+                        highScore;
+                    document.querySelector(".game-over").style.display =
+                        "block";
+                }
+
+                requestAnimationFrame(update);
+            }
+
+            function createBar() {
+                const topHeight =
+                    Math.floor(Math.random() * (canvas.height - 200)) + 50;
+                const bar = {
+                    x: canvas.width,
+                    top: topHeight,
+                    bottom: topHeight + 100,
+                    width: 20
+                };
+                bars.push(bar);
+            }
+
+            function gameOver() {
+                isGameOver = true;
+            }
+
+            function restartGame() {
+                isGameOver = false;
+                bird.y = canvas.height / 2;
+                bird.speedY = -5; // Lift effect
+                bars = [];
+                score = 0;
+                document.querySelector(".game-over").style.display = "none"; // Hide game over screen
+            }
+
+            canvas.addEventListener("click", () => {
+                if (!isGameOver) {
+                    bird.speedY = -5; // Lift effect
                 }
             });
-            
-            if (bars.length === 0 || bars[bars.length - 1].x + 100 < canvas.width) {
-                createBar();
-            }
-            
-            bars = bars.filter(bar => bar.x + bar.width > 0);
-            bars.forEach(bar => bar.x -= 2); // Adjust speed here
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBird();
-            drawBars();
-            drawScore();
-        } else {
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('highScore').textContent = highScore;
-            document.querySelector('.game-over').style.display = 'block';
-        }
+
+            update();
+        </script>
         
-        requestAnimationFrame(update);
-    }
-    
-    function createBar() {
-        const topHeight = Math.floor(Math.random() * (canvas.height - 200)) + 50;
-        const bar = { x: canvas.width, top: topHeight, bottom: topHeight + 100, width: 20 };
-        bars.push(bar);
-    }
-    
-    function gameOver() {
-        isGameOver = true;
-    }
-    
-    function restartGame() {
-        isGameOver = false;
-        bird.y = canvas.height / 2;
-        bird.speedY = -5; // Lift effect
-        bars = [];
-        score = 0;
-        document.querySelector('.game-over').style.display = 'none'; // Hide game over screen
-    }
-    
-    canvas.addEventListener('click', () => {
-        if (!isGameOver) {
-            bird.speedY = -5; // Lift effect
-        }
-    });
-    
-    update();
-</script>
-</body>
+        
+         <footer>
+            <br />
+            <br />
+            <hr />
+            <a
+                href="https://github.com/ronynn/prototypes"
+                title="Go to GitHub repo"
+                ><img
+                    src="https://img.shields.io/static/v1?label=ronynn&message=prototypes&color=blue&logo=github"
+                    alt="ronynn - prototypes"
+            /></a>
+            <a href="https://github.com/ronynn/prototypes"
+                ><img
+                    src="https://img.shields.io/github/stars/ronynn/prototypes?style=social"
+                    alt="stars - prototypes" /></a
+            ><br />
+        </footer>
+        <script
+            type="text/javascript"
+            id="cookiebanner"
+            src="https://cdn.jsdelivr.net/gh/dobarkod/cookie-banner@1.2.2/dist/cookiebanner.min.js"
+            data-height="25px"
+            data-position="bottom"
+            data-moreinfo="https://ronynn.github.io/blog/privacy"
+            data-message="We use cookies to improve your app experience."
+        ></script>
+        <noscript>
+            <div class="noscript" style="text-align: center; color: white">
+                It's not a server based app so you need javascript to run this.
+            </div>
+        </noscript>
+        
+    </body>
 </html>

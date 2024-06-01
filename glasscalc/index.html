@@ -22,13 +22,13 @@
             href="/favicon-16x16.png"
         />
         <link rel="manifest" href="manifest.json" />
-
+        <title>GlassCalc</title>
         <style>
             html {
                 background-color: #4158d0;
                 background-image: linear-gradient(
                     90deg,
-                    #4158d0 0%,
+                    purple 0%,
                     #c850c0 100%
                 );
                 color: white;
@@ -39,12 +39,15 @@
                 position: relative;
                 font-size: 1.2em;
                 display: flex;
+                flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 overflow: hidden;
                 height: 100vh;
-                --width: 100vw;
+               
             }
+            
+            
 
             .calculator {
                 border-radius: 10px;
@@ -74,6 +77,17 @@
                 width: 100%;
             }
 
+footer {
+    position: absolute;
+    bottom: 0;
+   
+    color: #fff;
+    text-align: center;
+    padding: 4px;
+    z-index: 2; /* Ensure the footer is above the calculator */
+}
+
+
             input[type="button"] {
                 background: transparent;
 
@@ -90,10 +104,82 @@
             input[type="button"]:hover {
                 background-color: rgba(255, 255, 255, 0.15);
             }
+            nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(5px);
+                color: white;
+                display: flex;
+                justify-content: left;
+                font-family: "Poppins", sans-serif;
+                z-index: 1000; /* Ensure the nav is above other content */
+            }
+
+            nav a {
+                display: flex;
+                align-items: center;
+                padding: 2px 2px 2px 2px; /* Adjust padding as needed */
+                text-decoration: none;
+                color: white;
+
+                margin: 0.5px;
+            }
+
+            nav a img {
+                width: 22px; /* Adjust image width as needed */
+                margin: 0.2px; /* Add spacing between image and text */
+                border-radius: 5px;
+            }
+
+            nav a:hover {
+                background-color: rgba(255, 255, 255, 0.4);
+            }
+
+            nav a:nth-child(3) {
+                margin-left: auto;
+            }
         </style>
-        <title>GlassCalc</title>
+
+        <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749889536957447"
+            crossorigin="anonymous"
+        ></script>
     </head>
+    <script
+        async
+        src="https://www.googletagmanager.com/gtag/js?id=G-MDG8SVY9GB"
+    ></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag("js", new Date());
+
+        gtag("config", "G-MDG8SVY9GB");
+    </script>
+
     <body>
+        <nav>
+            <a href="https://ronynn.github.io"
+                ><img src="https://github.com/ronynn.png"
+            /></a>
+
+            <a href="https://ronynn.github.io/prototypes/glasscalc"
+                >GlassCalc</a
+            >
+
+            <a href="https://m.youtube.com/@ronynn89">Youtube</a>
+            <a href="https://ronynn.github.io/blog/">Blog</a>
+            <a href="https://ronynn.github.io/portfolio">Portfolio</a>
+        </nav>
+        <br />
+        <br />
+
         <div class="calculator">
             <form action="#" name="form">
                 <input type="text" name="display" id="display" />
@@ -217,5 +303,38 @@
                 });
             }
         </script>
+
+        <footer>
+            <br />
+            <br />
+            <hr />
+            <a
+                href="https://github.com/ronynn/prototypes"
+                title="Go to GitHub repo"
+                ><img
+                    src="https://img.shields.io/static/v1?label=ronynn&message=prototypes&color=blue&logo=github"
+                    alt="ronynn - prototypes"
+            /></a>
+            <a href="https://github.com/ronynn/prototypes"
+                ><img
+                    src="https://img.shields.io/github/stars/ronynn/prototypes?style=social"
+                    alt="stars - prototypes" /></a
+            ><br />
+            <br/>
+        </footer>
+        <script
+            type="text/javascript"
+            id="cookiebanner"
+            src="https://cdn.jsdelivr.net/gh/dobarkod/cookie-banner@1.2.2/dist/cookiebanner.min.js"
+            data-height="25px"
+            data-position="bottom"
+            data-moreinfo="https://ronynn.github.io/blog/privacy"
+            data-message="We use cookies to improve your app experience."
+        ></script>
+        <noscript>
+            <div class="noscript" style="text-align: center">
+                It's not a server based app so you need javascript to run this.
+            </div>
+        </noscript>
     </body>
 </html>
