@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>slides</title>
+  <style>
+    * { box-sizing: border-box }
+    body { background: #fff; color: #000; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 100vh; width: 100vw; overflow: hidden; font-size: 20px; line-height: 1.4 }
+    .viewport { display: flex; align-items: center; justify-content: center; width: 100%; height: calc(100vh - 65px); padding: 8px }
+    .slide-card { width: 100%; height: 100%; max-width: 1200px; border: 3px solid #000; padding: 12px; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; position: relative }
+    .mode-text { text-align: left; width: 100%; height: 100%; overflow-y: auto }
+    .mode-center-img { display: flex; justify-content: center; align-items: center; width: 100%; height: 100% }
+    .mode-center-img img { max-width: 100%; max-height: 100%; object-fit: contain; border: 3px solid #000; cursor: pointer }
+    .mode-split { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 8px; align-items: center; justify-content: space-between; width: 100%; height: 100% }
+    .text-col { flex: 1 1 50%; text-align: left; overflow-y: auto; height: 100%; max-height: 100%; padding-right: 4px; cursor: pointer }
+    .text-col.fullscreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 50; padding: 16px; cursor: default; flex: none !important }
+    .close-btn { display: none; position: sticky; top: 0; float: right; background: #fff; border: 3px solid #000; padding: 4px 10px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 60 }
+    .text-col.fullscreen .close-btn { display: block }
+    .img-col { flex: 1 1 50%; display: flex; justify-content: center; align-items: center; height: 100%; max-height: 100%; flex-shrink: 0 }
+    .img-col img { max-width: 100%; max-height: 100%; object-fit: contain; border: 3px solid #000; cursor: pointer }
+    .img-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.95); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 16px }
+    .img-overlay img { max-width: 100%; max-height: 100%; object-fit: contain; border: 3px solid #000 }
+    .close-btn-img { position: absolute; top: 16px; right: 16px; background: #fff; border: 3px solid #000; padding: 6px 14px; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; z-index: 1010 }
+    .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; display: flex; justify-content: space-between; align-items: center; padding: 0 16px; background: #fff; border-top: 3px solid #000; z-index: 100 }
+    .file-picker { position: relative }
+    .dropup-btn { background: #fff; border: 3px solid #000; padding: 0 16px; height: 42px; display: inline-flex; align-items: center; justify-content: center; font-family: inherit; font-size: 18px; font-weight: bold; cursor: pointer }
+    .dropup-btn:active { background: #eee }
+    .dropup-content { display: none; position: absolute; bottom: 50px; left: 0; background: #fff; border: 3px solid #000; min-width: 180px; z-index: 200 }
+    .dropup-content.show { display: flex; flex-direction: column }
+    .dropup-item { padding: 10px 14px; text-decoration: none; color: #000; font-family: inherit; font-size: 16px; font-weight: bold; border-bottom: 2px solid #000; cursor: pointer }
+    .dropup-item:last-child { border-bottom: none }
+    .dropup-item:hover { background: #eee }
+    .controls { display: flex; align-items: center; gap: 8px }
+    .btn { background: #fff; border: 3px solid #000; padding: 0 18px; height: 42px; display: inline-flex; align-items: center; justify-content: center; font-family: inherit; font-size: 16px; font-weight: bold; cursor: pointer }
+    .btn:active { background: #eee }
+    .counter { font-family: inherit; font-size: 16px; font-weight: bold; border: 3px solid #000; padding: 0 14px; height: 42px; display: inline-flex; align-items: center; justify-content: center; background: #fff }
+    pre { background: #f4f4f4; border: 2px solid #000; padding: 10px; overflow-x: auto; font-family: monospace; font-size: 16px; margin: 8px 0 }
+    code { font-family: monospace; background: #eee; padding: 2px 4px; border-radius: 2px }
+    pre code { background: none; padding: 0 }
+    h1 { font-size: 1.8rem; margin: 0 0 12px 0 }
+    h2 { font-size: 1.4rem; margin: 0 0 8px 0 }
+    blockquote { border-left: 4px solid #000; margin: 10px 0; padding-left: 10px; font-style: italic }
+    ul { text-align: left; padding-left: 24px; margin: 6px 0 }
+    li { margin-bottom: 4px }
+    p { margin: 6px 0 }
+    @media (orientation: portrait) { .mode-split { flex-direction: column; flex-wrap: nowrap; gap: 8px } .img-col { max-height: 45%; width: 100% } .text-col { max-height: 55%; width: 100% } }
+    @media (orientation: landscape) { .mode-split { flex-direction: row !important; flex-wrap: nowrap !important; gap: 8px !important } .text-col { flex: 1 1 50% !important; max-height: 100% !important } .img-col { flex: 1 1 50% !important; max-height: 100% !important } }
+    @media (orientation: landscape) and (max-height: 600px) { .viewport { height: calc(100vh - 40px); padding: 4px } .bottom-bar { height: 40px; padding: 0 10px; border-top-width: 2px } .dropup-btn { height: 28px; padding: 0 10px; font-size: 14px; border-width: 2px } .btn { height: 28px; padding: 0 12px; font-size: 13px; border-width: 2px } .counter { height: 28px; padding: 0 10px; font-size: 13px; border-width: 2px } .dropup-content { bottom: 35px } }
+  </style>
+</head>
+<body>
+
+  <div class="viewport">
+    <main id="slideContent" class="slide-card"></main>
+  </div>
+
+  <footer class="bottom-bar">
+    <div class="file-picker">
+      <button class="dropup-btn" onclick="toggleMenu()">=</button>
+      <div class="dropup-content" id="dropupMenu"></div>
+    </div>
+
+    <nav class="controls">
+      <button class="btn" onclick="prevSlide()">PREV</button>
+      <div class="counter" id="slideCounter">0 / 0</div>
+      <button class="btn" onclick="nextSlide()">NEXT</button>
+    </nav>
+  </footer>
+
+  <script>
+    /* Section: State */
+    let slides = []
+    let currentIndex = 0
+    const files = ["gardner.txt", "social.txt", "ra.txt", "nutrition.txt", "nature.txt", "test.txt"]
+    let currentFile = files[0]
+
+    /* Section: Initialization */
+    async function init()
+    {
+      setupKeyboard()
+      renderMenu()
+      await loadFile(currentFile)
+    }
+
+    function renderMenu()
+    {
+      const menu = document.getElementById("dropupMenu")
+      menu.innerHTML = ""
+      files.forEach(file => 
+      {
+        const item = document.createElement("div")
+        item.className = "dropup-item"
+        item.innerText = file
+        item.onclick = async () => 
+        {
+          currentFile = file
+          toggleMenu()
+          await loadFile(currentFile)
+        }
+        menu.appendChild(item)
+      })
+    }
+
+    function toggleMenu()
+    {
+      const menu = document.getElementById("dropupMenu")
+      menu.classList.toggle("show")
+    }
+
+    async function loadFile(filename)
+    {
+      try
+      {
+        const res = await fetch(filename)
+        const text = await res.text()
+        parseSlides(text)
+      }
+      catch (e)
+      {
+        document.getElementById("slideContent").innerText = "failed to load " + filename
+      }
+    }
+
+    function parseSlides(rawText)
+    {
+      const lines = rawText.split(/\r?\n/)
+      slides = []
+      let current = []
+
+      lines.forEach(line => 
+      {
+        if (line.trim() === "---")
+        {
+          if (current.length > 0)
+          {
+            slides.push(current.join("\n").trim())
+            current = []
+          }
+        }
+        else
+        {
+          current.push(line)
+        }
+      })
+
+      if (current.length > 0)
+      {
+        slides.push(current.join("\n").trim())
+      }
+
+      currentIndex = 0
+      renderSlide()
+    }
+
+    function parseInline(text)
+    {
+      return text
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    }
+
+    /* Section: Direct DOM Building */
+    function buildSlideDOM(rawText)
+    {
+      const lines = rawText.split("\n")
+      const textNodes = []
+      const imgNodes = []
+      let currentUl = null
+      let ulStack = []
+      let inCodeBlock = false
+      let codeLines = []
+
+      lines.forEach(line => 
+      {
+        const trimmed = line.trim()
+
+        if (trimmed.startsWith("```"))
+        {
+          if (inCodeBlock)
+          {
+            const pre = document.createElement("pre")
+            const code = document.createElement("code")
+            code.textContent = codeLines.join("\n")
+            pre.appendChild(code)
+            textNodes.push(pre)
+            codeLines = []
+            inCodeBlock = false
+          }
+          else
+          {
+            inCodeBlock = true
+          }
+          return
+        }
+
+        if (inCodeBlock)
+        {
+          codeLines.push(line)
+          return
+        }
+
+        if (!trimmed)
+        {
+          return
+        }
+
+        const indent = line.search(/\S/)
+
+        if (trimmed.startsWith("img:") || trimmed.startsWith("!["))
+        {
+          currentUl = null
+          ulStack = []
+          let src = ""
+          let alt = ""
+
+          if (trimmed.startsWith("img:"))
+          {
+            src = trimmed.replace(/^img:\s*/, "")
+          }
+          else
+          {
+            const match = trimmed.match(/!\[(.*?)\]\((.*?)\)/)
+            if (match)
+            {
+              alt = match[1]
+              src = match[2]
+            }
+          }
+
+          if (src)
+          {
+            const img = document.createElement("img")
+            img.src = src
+            img.alt = alt
+            img.onclick = () => 
+            {
+              openImgModal(src, alt)
+            }
+            imgNodes.push(img)
+          }
+        }
+        else if (trimmed.startsWith("- ") || trimmed.startsWith("* "))
+        {
+          const level = Math.floor(indent / 2) + 1
+          if (!currentUl)
+          {
+            currentUl = document.createElement("ul")
+            ulStack = [currentUl]
+            textNodes.push(currentUl)
+          }
+
+          while (ulStack.length < level)
+          {
+            const newUl = document.createElement("ul")
+            const lastLi = ulStack[ulStack.length - 1].lastElementChild
+            if (lastLi)
+            {
+              lastLi.appendChild(newUl)
+            }
+            else
+            {
+              ulStack[ulStack.length - 1].appendChild(newUl)
+            }
+            ulStack.push(newUl)
+          }
+
+          while (ulStack.length > level)
+          {
+            ulStack.pop()
+          }
+
+          const li = document.createElement("li")
+          li.innerHTML = parseInline(trimmed.slice(2))
+          ulStack[ulStack.length - 1].appendChild(li)
+        }
+        else
+        {
+          currentUl = null
+          ulStack = []
+
+          if (trimmed.startsWith("# "))
+          {
+            const h1 = document.createElement("h1")
+            h1.innerHTML = parseInline(trimmed.slice(2))
+            textNodes.push(h1)
+          }
+          else if (trimmed.startsWith("## "))
+          {
+            const h2 = document.createElement("h2")
+            h2.innerHTML = parseInline(trimmed.slice(3))
+            textNodes.push(h2)
+          }
+          else if (trimmed.startsWith("> "))
+          {
+            const bq = document.createElement("blockquote")
+            bq.innerHTML = parseInline(trimmed.slice(2))
+            textNodes.push(bq)
+          }
+          else
+          {
+            const p = document.createElement("p")
+            p.innerHTML = parseInline(trimmed)
+            textNodes.push(p)
+          }
+        }
+      })
+
+      return { textNodes, imgNodes }
+    }
+
+    /* Section: Modal Engine */
+    function openImgModal(src, alt)
+    {
+      const overlay = document.createElement("div")
+      overlay.className = "img-overlay"
+
+      const closeBtn = document.createElement("button")
+      closeBtn.className = "close-btn-img"
+      closeBtn.innerText = "CLOSE X"
+      closeBtn.onclick = () => 
+      {
+        overlay.remove()
+      }
+
+      const img = document.createElement("img")
+      img.src = src
+      img.alt = alt
+
+      overlay.appendChild(closeBtn)
+      overlay.appendChild(img)
+
+      overlay.onclick = (e) => 
+      {
+        if (e.target === overlay)
+        {
+          overlay.remove()
+        }
+      }
+
+      document.body.appendChild(overlay)
+    }
+
+    /* Section: Render Engine */
+    function renderSlide()
+    {
+      const container = document.getElementById("slideContent")
+      const counter = document.getElementById("slideCounter")
+      container.innerHTML = ""
+
+      if (slides.length === 0)
+      {
+        container.innerText = "no slides found"
+        counter.innerText = "0 / 0"
+        return
+      }
+
+      counter.innerText = (currentIndex + 1) + " / " + slides.length
+
+      const rawText = slides[currentIndex]
+      const { textNodes, imgNodes } = buildSlideDOM(rawText)
+
+      const hasImages = imgNodes.length > 0
+      const hasText = textNodes.length > 0
+
+      if (hasImages && !hasText)
+      {
+        container.className = "slide-card mode-center-img"
+        imgNodes.forEach(img => container.appendChild(img))
+      }
+      else if (hasImages && hasText)
+      {
+        container.className = "slide-card mode-split"
+        const textCol = document.createElement("div")
+        textCol.className = "text-col"
+
+        const closeBtn = document.createElement("button")
+        closeBtn.className = "close-btn"
+        closeBtn.innerText = "CLOSE X"
+        closeBtn.onclick = (e) => 
+        {
+          e.stopPropagation()
+          textCol.classList.remove("fullscreen")
+        }
+        textCol.appendChild(closeBtn)
+
+        textCol.onclick = () => 
+        {
+          if (!textCol.classList.contains("fullscreen"))
+          {
+            textCol.classList.add("fullscreen")
+          }
+        }
+
+        textNodes.forEach(node => textCol.appendChild(node))
+
+        const imgCol = document.createElement("div")
+        imgCol.className = "img-col"
+        imgNodes.forEach(img => imgCol.appendChild(img))
+
+        container.appendChild(textCol)
+        container.appendChild(imgCol)
+      }
+      else
+      {
+        container.className = "slide-card mode-text"
+        textNodes.forEach(node => container.appendChild(node))
+      }
+    }
+
+    /* Section: Navigation */
+    function nextSlide()
+    {
+      if (currentIndex < slides.length - 1)
+      {
+        currentIndex++
+        renderSlide()
+      }
+    }
+
+    function prevSlide()
+    {
+      if (currentIndex > 0)
+      {
+        currentIndex--
+        renderSlide()
+      }
+    }
+
+    function setupKeyboard()
+    {
+      window.addEventListener("keydown", (e) => 
+      {
+        if (e.key === "ArrowRight" || e.key === " ")
+        {
+          nextSlide()
+        }
+        else if (e.key === "ArrowLeft")
+        {
+          prevSlide()
+        }
+      })
+    }
+
+    window.onload = init
+  </script>
+</body>
+</html>

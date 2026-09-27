@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Rekishi Teki (Histori-Cal)</title>
+    <style>
+      :root {
+        --bg: #282828;
+        --surface: #3c3836;
+        --border: #d79921;
+        --text: #ebdbb2;
+        --accent: #fabd2f;
+        --accent-txt: #282828;
+        --gray: #928374;
+        --zoom: 1;
+      }
+      [data-theme="dracula"] {
+        --bg: #282a36;
+        --surface: #44475a;
+        --border: #ff79c6;
+        --text: #f8f8f2;
+        --accent: #bd93f9;
+        --accent-txt: #282a36;
+        --gray: #6272a4;
+      }
+      [data-theme="monokai"] {
+        --bg: #272822;
+        --surface: #3e3d32;
+        --border: #f92672;
+        --text: #f8f8f2;
+        --accent: #a6e22e;
+        --accent-txt: #272822;
+        --gray: #75715e;
+      }
+      [data-theme="nord"] {
+        --bg: #2e3440;
+        --surface: #3b4252;
+        --border: #88c0d0;
+        --text: #d8dee9;
+        --accent: #81a1c1;
+        --accent-txt: #2e3440;
+        --gray: #4c566a;
+      }
+      [data-theme="purple"] {
+        --bg: #ffffff;
+        --surface: #f5f5f5;
+        --border: #8e24aa;
+        --text: #333333;
+        --accent: #8e24aa;
+        --accent-txt: #ffffff;
+        --gray: #888888;
+      }
+      [data-theme="amoled"] {
+        --bg: #000000;
+        --surface: #121212;
+        --border: #ffffff;
+        --text: #ffffff;
+        --accent: #ffffff;
+        --accent-txt: #000000;
+        --gray: #555555;
+      }
+      [data-theme="cupcake"] {
+        --bg: #faf7f5;
+        --surface: #efeae6;
+        --border: #ffb6c1;
+        --text: #2e282a;
+        --accent: #ffb6c1;
+        --accent-txt: #2e282a;
+        --gray: #b0a8a6;
+      }
+      [data-theme="catppuccin"] {
+        --bg: #1e1e2e;
+        --surface: #313244;
+        --border: #cba6f7;
+        --text: #cdd6f4;
+        --accent: #cba6f7;
+        --accent-txt: #11111b;
+        --gray: #6c7086;
+      }
+      [data-theme="catppuccin-frappe"] {
+        --bg: #303446;
+        --surface: #414559;
+        --border: #ca9ee6;
+        --text: #c6d0f5;
+        --accent: #ca9ee6;
+        --accent-txt: #232634;
+        --gray: #737994;
+      }
+      [data-theme="everforest"] {
+        --bg: #2d353b;
+        --surface: #3d484d;
+        --border: #a7c080;
+        --text: #d3c6aa;
+        --accent: #a7c080;
+        --accent-txt: #232a2e;
+        --gray: #859289;
+      }
+      [data-theme="everforest-light"] {
+        --bg: #fdf6e3;
+        --surface: #eee8d5;
+        --border: #859900;
+        --text: #586e75;
+        --accent: #859900;
+        --accent-txt: #fdf6e3;
+        --gray: #93a1a1;
+      }
+      [data-theme="tokyo-night"] {
+        --bg: #1a1b26;
+        --surface: #24283c;
+        --border: #7aa2f7;
+        --text: #a9b1d6;
+        --accent: #7aa2f7;
+        --accent-txt: #1d202f;
+        --gray: #565f89;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        border-radius: 0;
+        -webkit-tap-highlight-color: transparent;
+        font-family: monospace !important;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-size: calc(14px * var(--zoom));
+      }
+
+      header {
+        display: flex;
+        justify-content: flex-start;
+        gap: calc(20px * var(--zoom));
+        padding: calc(20px * var(--zoom)) calc(20px * var(--zoom))
+          calc(10px * var(--zoom));
+        font-size: calc(26px * var(--zoom));
+        background: var(--bg);
+        z-index: 10;
+      }
+      header div {
+        opacity: 0.4;
+        transition: opacity 0.2s;
+        padding-bottom: calc(5px * var(--zoom));
+        cursor: pointer;
+      }
+      header div.active {
+        opacity: 1;
+        color: var(--accent);
+        border-bottom: calc(2px * var(--zoom)) solid var(--accent);
+        margin-bottom: calc(-2px * var(--zoom));
+      }
+
+      #viewport {
+        display: flex;
+        flex: 1;
+        width: 200vw;
+        height: calc(100vh - 65px);
+        transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+      }
+      .screen {
+        width: 100vw;
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: calc(20px * var(--zoom));
+        display: block;
+      }
+
+      .box {
+        border: calc(1px * var(--zoom)) solid var(--border);
+        padding: calc(25px * var(--zoom)) calc(15px * var(--zoom))
+          calc(15px * var(--zoom));
+        position: relative;
+        background: var(--bg);
+        margin-bottom: calc(25px * var(--zoom));
+      }
+      .box-title {
+        position: absolute;
+        top: calc(-10px * var(--zoom));
+        left: calc(10px * var(--zoom));
+        background: var(--bg);
+        padding: 0 calc(5px * var(--zoom));
+        font-size: calc(12px * var(--zoom));
+        color: var(--text);
+      }
+
+      input,
+      select,
+      button {
+        width: 100%;
+        padding: calc(12px * var(--zoom));
+        background: var(--surface);
+        color: var(--text);
+        border: calc(1px * var(--zoom)) solid var(--border);
+        font-size: calc(16px * var(--zoom));
+        outline: none;
+      }
+      button {
+        background: var(--accent);
+        color: var(--accent-txt);
+        cursor: pointer;
+        border: none;
+        text-transform: uppercase;
+      }
+      button:active {
+        filter: brightness(0.8);
+      }
+
+      .grid-btns {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: calc(6px * var(--zoom));
+      }
+      .theme-btn {
+        padding: calc(10px * var(--zoom)) calc(4px * var(--zoom));
+        background: var(--surface);
+        color: var(--gray);
+        border: calc(1px * var(--zoom)) solid var(--border);
+        text-transform: uppercase;
+        font-size: calc(11px * var(--zoom));
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
+      }
+      .theme-btn.active {
+        background: var(--accent);
+        color: var(--accent-txt);
+      }
+
+      .heading-large {
+        font-size: calc(22px * var(--zoom));
+        margin: calc(15px * var(--zoom)) 0 calc(10px * var(--zoom));
+        font-weight: normal;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: calc(1px * var(--zoom));
+      }
+
+      .font-size-ctrl {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: calc(15px * var(--zoom));
+        font-size: calc(16px * var(--zoom));
+        margin-top: calc(20px * var(--zoom));
+      }
+      .font-size-ctrl button {
+        width: calc(45px * var(--zoom));
+        height: calc(45px * var(--zoom));
+        padding: 0;
+        font-size: calc(24px * var(--zoom));
+        background: var(--surface);
+        color: var(--text);
+        border: calc(1px * var(--zoom)) solid var(--border);
+      }
+
+      .about-text {
+        font-size: calc(14px * var(--zoom));
+        line-height: 1.5;
+        color: var(--text);
+        opacity: 0.9;
+      }
+
+      #modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 200;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: calc(20px * var(--zoom));
+      }
+      .modal-box {
+        background: var(--bg);
+        border: calc(1px * var(--zoom)) solid var(--border);
+        padding: calc(20px * var(--zoom));
+        width: 100%;
+        max-width: calc(400px * var(--zoom));
+        display: flex;
+        flex-direction: column;
+        gap: calc(15px * var(--zoom));
+      }
+
+      /* Calendar view updates */
+      .cal-top-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: calc(15px * var(--zoom));
+        margin-bottom: calc(15px * var(--zoom));
+      }
+      .cal-arrow {
+        width: calc(40px * var(--zoom));
+        padding: calc(6px * var(--zoom));
+        font-size: calc(18px * var(--zoom));
+        line-height: 1;
+        background: var(--surface);
+        color: var(--text);
+        border: calc(1px * var(--zoom)) solid var(--border);
+      }
+      .month-display-wrap {
+        position: relative;
+        display: inline-block;
+      }
+      .month-lbl {
+        font-size: calc(20px * var(--zoom));
+        background: none;
+        border: none;
+        color: var(--accent);
+        cursor: pointer;
+        padding: calc(5px * var(--zoom)) calc(10px * var(--zoom));
+        text-transform: none;
+        font-weight: normal;
+      }
+      .hidden-month-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .week-head {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-size: calc(12px * var(--zoom));
+        color: var(--gray);
+        margin-bottom: calc(8px * var(--zoom));
+        font-weight: bold;
+        width: 100%;
+      }
+      .week-head .sun-h {
+        color: #ff5252;
+      }
+      .week-head .sat-h {
+        color: #00b0ff;
+      }
+
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        border: none;
+        width: 100%;
+      }
+      .cal-cell {
+        padding: calc(6px * var(--zoom));
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: rgba(0, 0, 0, 0.15);
+        min-height: calc(80px * var(--zoom));
+        border: calc(0.5px * var(--zoom)) solid rgba(255, 255, 255, 0.03);
+      }
+      .cal-cell:hover {
+        background: var(--surface);
+      }
+      .cal-cell.empty-cell {
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .cal-cell.today-cell {
+        border: calc(2px * var(--zoom)) solid var(--accent);
+      }
+
+      .cell-num {
+        font-size: calc(14px * var(--zoom));
+        color: var(--text);
+      }
+      .cal-cell.sun-cell .cell-num {
+        color: #ff5252;
+      }
+      .cal-cell.sat-cell .cell-num {
+        color: #00b0ff;
+      }
+
+      .cell-dots {
+        display: flex;
+        gap: calc(3px * var(--zoom));
+        flex-wrap: wrap;
+        margin-top: auto;
+        padding-top: calc(4px * var(--zoom));
+      }
+      .cell-dot {
+        width: calc(6px * var(--zoom));
+        height: calc(6px * var(--zoom));
+        border-radius: 50%;
+      }
+
+      /* Scrollable detail modal layout */
+      #gk-detail-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 300;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: calc(20px * var(--zoom));
+      }
+      .gk-modal-body {
+        background: var(--bg);
+        border: calc(1px * var(--zoom)) solid var(--border);
+        padding: calc(20px * var(--zoom));
+        width: 100%;
+        max-width: calc(500px * var(--zoom));
+        max-height: 80vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: calc(15px * var(--zoom));
+        -webkit-overflow-scrolling: touch;
+      }
+      .gk-m-date {
+        font-size: calc(18px * var(--zoom));
+        color: var(--accent);
+        border-bottom: calc(1px * var(--zoom)) solid var(--surface);
+        padding-bottom: calc(8px * var(--zoom));
+      }
+      .gk-m-item {
+        padding: calc(8px * var(--zoom));
+        border-left: calc(3px * var(--zoom)) solid var(--border);
+        background: var(--surface);
+        margin-bottom: calc(10px * var(--zoom));
+      }
+      .gk-m-title {
+        font-weight: bold;
+        margin-bottom: calc(4px * var(--zoom));
+      }
+      .gk-m-extra {
+        font-size: calc(13px * var(--zoom));
+        color: var(--gray);
+      }
+      .gk-m-history-title {
+        font-size: calc(14px * var(--zoom));
+        color: var(--accent);
+        margin-top: calc(25px * var(--zoom));
+        border-top: calc(1px * var(--zoom)) dashed var(--gray);
+        padding-top: calc(15px * var(--zoom));
+        letter-spacing: calc(1px * var(--zoom));
+      }
+
+      /* Menu file layout tracking */
+      .csv-menu-container {
+        margin-top: calc(15px * var(--zoom));
+        background: var(--surface);
+        padding: calc(10px * var(--zoom));
+        border: calc(1px * var(--zoom)) dashed var(--border);
+      }
+      .csv-item-row {
+        font-size: calc(13px * var(--zoom));
+        padding: calc(6px * var(--zoom)) 0;
+        border-bottom: calc(1px * var(--zoom)) solid rgba(255, 255, 255, 0.05);
+        color: var(--text);
+      }
+      .csv-item-row:last-child {
+        border-bottom: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div id="tab-home" class="active" onclick="switchScreen(0)">Home</div>
+      <div id="tab-settings" onclick="switchScreen(1)">Settings</div>
+    </header>
+
+    <div id="viewport">
+      <div class="screen" id="home-screen" style="padding: 0">
+        <div style="padding: 10px">
+          <div class="cal-top-bar">
+            <button class="cal-arrow" onclick="changeMonth(-1)">&lt;</button>
+            <div class="month-display-wrap">
+              <button class="month-lbl" id="month-label-btn">June 2026</button>
+              <input
+                type="month"
+                id="calendar-month-picker"
+                class="hidden-month-input"
+              />
+            </div>
+            <button class="cal-arrow" onclick="changeMonth(1)">&gt;</button>
+          </div>
+
+          <div class="week-head">
+            <div class="sun-h">SUN</div>
+            <div>MON</div>
+            <div>TUE</div>
+            <div>WED</div>
+            <div>THU</div>
+            <div>FRI</div>
+            <div class="sat-h">SAT</div>
+          </div>
+
+          <div class="cal-grid" id="calendar-matrix"></div>
+        </div>
+      </div>
+
+      <div class="screen" id="settings-screen">
+        <div class="box">
+          <span class="box-title">Webview Data Pipeline</span>
+          <h3 class="heading-large">Folder Selector</h3>
+          <p style="font-size: 12px; color: var(--gray); margin-bottom: 12px">
+            Choose directory containing tracking files to load entries
+            sequentially.
+          </p>
+
+          <input
+            type="file"
+            id="csv-directory-loader"
+            webkitdirectory
+            directory
+            multiple
+            style="display: none"
+            onchange="importFolderCSV(event)"
+          />
+          <button
+            onclick="document.getElementById('csv-directory-loader').click()"
+          >
+            Select Folder
+          </button>
+
+          <div
+            class="csv-menu-container"
+            id="csv-menu-box"
+            style="display: none"
+          >
+            <div
+              style="
+                font-size: 11px;
+                color: var(--accent);
+                margin-bottom: 6px;
+                text-transform: uppercase;
+              "
+            >
+              Loaded Modules:
+            </div>
+            <div id="csv-serial-list"></div>
+          </div>
+        </div>
+
+        <div class="box">
+          <span class="box-title">Theme & Layout Scaling</span>
+          <h3 class="heading-large">Themes</h3>
+          <div class="grid-btns" id="theme-btns">
+            <button class="theme-btn" onclick="setTheme('gruvbox')">
+              GRUVBOX
+            </button>
+            <button class="theme-btn" onclick="setTheme('dracula')">
+              DRACULA
+            </button>
+            <button class="theme-btn" onclick="setTheme('monokai')">
+              MONOKAI
+            </button>
+            <button class="theme-btn" onclick="setTheme('nord')">NORD</button>
+            <button class="theme-btn" onclick="setTheme('purple')">
+              PURPLE
+            </button>
+            <button class="theme-btn" onclick="setTheme('amoled')">
+              AMOLED
+            </button>
+            <button class="theme-btn" onclick="setTheme('cupcake')">
+              CUPCAKE
+            </button>
+            <button class="theme-btn" onclick="setTheme('catppuccin')">
+              CATPPUCCIN
+            </button>
+            <button class="theme-btn" onclick="setTheme('catppuccin-frappe')">
+              FRAPPE
+            </button>
+            <button class="theme-btn" onclick="setTheme('everforest')">
+              EVERFOREST
+            </button>
+            <button class="theme-btn" onclick="setTheme('everforest-light')">
+              EV-LIGHT
+            </button>
+            <button class="theme-btn" onclick="setTheme('tokyo-night')">
+              TOKYO
+            </button>
+          </div>
+
+          <h3 class="heading-large">Interface Scale Units</h3>
+          <div class="font-size-ctrl">
+            <button onclick="adjustScaleMultiplier(-1)">-</button>
+            <span id="f-size-disp">Level 2</span>
+            <button onclick="adjustScaleMultiplier(1)">+</button>
+          </div>
+        </div>
+
+        <div class="box">
+          <span class="box-title">About Rekishi Teki (Histori-Cal)</span>
+          <div class="about-text" id="project-description-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-overlay">
+      <div class="modal-box">
+        <div id="modal-title"></div>
+        <input type="text" id="modal-input" />
+        <div style="display: flex; gap: 10px">
+          <button
+            style="background: var(--surface); color: var(--text)"
+            onclick="closeModal(false)"
+          >
+            Cancel
+          </button>
+          <button onclick="closeModal(true)">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gk-detail-modal" onclick="closeGkModal(event)">
+      <div class="gk-modal-body" id="gk-modal-inner">
+        <h3 class="gk-m-date" id="gk-target-date"></h3>
+        <div id="gk-current-events"></div>
+        <div id="gk-history-section">
+          <div class="gk-m-history-title">ON THIS DAY IN HISTORY:</div>
+          <div id="gk-history-events"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let state = {
+        theme: "gruvbox",
+        scaleLevel: 2,
+        eventsDatabase: [],
+        fileRegistry: [],
+      };
+
+      let modalCb = null;
+      let currentYear = 2026;
+      let currentMonth = 5;
+
+      function init() {
+        let saved = localStorage.getItem("app_state");
+        if (saved) {
+          try {
+            let parsed = JSON.parse(saved);
+            state = Object.assign(state, parsed);
+          } catch (e) {}
+        }
+
+        setTheme(state.theme);
+        applyScaleLevel(state.scaleLevel);
+        writeAboutText();
+
+        if (!state.eventsDatabase || state.eventsDatabase.length === 0) {
+          state.eventsDatabase = [
+            {
+              date: "2026-06-08",
+              color: "#2196f3",
+              event: "World Oceans Day",
+              extra: "Theme: Protect Ocean",
+            },
+            {
+              date: "1776-07-04",
+              color: "#ff5252",
+              event: "USA Independence",
+              extra: "Historic Day Declaration",
+            },
+            {
+              date: "1947-08-15",
+              color: "#ff9933",
+              event: "India Independence",
+              extra: "Historic Shift 1947",
+            },
+            {
+              date: "2026-06-13",
+              color: "#4caf50",
+              event: "Project Release",
+              extra: "",
+            },
+          ];
+        }
+
+        renderCalendar();
+        updateFileMenuDisplay();
+      }
+
+      function saveState() {
+        localStorage.setItem("app_state", JSON.stringify(state));
+      }
+
+      function writeAboutText() {
+        document.getElementById("project-description-box").innerHTML =
+          `App: Rekishi Teki (Histori-Cal)<br><br>` +
+          `Goals of this project is to help remember historical events and keep track of events of importance through csv based note tracking. ` +
+          `It can be also used to track personal journal entries and upcoming events accurately inside mobile webview frameworks.`;
+      }
+
+      function switchScreen(idx) {
+        document.getElementById("viewport").style.transform =
+          `translateX(-${idx * 100}vw)`;
+        document
+          .getElementById("tab-home")
+          .classList.toggle("active", idx === 0);
+        document
+          .getElementById("tab-settings")
+          .classList.toggle("active", idx === 1);
+      }
+
+      // Swipe tracking matrix logic
+      let startX,
+        startY,
+        isSwipe = false;
+      window.addEventListener(
+        "touchstart",
+        (e) => {
+          if (
+            e.target.closest("input") ||
+            e.target.closest("button") ||
+            e.target.closest("#modal-overlay") ||
+            e.target.closest("#gk-detail-modal")
+          )
+            return;
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+          isSwipe = true;
+        },
+        { passive: true },
+      );
+
+      window.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!isSwipe) return;
+          let dX = e.touches[0].clientX - startX,
+            dY = e.touches[0].clientY - startY;
+
+          if (Math.abs(dX) > Math.abs(dY) && Math.abs(dX) > 40) {
+            switchScreen(dX > 0 ? 0 : 1);
+            isSwipe = false;
+          } else if (Math.abs(dY) > Math.abs(dX) && Math.abs(dY) > 50) {
+            if (
+              document.getElementById("tab-home").classList.contains("active")
+            ) {
+              changeMonth(dY > 0 ? -1 : 1);
+            }
+            isSwipe = false;
+          }
+        },
+        { passive: true },
+      );
+
+      function setTheme(t) {
+        state.theme = t;
+        document.body.setAttribute("data-theme", t);
+        document.querySelectorAll("#theme-btns .theme-btn").forEach((b) => {
+          b.classList.toggle(
+            "active",
+            b.innerText.toLowerCase() === t ||
+              (t === "catppuccin-frappe" && b.innerText === "FRAPPE") ||
+              (t === "everforest-light" && b.innerText === "EV-LIGHT") ||
+              (t === "tokyo-night" && b.innerText === "TOKYO"),
+          );
+        });
+        saveState();
+      }
+
+      function adjustScaleMultiplier(delta) {
+        let nextLvl = state.scaleLevel + delta;
+        if (nextLvl >= 1 && nextLvl <= 3) {
+          applyScaleLevel(nextLvl);
+        }
+      }
+
+      function applyScaleLevel(lvl) {
+        state.scaleLevel = lvl;
+        let multiplier = 1.0;
+        if (lvl === 1) multiplier = 0.75;
+        if (lvl === 3) multiplier = 1.35;
+
+        document.documentElement.style.setProperty("--zoom", multiplier);
+        document.getElementById("f-size-disp").innerText = "Level " + lvl;
+        saveState();
+        renderCalendar();
+      }
+
+      function renderCalendar() {
+        const matrix = document.getElementById("calendar-matrix");
+        matrix.innerHTML = "";
+
+        const months = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        document.getElementById("month-label-btn").innerText =
+          `${months[currentMonth]} ${currentYear}`;
+
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        const liveClock = new Date();
+        const liveISO = `${liveClock.getFullYear()}-${String(liveClock.getMonth() + 1).padStart(2, "0")}-${String(liveClock.getDate()).padStart(2, "0")}`;
+
+        for (let i = 0; i < firstDayIndex; i++) {
+          const space = document.createElement("div");
+          space.className = "cal-cell empty-cell";
+          matrix.appendChild(space);
+        }
+
+        for (let d = 1; d <= totalDays; d++) {
+          const dayOfWeek = new Date(currentYear, currentMonth, d).getDay();
+          const currentMStr = String(currentMonth + 1).padStart(2, "0");
+          const currentDStr = String(d).padStart(2, "0");
+          const isoString = `${currentYear}-${currentMStr}-${currentDStr}`;
+          const mdToken = `${currentMStr}-${currentDStr}`;
+
+          const exactDayMatches = state.eventsDatabase.filter(
+            (e) => e.date === isoString,
+          );
+
+          const cell = document.createElement("div");
+          cell.className = "cal-cell";
+          if (dayOfWeek === 0) cell.classList.add("sun-cell");
+          if (dayOfWeek === 6) cell.classList.add("sat-cell");
+          if (isoString === liveISO) cell.classList.add("today-cell");
+
+          let dotsContainer = document.createElement("div");
+          dotsContainer.className = "cell-dots";
+
+          exactDayMatches.forEach((match) => {
+            let dot = document.createElement("div");
+            dot.className = "cell-dot";
+            dot.style.background = match.color ? match.color : "var(--gray)";
+            dotsContainer.appendChild(dot);
+          });
+
+          cell.innerHTML = `<div class="cell-num">${d}</div>`;
+          cell.appendChild(dotsContainer);
+
+          cell.onclick = () => launchGkViewer(isoString, mdToken);
+          matrix.appendChild(cell);
+        }
+      }
+
+      function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        renderCalendar();
+      }
+
+      document.getElementById("calendar-month-picker").onchange = (e) => {
+        if (!e.target.value) return;
+        const [yr, mo] = e.target.value.split("-");
+        currentYear = parseInt(yr);
+        currentMonth = parseInt(mo) - 1;
+        renderCalendar();
+      };
+
+      function parseCSVData(rawText) {
+        const lines = rawText.split(/\r?\n/);
+        if (lines.length <= 1) return;
+
+        lines.slice(1).forEach((l) => {
+          if (!l.trim()) return;
+          const segments = l.split(",");
+          const dateVal = segments[0] ? segments[0].trim() : "";
+          const colorVal = segments[1] ? segments[1].trim() : "";
+          const eventVal = segments[2] ? segments[2].trim() : "";
+          const extraVal = segments[3] ? segments[3].trim() : "";
+
+          if (dateVal) {
+            state.eventsDatabase.push({
+              date: dateVal,
+              color: colorVal,
+              event: eventVal,
+              extra: extraVal,
+            });
+          }
+        });
+      }
+
+      function importFolderCSV(event) {
+        const selectedFiles = Array.from(event.target.files).filter((f) =>
+          f.name.endsWith(".csv"),
+        );
+        if (!selectedFiles.length) return;
+
+        state.eventsDatabase = [];
+        state.fileRegistry = [];
+        let completionCounter = 0;
+
+        selectedFiles.forEach((file, index) => {
+          state.fileRegistry.push(file.name);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            parseCSVData(e.target.result);
+            completionCounter++;
+            if (completionCounter === selectedFiles.length) {
+              saveState();
+              updateFileMenuDisplay();
+              renderCalendar();
+              switchScreen(0);
+            }
+          };
+          reader.readAsText(file);
+        });
+      }
+
+      function updateFileMenuDisplay() {
+        const container = document.getElementById("csv-serial-list");
+        const wrapper = document.getElementById("csv-menu-box");
+        container.innerHTML = "";
+
+        if (!state.fileRegistry || state.fileRegistry.length === 0) {
+          wrapper.style.display = "none";
+          return;
+        }
+
+        wrapper.style.display = "block";
+        state.fileRegistry.forEach((filename, i) => {
+          const row = document.createElement("div");
+          row.className = "csv-item-row";
+          row.innerText = `${i + 1}. ${filename}`;
+          container.appendChild(row);
+        });
+      }
+
+      function launchGkViewer(isoDate, mdString) {
+        document.getElementById("gk-target-date").innerText = isoDate;
+
+        const currentBox = document.getElementById("gk-current-events");
+        const historyBox = document.getElementById("gk-history-events");
+
+        currentBox.innerHTML = "";
+        historyBox.innerHTML = "";
+
+        const absoluteDayMatches = state.eventsDatabase.filter(
+          (e) => e.date === isoDate,
+        );
+        if (absoluteDayMatches.length === 0) {
+          currentBox.innerHTML =
+            '<div style="color:var(--gray); font-size:13px;">No direct events recorded.</div>';
+        } else {
+          absoluteDayMatches.forEach((e) => {
+            let colorMark = e.color ? e.color : "var(--gray)";
+            currentBox.innerHTML += `
+        <div class="gk-m-item" style="border-color:${colorMark}">
+          <div class="gk-m-title" style="color:${colorMark}">${e.event}</div>
+          <div class="gk-m-extra">${e.extra ? e.extra : ""}</div>
+        </div>`;
+          });
+        }
+
+        const pastMatches = state.eventsDatabase.filter(
+          (e) => e.date.endsWith(mdString) && e.date !== isoDate,
+        );
+        if (pastMatches.length === 0) {
+          document.getElementById("gk-history-section").style.display = "none";
+        } else {
+          document.getElementById("gk-history-section").style.display = "block";
+          pastMatches.forEach((e) => {
+            const splitYear = e.date.split("-")[0];
+            let colorMark = e.color ? e.color : "var(--gray)";
+            historyBox.innerHTML += `
+        <div class="gk-m-item" style="border-color:var(--accent)">
+          <div class="gk-m-title"><span style="color:var(--accent)">Year ${splitYear}:</span> ${e.event}</div>
+          <div class="gk-m-extra">${e.extra ? e.extra : ""}</div>
+        </div>`;
+          });
+        }
+
+        document.getElementById("gk-detail-modal").style.display = "flex";
+      }
+
+      function closeGkModal(e) {
+        if (e.target === document.getElementById("gk-detail-modal")) {
+          document.getElementById("gk-detail-modal").style.display = "none";
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

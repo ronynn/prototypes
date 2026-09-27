@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanta Globe – A-Frame</title>
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+    #vanta-container { width: 100%; height: 100%; }
+  </style>
+  <script src="lib/aframe.js"></script>
+</head>
+<body>
+  <div id="vanta-container">
+    <a-scene embedded="true" renderer="antialias: true; alpha: true" background="color: #23153c">
+      <!-- The globe component will attach everything to this entity -->
+      <a-entity vanta-globe="color: #ff4fff; color2: #ffffff; size: 1; points: 10; maxDistance: 20; spacing: 15; showDots: true"></a-entity>
+    </a-scene>
+  </div>
+
+  <script>
+    AFRAME.registerComponent('vanta-globe', {
+      schema: {
+        color:       { type: 'color', default: '#ff4fff' },
+        color2:      { type: 'color', default: '#ffffff' },
+        size:        { default: 1 },
+        points:      { default: 10 },
+        maxDistance: { default: 20 },
+        spacing:     { default: 15 },
+        showDots:    { default: true },
+        speed:       { default: 1 },
+        mouseCoeffX: { default: 1 },
+        mouseCoeffY: { default: 1 }
+      },
+
+      init: function () {
+        this.el.sceneEl.renderer.sortObjects = true;
+        this.camera = this.el.sceneEl.camera;
+
+        // Store original camera position
+        this.camOrigin = { x: 50, y: 100, z: 150 };
+        this.camera.position.set(50, 100, 150);
+
+        // Mouse state
+        this.mouseX = window.innerWidth / 2;
+        this.mouseY = window.innerHeight / 2;
+        window.addEventListener('mousemove', (e) => {
+          this.mouseX = e.clientX;
+          this.mouseY = e.clientY;
+        });
+        window.addEventListener('resize', () => {
+          // A-Frame handles resizing automatically
+        });
+
+        this.time = 0;
+        this.createEffect();
+      },
+
+      createEffect: function () {
+        const data = this.data;
+        const el = this.el;
+
+        // ---- Grid of points ----
+        const cont = new THREE.Group();
+        cont.position.set(-50, -20, 0);
+        el.setObject3D('grid', cont);
+
+        const gridSize = data.points + 1;
+        const spacing = data.spacing;
+        this.points = [];
+
+        for (let i = 0; i < gridSize; i++) {
+          for (let j = 0; j < gridSize; j++) {
+            const x = (i - data.points / 2) * spacing;
+            const z = (j - data.points / 2) * spacing;
+            const point = new THREE.Object3D();
+            point.position.set(x, 0, z);
+            point.userData = { baseX: x, baseZ: z };
+            cont.add(point);
+
+            if (data.showDots) {
+              const geom = new THREE.SphereGeometry(0.25, 12, 12);
+              const mat = new THREE.MeshLambertMaterial({ color: data.color });
+              const dot = new THREE.Mesh(geom, mat);
+              point.add(dot);
+            }
+            this.points.push(point);
+          }
+        }
+
+        // ---- Dynamic lines ----
+        const maxVerts = this.points.length * this.points.length * 2;
+        this.linePositions = new Float32Array(maxVerts * 3);
+        this.lineColors = new Float32Array(maxVerts * 3);
+
+        const lineGeo = new THREE.BufferGeometry();
+        lineGeo.setAttribute('position', new THREE.BufferAttribute(this.linePositions, 3).setUsage(THREE.DynamicDrawUsage));
+        lineGeo.setAttribute('color', new THREE.BufferAttribute(this.lineColors, 3).setUsage(THREE.DynamicDrawUsage));
+        lineGeo.setDrawRange(0, 0);
+
+        const bgColor = new THREE.Color('#23153c');
+        const color = new THREE.Color(data.color);
+        const lightness = (c) => 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+        const isAdditive = lightness(color) > lightness(bgColor);
+        const lineMat = new THREE.LineBasicMaterial({
+          vertexColors: true,
+          blending: isAdditive ? THREE.AdditiveBlending : THREE.NormalBlending,
+          transparent: true
+        });
+        this.linesMesh = new THREE.LineSegments(lineGeo, lineMat);
+        cont.add(this.linesMesh);
+
+        // ---- Central decorations ----
+        const cont2 = new THREE.Group();
+        cont2.position.set(0, 15, 0);
+        cont2.rotation.x = -0.25;
+        el.setObject3D('central', cont2);
+
+        // Starburst rays
+        const starburstVerts = [];
+        for (let i = 0; i < 80; i++) {
+          const r1 = 18 + Math.random() * 6;
+          const r2 = r1 + 1 + Math.random() * 5;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos(2 * Math.random() - 1);
+          const x = Math.sin(phi) * Math.cos(theta);
+          const y = Math.cos(phi);
+          const z = Math.sin(phi) * Math.sin(theta);
+          starburstVerts.push(x * r1, y * r1, z * r1, x * r2, y * r2, z * r2);
+        }
+        const burstGeo = new THREE.BufferGeometry();
+        burstGeo.setAttribute('position', new THREE.Float32BufferAttribute(starburstVerts, 3));
+        const burstLines = new THREE.LineSegments(burstGeo, new THREE.LineBasicMaterial({ color: data.color2 }));
+        cont2.add(burstLines);
+        this.starburst = burstLines;
+
+        // Arms + center vertical line
+        const armVerts = [0, 30, 0, 0, -30, 0];
+        const heights = [17.9,12,8,5,3,2,1.5,1.1,0.8,0.6,0.45,0.3,0.2,0.1,0.05,0.03,0.02,0.01];
+        for (let d = 0; d < 4; d++) {
+          const angle = d * Math.PI / 2;
+          const dx = 0.15 * Math.cos(angle);
+          const dz = 0.15 * Math.sin(angle);
+          for (let j = 0; j < heights.length; j++) {
+            const h = heights[j];
+            const r = 6 * (j + 1);
+            armVerts.push(dx * r, h, dz * r, dx * r, -h, dz * r);
+          }
+        }
+        const armGeo = new THREE.BufferGeometry();
+        armGeo.setAttribute('position', new THREE.Float32BufferAttribute(armVerts, 3));
+        const armLines = new THREE.LineSegments(armGeo, new THREE.LineBasicMaterial({ color: data.color2 }));
+        cont2.add(armLines);
+        this.arms = armLines;
+
+        // Wireframe sphere
+        const sphereGeo = new THREE.SphereGeometry(18 * data.size, 18, 14);
+        const edgesGeo = new THREE.EdgesGeometry(sphereGeo);
+        const sphereLines = new THREE.LineSegments(edgesGeo, new THREE.LineBasicMaterial({ color: data.color }));
+        cont2.add(sphereLines);
+        this.sphere = sphereLines;
+
+        // Lights
+        const ambient = new THREE.AmbientLight(0xffffff, 0.75);
+        el.setObject3D('ambient', ambient);
+        const spot = new THREE.SpotLight(0xffffff, 1, 400);
+        spot.position.set(0, 200, 0);
+        spot.target = cont;
+        el.setObject3D('spot', spot);
+      },
+
+      tick: function (timeDelta, time) {
+        const t = time * 0.001 * this.data.speed;
+        this.time = t;
+
+        // Animate points
+        for (const p of this.points) {
+          p.position.y = 2 * Math.sin(p.userData.baseX / 10 + t + p.userData.baseZ / 10 * 0.5);
+        }
+
+        // Update dynamic lines
+        const maxDist = this.data.maxDistance;
+        const pos = this.linePositions;
+        const col = this.lineColors;
+        const bgColor = new THREE.Color('#23153c');
+        const dotColor = new THREE.Color(this.data.color);
+        const isAdditive = (0.299 * dotColor.r + 0.587 * dotColor.g + 0.114 * dotColor.b) >
+                           (0.299 * bgColor.r + 0.587 * bgColor.g + 0.114 * bgColor.b);
+        let idx = 0;
+        for (let i = 0; i < this.points.length; i++) {
+          const p1 = this.points[i].position;
+          for (let j = i + 1; j < this.points.length; j++) {
+            const p2 = this.points[j].position;
+            const dist = p1.distanceTo(p2);
+            if (dist < maxDist) {
+              let factor = 2 * (1 - dist / maxDist);
+              factor = Math.max(0, Math.min(1, factor));
+              const color = isAdditive
+                ? new THREE.Color(0, 0, 0).lerp(new THREE.Color(this.data.color).sub(bgColor), factor)
+                : bgColor.clone().lerp(dotColor, factor);
+              pos[idx * 3] = p1.x;
+              pos[idx * 3 + 1] = p1.y;
+              pos[idx * 3 + 2] = p1.z;
+              col[idx * 3] = color.r;
+              col[idx * 3 + 1] = color.g;
+              col[idx * 3 + 2] = color.b;
+              idx++;
+              pos[idx * 3] = p2.x;
+              pos[idx * 3 + 1] = p2.y;
+              pos[idx * 3 + 2] = p2.z;
+              col[idx * 3] = color.r;
+              col[idx * 3 + 1] = color.g;
+              col[idx * 3 + 2] = color.b;
+              idx++;
+            }
+          }
+        }
+        this.linesMesh.geometry.setDrawRange(0, idx);
+        this.linesMesh.geometry.attributes.position.needsUpdate = true;
+        this.linesMesh.geometry.attributes.color.needsUpdate = true;
+
+        // Rotate decorations
+        this.starburst.rotation.z += 0.002;
+        this.starburst.rotation.x += 0.0008;
+        this.starburst.rotation.y += 0.0005;
+        this.sphere.rotation.y += 0.002;
+        this.arms.rotation.y -= 0.004;
+
+        // Camera motion
+        const { x: ox, y: oy, z: oz } = this.camOrigin;
+        const angle = Math.atan2(oz, ox);
+        const radius = Math.sqrt(ox * ox + oz * oz);
+        const newAngle = angle + 1.5 * ((this.mouseX / window.innerWidth) - 0.5) * this.data.mouseCoeffX;
+        const targetX = radius * Math.cos(newAngle);
+        const targetZ = radius * Math.sin(newAngle);
+        const targetY = oy + 80 * ((this.mouseY / window.innerHeight) - 0.5) * this.data.mouseCoeffY;
+
+        this.camera.position.x += (targetX - this.camera.position.x) * 0.05;
+        this.camera.position.y += (targetY - this.camera.position.y) * 0.05;
+        this.camera.position.z += (targetZ - this.camera.position.z) * 0.05;
+
+        // Look at
+        const w = window.innerWidth;
+        const lookX = w < 480 ? -10 : w < 720 ? -20 : -40;
+        this.camera.lookAt(lookX, 0, 0);
+      }
+    });
+  </script>
+</body>
+</html>

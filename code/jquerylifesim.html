@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BitLife Clone</title>
+  <script src="lib/jquery.slim.min.js"></script>
+  <script src="lib/confetti.browser.min.js"></script>
+  <style>
+    /* Base styles */
+    body {
+      font-family: sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      padding: 0;
+    }
+    .panel {
+      background-color: var(--panel-bg, #ffffff);
+      color: var(--text-color, #333333);
+      border-radius: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 0.75rem;
+    }
+    .button {
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.25rem;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      background-color: var(--button-bg, #3b82f6);
+      color: white;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    .button:hover {
+      background-color: var(--button-hover, #2563eb);
+    }
+    .button:active {
+      transform: scale(0.95);
+    }
+    .button-green { background-color: #10b981; }
+    .button-green:hover { background-color: #059669; }
+    .button-red { background-color: #ef4444; }
+    .button-red:hover { background-color: #dc2626; }
+    .button-gray { background-color: #6b7280; }
+    .button-gray:hover { background-color: #4b5563; }
+
+    /* Compact meters */
+    .meter {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.15rem;
+      font-size: 0.7rem;
+    }
+    .meter label {
+      width: 3.5rem;
+      text-align: right;
+      margin-right: 0.4rem;
+      flex-shrink: 0;
+    }
+    .meter progress {
+      flex: 1;
+      height: 0.5rem;
+    }
+    .meter.glow label,
+    .meter.glow progress {
+      color: #fbbf24;
+      filter: drop-shadow(0 0 4px #fbbf24);
+    }
+
+    /* Theme variables */
+    .theme-light { --bg: #f3f4f6; --panel-bg: #ffffff; --text-color: #333333; --button-bg: #3b82f6; --button-hover: #2563eb; }
+    .theme-amoled { --bg: #000000; --panel-bg: #111111; --text-color: #ffffff; --button-bg: #3b82f6; --button-hover: #1e40af; }
+    .theme-nord { --bg: #2e3440; --panel-bg: #3b4252; --text-color: #d8dee9; --button-bg: #5e81ac; --button-hover: #81a1c1; }
+    .theme-gruvbox { --bg: #282828; --panel-bg: #3c3836; --text-color: #ebdbb2; --button-bg: #d79921; --button-hover: #fabd2f; }
+    .theme-catpuccin-frappe { --bg: #303446; --panel-bg: #414559; --text-color: #c6d0f5; --button-bg: #8caaee; --button-hover: #a5b4fc; }
+
+    /* Layout */
+    #app { max-width: 1200px; margin: 0 auto; padding: 0.5rem; }
+    .flex-col-mobile { display: flex; flex-direction: column; }
+    @media (min-width: 768px) {
+      .flex-row-desktop { flex-direction: row; }
+    }
+    .status-panel {
+      flex: 0 0 180px;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+    }
+    .main-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
+    .tab {
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.25rem;
+      background-color: var(--panel-bg);
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .tab.active { background-color: var(--button-bg); color: white; }
+    .timeline-box {
+      overflow-y: auto;
+      max-height: 60vh;
+      padding: 0.4rem;
+      font-size: 0.9rem;
+    }
+    .advance-button {
+      position: fixed;
+      right: 1rem;
+      bottom: 3rem;
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0;
+      background-color: #10b981;
+      color: white;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+    .advance-button:hover { background-color: #059669; }
+    .advance-button:active { transform: scale(0.95); }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal-content {
+      background-color: var(--panel-bg);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      max-width: 90%;
+    }
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 0.6rem 1rem;
+      border-radius: 0.25rem;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      font-size: 0.9rem;
+    }
+    .toast.show { opacity: 1; }
+    .card { border: 1px solid #ccc; padding: 0.5rem; margin-bottom: 0.5rem; border-radius: 0.25rem; display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body class="theme-light" style="background-color: var(--bg); color: var(--text-color);">
+  <div id="app"></div>
+
+  <script type="module">
+    import { signal, effect } from './lib/signals-core.module.js';
+
+    // ===== Reactive Signals Setup =====
+    const playerSignal = signal(null);
+
+    function getPlayer() { return playerSignal.value; }
+    function setPlayer(data) { playerSignal.value = data; }
+
+    let theme = 'light';
+    let soundEnabled = true;
+    let audioCtx = null;
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+
+    function playSoftClick() {
+      if (!soundEnabled || !audioCtx) return;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.04);
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.04);
+    }
+
+    function playUISound() { playSoftClick(); }
+
+    function playAchievementSound() {
+      if (!soundEnabled || !audioCtx) return;
+      const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = 880; gain.gain.value = 0.2;
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function showToast(msg) {
+      const toast = $('<div class="toast">' + msg + '</div>');
+      $('body').append(toast);
+      requestAnimationFrame(() => toast.addClass('show'));
+      setTimeout(() => {
+        toast.removeClass('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    // ===== Events & Content Data =====
+    const worldEvents = [
+      { text: "Global recession hits, economy slows down", effect: { money: -10, happiness: -5 } },
+      { text: "Tech boom creates new opportunities", effect: { intelligence: 5, money: 10 } },
+      { text: "A new pandemic spreads worldwide", effect: { health: -15, happiness: -10 } },
+      { text: "International peace treaty signed", effect: { happiness: 10, money: 5 } },
+      { text: "Oil prices skyrocket", effect: { money: 8, happiness: -3 } },
+      { text: "Major earthquake causes damage", effect: { health: -5, money: -8, happiness: -7 } }
+    ];
+
+    function getWorldEvent(country) {
+      let ev = worldEvents[Math.floor(Math.random() * worldEvents.length)];
+      if (country === 'Switzerland' && Math.random() < 0.3) ev = { text: "Swiss government issues military notice", effect: { happiness: -3 } };
+      if (country === 'India' && Math.random() < 0.3) ev = { text: "Monsoon season brings heavy rains", effect: { health: -2, happiness: 2 } };
+      if (country === 'Japan' && Math.random() < 0.3) ev = { text: "Cherry blossom festival boosts tourism", effect: { money: 5, happiness: 5 } };
+      return ev;
+    }
+
+    const jobs = [
+      { id: 'waiter', name: 'Waiter', minAge: 14, req: {}, salary: 2000 },
+      { id: 'doctor', name: 'Doctor', minAge: 25, req: { intelligence: 60 }, salary: 20000 },
+      { id: 'butler', name: 'Butler', minAge: 20, req: {}, salary: 5000 },
+      { id: 'army', name: 'Army', minAge: 18, req: {}, salary: 3000 },
+      { id: 'navy', name: 'Navy', minAge: 18, req: {}, salary: 3200 }
+    ];
+
+    const assetsCatalog = [
+      { id: 'car', name: 'Used Sedan', cost: 5000, upkeep: 200 },
+      { id: 'apartment', name: 'Studio Apartment', cost: 50000, upkeep: 1000 },
+      { id: 'mansion', name: 'Luxury Villa', cost: 500000, upkeep: 10000 }
+    ];
+
+    function getJobById(id) { return jobs.find(j => j.id === id); }
+    function isJobAvailable(job, player) {
+      if (player.age < job.minAge) return false;
+      if (job.req.intelligence && player.intelligence < job.req.intelligence) return false;
+      return true;
+    }
+
+    const namesByCountry = {
+      India: { male: ['Aarav','Vivaan','Aditya'], female: ['Aanya','Diya','Ananya'], surnames: ['Sharma','Patel','Singh'] },
+      Japan: { male: ['Hiroshi','Kenji','Takumi'], female: ['Yuki','Sakura','Hana'], surnames: ['Sato','Suzuki','Tanaka'] },
+      Switzerland: { male: ['Luca','Noah','David'], female: ['Mia','Emma','Lena'], surnames: ['Müller','Meier','Schmid'] }
+    };
+    const currencies = {
+      India: { symbol: '₹', name: 'Rupee' },
+      Japan: { symbol: '¥', name: 'Yen' },
+      Switzerland: { symbol: 'CHF', name: 'Swiss Franc' }
+    };
+
+    function generateName(gender, country) {
+      const list = namesByCountry[country];
+      const first = gender === 'M' ? list.male[Math.floor(Math.random() * list.male.length)] : list.female[Math.floor(Math.random() * list.female.length)];
+      const last = list.surnames[Math.floor(Math.random() * list.surnames.length)];
+      return { first, last };
+    }
+
+    // ===== UI Views =====
+    function showAbout() {
+      $('#app').empty().append(`
+        <div class="panel" style="max-width: 600px; margin: 2rem auto;">
+          <h1 class="text-2xl font-bold mb-4">About</h1>
+          <p>Enhanced Life Simulator Web App built with JavaScript ES Modules and signals.</p>
+          <button id="aboutBack" class="button">Back</button>
+        </div>
+      `);
+      $('#aboutBack').on('click', showStartScreen);
+    }
+
+    function showCreateScreen() {
+      $('#app').empty().append(`
+        <div class="panel" style="max-width: 400px; margin: 2rem auto;">
+          <h2 class="text-2xl font-bold mb-4">Create New Character</h2>
+          <div style="margin-bottom: 0.5rem;"><label>First Name</label><input id="firstName" type="text" style="width:100%;"></div>
+          <div style="margin-bottom: 0.5rem;"><label>Surname</label><input id="surname" type="text" style="width:100%;"></div>
+          <div style="margin-bottom: 0.5rem;"><label>Gender</label>
+            <select id="gender" style="width:100%;"><option value="M">Male</option><option value="F">Female</option></select>
+          </div>
+          <div style="margin-bottom: 0.5rem;"><label>Region</label>
+            <select id="region" style="width:100%;"><option value="India">India</option><option value="Japan">Japan</option><option value="Switzerland">Switzerland</option></select>
+          </div>
+          <button id="autoGen" class="button button-gray" style="width:100%; margin-bottom: 0.5rem;">Auto-Generate</button>
+          <button id="createBtn" class="button button-green" style="width:100%;">Create</button>
+        </div>
+      `);
+
+      $('#autoGen').on('click', () => {
+        const gender = $('#gender').val(), country = $('#region').val();
+        const name = generateName(gender, country);
+        $('#firstName').val(name.first);
+        $('#surname').val(name.last);
+        playSoftClick();
+      });
+
+      $('#createBtn').on('click', () => {
+        playSoftClick();
+        const firstName = $('#firstName').val().trim();
+        const surname = $('#surname').val().trim();
+        if (!firstName || !surname) return alert('Enter full name');
+        const region = $('#region').val();
+        
+        const newPlayer = {
+          firstName, surname, gender: $('#gender').val(), region,
+          currency: currencies[region],
+          age: 5, year: 2000, health: 80, strength: 40, money: 500, happiness: 70, intelligence: 50,
+          looks: Math.floor(Math.random() * 100),
+          activeStudy: 'Class 1', gradeMarks: 75,
+          actionsUsed: 0, orientation: 'unknown', maritalStatus: 'single', job: null,
+          assets: [], timeline: [{ year: 2000, text: "It's the year 2000 and you are 5 years old." }]
+        };
+        savePlayer(newPlayer);
+        setPlayer(newPlayer);
+        startGame();
+      });
+    }
+
+    function showStartScreen() {
+      $('#app').empty().append(`
+        <div class="panel" style="max-width: 300px; margin: 2rem auto; text-align: center;">
+          <h1 class="text-2xl font-bold mb-4">BitLife Clone</h1>
+          <button id="newChar" class="button" style="width:100%; margin-bottom:0.5rem;">New Character</button>
+          <button id="continue" class="button button-green" style="width:100%; margin-bottom:0.5rem;">Continue</button>
+          <button id="reset" class="button button-red" style="width:100%; margin-bottom:0.5rem;">Reset</button>
+          <button id="about" class="button button-gray" style="width:100%;">About</button>
+        </div>
+      `);
+      $('#newChar').on('click', () => { playSoftClick(); showCreateScreen(); });
+      $('#continue').on('click', () => {
+        playSoftClick();
+        const saved = localStorage.getItem('player');
+        if (saved) { setPlayer(JSON.parse(saved)); startGame(); }
+        else alert('No saved game');
+      });
+      $('#reset').on('click', () => { playSoftClick(); localStorage.removeItem('player'); setPlayer(null); showStartScreen(); });
+      $('#about').on('click', () => { playSoftClick(); showAbout(); });
+    }
+
+    function startGame() {
+      $('#app').empty();
+      renderGameLayout();
+    }
+
+    function renderGameLayout() {
+      $('#app').append(`
+        <div class="flex-col-mobile flex-row-desktop" style="display:flex; gap:0.5rem;">
+          <div id="statusPanel" class="panel status-panel"></div>
+          <div class="main-panel">
+            <div class="tabs">
+              <button class="tab active" data-tab="timeline">Timeline</button>
+              <button class="tab" data-tab="education">Education</button>
+              <button class="tab" data-tab="jobs">Jobs</button>
+              <button class="tab" data-tab="assets">Assets</button>
+              <button class="tab" data-tab="activities">Activities</button>
+              <button class="tab" data-tab="family">Family</button>
+            </div>
+            <div class="panel timeline-box">
+              <div id="timelineTab" class="tab-pane">
+                <h3 class="text-lg font-bold mb-2">Timeline</h3>
+                <div id="timeline"></div>
+              </div>
+              <div id="educationTab" class="tab-pane" style="display:none;">
+                <h3 class="text-lg font-bold mb-2">Education</h3>
+                <div id="educationContent"></div>
+              </div>
+              <div id="jobsTab" class="tab-pane" style="display:none;">
+                <h3 class="text-lg font-bold mb-2">Jobs</h3>
+                <div id="jobsContent"></div>
+              </div>
+              <div id="assetsTab" class="tab-pane" style="display:none;">
+                <h3 class="text-lg font-bold mb-2">Assets</h3>
+                <div id="assetsContent"></div>
+              </div>
+              <div id="activitiesTab" class="tab-pane" style="display:none;">
+                <h3 class="text-lg font-bold mb-2">Activities</h3>
+                <div id="activitiesContent"></div>
+              </div>
+              <div id="familyTab" class="tab-pane" style="display:none;">
+                <h3 class="text-lg font-bold mb-2">Family</h3>
+                <div id="familyContent"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button id="advanceYear" class="advance-button" title="Advance Year">+</button>
+      `);
+
+      $('.tab').on('click', function() {
+        playSoftClick();
+        $('.tab').removeClass('active');$(this).addClass('active');
+        $('.tab-pane').hide();$(`#${$(this).data('tab')}Tab`).show();
+      });
+
+      $('#advanceYear').on('click', () => { playSoftClick(); advanceYear(); });
+    }
+
+    // Signals state listener
+    effect(() => {
+      const p = getPlayer();
+      if (!p) return;
+
+      $('#statusPanel').html(`
+        <h2 style="font-size:1rem; margin-bottom:0.3rem;">${p.firstName} ${p.surname}</h2>
+        <p style="font-size:0.75rem; margin:0.1rem 0;">Age: ${p.age} | Year: ${p.year}</p>
+        <p style="font-size:0.75rem; margin:0.1rem 0;">${p.region}</p>
+        <p style="font-size:0.75rem; margin:0.1rem 0;">${p.currency.symbol}${p.money}</p>
+        <div style="margin-top:0.4rem;">
+          <div class="meter"><label>Health</label><progress value="${p.health}" max="100"></progress></div>
+          <div class="meter"><label>Strength</label><progress value="${p.strength}" max="100"></progress></div>
+          <div class="meter"><label>Happiness</label><progress value="${p.happiness}" max="100"></progress></div>
+          <div class="meter"><label>Intelligence</label><progress value="${p.intelligence}" max="100"></progress></div>
+          <div class="meter"><label>Looks</label><progress value="${p.looks}" max="100"></progress></div>
+        </div>
+      `);
+
+      renderTimeline(p);
+      renderEducation(p);
+      renderJobs(p);
+      renderAssets(p);
+      renderActivities(p);
+      renderFamily(p);
+    });
+
+    // Plaintext static timeline append to avoid line animation re-triggering
+    function renderTimeline(p) {
+      if (!p.timeline) p.timeline = [];
+      const tl = $('#timeline').empty();
+      p.timeline.forEach(entry => {
+        tl.append(`<div style="margin-bottom:0.3rem;"><strong>${entry.year}</strong>: ${entry.text}</div>`);
+      });
+      setTimeout(() => { if (tl[0]) tl.scrollTop(tl[0].scrollHeight); }, 50);
+    }
+
+    function renderEducation(p) {
+      const edu = $('#educationContent').empty();
+      if (p.activeStudy) {
+        edu.append(`
+          <p>Currently studying: ${p.activeStudy}</p>
+          <button id="readTextbook" class="button">Read Textbook</button>
+        `);
+        $('#readTextbook').on('click', () => performAction('textbook'));
+      } else {
+        edu.append(`<p>Not studying.</p><button id="applyCollege" class="button">Apply to College</button>`);
+        $('#applyCollege').on('click', () => performAction('applyCollege'));
+      }
+    }
+
+    function renderJobs(p) {
+      const jobsDiv = $('#jobsContent').empty();
+      if (p.age < 14) return jobsDiv.append('<p>Jobs unlock at age 14.</p>');
+      const available = jobs.filter(j => isJobAvailable(j, p));
+      available.forEach(job => {
+        jobsDiv.append(`
+          <div class="card">
+            <span><strong>${job.name}</strong> - ${p.currency.symbol}${job.salary}</span>
+            <button class="applyJob button button-green" data-job="${job.id}">Apply</button>
+          </div>
+        `);
+      });
+      $('.applyJob').on('click', function() { performAction('applyJob',$(this).data('job')); });
+    }
+
+    function renderAssets(p) {
+      const div = $('#assetsContent').empty();
+      div.append('<h4>Owned Assets</h4>');
+      if (p.assets.length === 0) div.append('<p>No assets owned.</p>');
+      p.assets.forEach(a => {
+        div.append(`<div class="card"><span>${a.name} (Upkeep: ${p.currency.symbol}${a.upkeep}/yr)</span></div>`);
+      });
+      div.append('<h4 style="margin-top:1rem;">Marketplace</h4>');
+      assetsCatalog.forEach(item => {
+        div.append(`
+          <div class="card">
+            <span>${item.name} - ${p.currency.symbol}${item.cost}</span>
+            <button class="buyAsset button" data-id="${item.id}">Buy</button>
+          </div>
+        `);
+      });
+      $('.buyAsset').on('click', function() { performAction('buyAsset',$(this).data('id')); });
+    }
+
+    function renderActivities(p) {
+      const div = $('#activitiesContent').empty();
+      div.append(`
+        <div class="card">
+          <span>Play Lottery Ticket (${p.currency.symbol}10)</span>
+          <button id="buyLottery" class="button button-green">Buy Ticket</button>
+        </div>
+        <div class="card">
+          <span>Visit Doctor (${p.currency.symbol}100)</span>
+          <button id="visitDoctor" class="button">Visit Doctor</button>
+        </div>
+        <div class="card">
+          <span>Commit Petty Theft</span>
+          <button id="commitCrime" class="button button-red">Commit Crime</button>
+        </div>
+      `);
+
+      $('#buyLottery').on('click', () => performAction('lottery'));
+      $('#visitDoctor').on('click', () => performAction('doctor'));
+      $('#commitCrime').on('click', () => performAction('crime'));
+    }
+
+    function renderFamily(p) {
+      const fam = $('#familyContent').empty();
+      fam.append(`
+        <button id="findFriend" class="button" style="margin-right:0.5rem;">Find Friend</button>
+        <button id="spendFamily" class="button button-green">Spend Time with Family</button>
+      `);
+      $('#findFriend').on('click', () => performAction('friend'));
+      $('#spendFamily').on('click', () => performAction('family'));
+    }
+
+    function performAction(type, data) {
+      playSoftClick();
+      let p = { ...getPlayer() };
+      if (p.actionsUsed >= 4) {
+        p.timeline.push({ year: p.year, text: 'No actions left this year.' });
+        setPlayer(p);
+        return;
+      }
+      p.actionsUsed++;
+
+      if (type === 'textbook') { p.intelligence += 3; p.timeline.push({ year: p.year, text: 'Studied textbooks.' }); }
+      else if (type === 'applyCollege') { p.activeStudy = 'College'; p.timeline.push({ year: p.year, text: 'Enrolled in College!' }); confetti(); }
+      else if (type === 'applyJob') { p.job = data; p.timeline.push({ year: p.year, text: `Hired as ${getJobById(data).name}!` }); confetti(); }
+      else if (type === 'friend') { p.happiness += 5; p.timeline.push({ year: p.year, text: 'Hanging out with friends.' }); }
+      else if (type === 'family') { p.happiness += 5; p.timeline.push({ year: p.year, text: 'Spent quality time with family.' }); }
+      else if (type === 'buyAsset') {
+        const item = assetsCatalog.find(a => a.id === data);
+        if (p.money >= item.cost) {
+          p.money -= item.cost;
+          p.assets.push(item);
+          p.timeline.push({ year: p.year, text: `Purchased a ${item.name}` });
+          confetti();
+        } else {
+          showToast('Not enough money!');
+        }
+      }
+      else if (type === 'lottery') {
+        if (p.money >= 10) {
+          p.money -= 10;
+          if (Math.random() < 0.05) {
+            const win = 10000;
+            p.money += win;
+            p.timeline.push({ year: p.year, text: `JACKPOT! You won ${p.currency.symbol}${win} in lottery!` });
+            confetti(); playAchievementSound();
+          } else {
+            p.timeline.push({ year: p.year, text: 'You bought a lottery ticket but won nothing.' });
+          }
+        } else showToast('Not enough money!');
+      }
+      else if (type === 'doctor') {
+        if (p.money >= 100) {
+          p.money -= 100;
+          p.health = Math.min(100, p.health + 25);
+          p.timeline.push({ year: p.year, text: 'Visited doctor and restored health.' });
+        } else showToast('Not enough money!');
+      }
+      else if (type === 'crime') {
+        if (Math.random() < 0.5) {
+          p.money += 200;
+          p.timeline.push({ year: p.year, text: 'Successfully committed petty theft! (+200)' });
+        } else {
+          p.happiness -= 15;
+          p.timeline.push({ year: p.year, text: 'Got caught doing petty theft and got fined!' });
+        }
+      }
+
+      savePlayer(p);
+      setPlayer(p);
+    }
+
+    function advanceYear() {
+      playSoftClick();
+      let p = { ...getPlayer() };
+      p.year++; p.age++; p.actionsUsed = 0;
+      if (p.job) { const j = getJobById(p.job); if (j) p.money += j.salary; }
+      p.assets.forEach(a => p.money -= a.upkeep);
+
+      const ev = getWorldEvent(p.region);
+      if (ev.effect) {
+        if (ev.effect.money) p.money += ev.effect.money;
+        if (ev.effect.happiness) p.happiness += ev.effect.happiness;
+      }
+      p.timeline.push({ year: p.year, text: `Aged to ${p.age}. ${ev.text}` });
+
+      savePlayer(p);
+      setPlayer(p);
+    }
+
+    function savePlayer(p) {
+      localStorage.setItem('player', JSON.stringify(p));
+    }
+
+    $(document).ready(() => {
+      showStartScreen();
+    });
+  </script>
+</body>
+</html>

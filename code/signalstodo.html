@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Preact Signals Core Notes</title>
+  <style>
+    .note-item.done span { text-decoration: line-through; color: #928374; }
+    input { padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 15px; }
+  </style>
+  <script type="module">
+    import { signal, effect } from './lib/signals-core.module.js';
+
+    const list = document.getElementById('notes-list');
+    const input = document.getElementById('note-input');
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        createSignalNote(input.value.trim());
+        input.value = '';
+      }
+    });
+
+    function createSignalNote(text) {
+      const completed = signal(false);
+
+      const div = document.createElement('div');
+      div.className = 'note-item';
+
+      const textSpan = document.createElement('span');
+      textSpan.textContent = text;
+      div.appendChild(textSpan);
+
+      div.onclick = () => {
+        completed.value = !completed.value;
+      };
+
+      // Effect automatically mutates class when completed signal updates
+      effect(() => {
+        div.classList.toggle('done', completed.value);
+      });
+
+      list.appendChild(div);
+    }
+  </script>
+</head>
+<body>
+
+  <input type="text" id="note-input" placeholder="Type a note and press Enter...">
+  <div id="notes-list"></div>
+
+</body>
+</html>

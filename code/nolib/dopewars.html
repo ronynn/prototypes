@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>DOPE WARS</title>
+<style>
+  :root{
+    --bg:#0a0e17; --panel:#121826; --panel-2:#0e1420; --panel-3:#0b111c;
+    --border:#2a3550; --border-bright:#3d4d70;
+    --text:#dbe4f5; --text-dim:#7a89a8;
+    --accent:#22d3ee; --accent-2:#f472b6;
+    --good:#4ade80; --bad:#f43f5e; --warn:#fbbf24;
+    --shadow:0 18px 40px -18px rgba(0,0,0,.85);
+  }
+  body.light{
+    --bg:#efe9dd; --panel:#faf7f0; --panel-2:#f2ece0; --panel-3:#e8e1d2;
+    --border:#c9bfa8; --border-bright:#a89878;
+    --text:#2a2418; --text-dim:#7a6f58;
+    --accent:#0284c7; --accent-2:#db2777;
+    --good:#16a34a; --bad:#dc2626; --warn:#d97706;
+    --shadow:0 18px 40px -22px rgba(60,45,20,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 800px at 50% -10%, rgba(34,211,238,.06), transparent 60%),
+      radial-gradient(900px 700px at 90% 110%, rgba(244,114,182,.05), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:13px; line-height:1.45;
+    min-height:100dvh; padding:14px;
+    transition:background .3s,color .3s;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.light{
+    background:
+      radial-gradient(1200px 800px at 50% -10%, rgba(2,132,199,.06), transparent 60%),
+      radial-gradient(900px 700px at 90% 110%, rgba(219,39,119,.05), transparent 55%),
+      var(--bg);
+  }
+
+  .app{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+
+  /* ── Header ── */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:12px;padding:4px 2px;
+  }
+  h1{
+    font-size:clamp(18px,3.4vw,26px);
+    font-weight:900;letter-spacing:.28em;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(34,211,238,.2);
+  }
+  .header-btns{display:flex;gap:8px}
+
+  /* ── Fieldsets ── */
+  fieldset{
+    border:2px solid var(--border);
+    border-radius:4px;
+    padding:10px 12px 12px;
+    background:var(--panel);
+    box-shadow:var(--shadow);
+    position:relative;
+    transition:border-color .2s,background .3s;
+  }
+  legend{
+    padding:0 7px;
+    font-size:10.5px;
+    font-weight:800;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--accent);
+    background:var(--bg);
+    border-radius:2px;
+    transition:color .2s,background .3s;
+  }
+  fieldset:hover{border-color:var(--border-bright)}
+
+  /* ── HUD ── */
+  .hud{
+    display:grid;
+    grid-template-columns:repeat(6,1fr);
+    gap:8px;
+  }
+  @media (max-width:640px){ .hud{grid-template-columns:repeat(3,1fr)} }
+  .hud fieldset{padding:6px 9px 8px;box-shadow:none}
+  .hud legend{font-size:9.5px;letter-spacing:.14em}
+  .hud .val{font-size:15px;font-weight:800;letter-spacing:.02em;display:block;margin-top:1px}
+  .hud .val.good{color:var(--good)}
+  .hud .val.bad{color:var(--bad)}
+  .hud .val.warn{color:var(--warn)}
+
+  /* ── Grid ── */
+  .grid{display:grid;grid-template-columns:1.45fr 1fr;gap:12px;align-items:start}
+  @media (max-width:800px){ .grid{grid-template-columns:1fr} }
+  .col{display:flex;flex-direction:column;gap:12px}
+
+  /* ── Market ── */
+  .qty-row{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+    margin-bottom:8px;font-size:11px;color:var(--text-dim);
+  }
+  .qty-row .label{letter-spacing:.1em;text-transform:uppercase;font-weight:700}
+  .qty-btn{
+    padding:3px 9px;font-size:11px;
+    background:var(--panel-2);border:1.5px solid var(--border);
+    color:var(--text-dim);border-radius:3px;cursor:pointer;
+    font-family:inherit;font-weight:700;letter-spacing:.05em;
+    transition:.12s;
+  }
+  .qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .qty-btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{
+    text-align:left;font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--text-dim);
+    padding:4px 6px;border-bottom:1px solid var(--border);
+    font-weight:800;
+  }
+  td{padding:5px 6px;border-bottom:1px solid rgba(128,128,128,.08)}
+  tr:last-child td{border-bottom:none}
+  .drug-name{font-weight:800;letter-spacing:.02em}
+  .price{font-weight:800;font-variant-numeric:tabular-nums}
+  .price.cheap{color:var(--good)}
+  .price.dear{color:var(--bad)}
+  .owned{color:var(--text-dim);font-variant-numeric:tabular-nums}
+  .delta{font-size:10px;margin-left:3px;font-weight:700}
+  .delta.up{color:var(--bad)}
+  .delta.down{color:var(--good)}
+  .btns{display:flex;gap:4px;justify-content:flex-end}
+
+  /* ── Buttons ── */
+  button{
+    font-family:inherit;font-size:11px;font-weight:800;
+    letter-spacing:.07em;text-transform:uppercase;
+    padding:5px 10px;
+    background:var(--panel-2);
+    color:var(--text);
+    border:1.5px solid var(--border);
+    border-radius:3px;
+    cursor:pointer;
+    transition:.12s;
+  }
+  button:hover:not(:disabled){
+    border-color:var(--accent);
+    color:var(--accent);
+    transform:translateY(-1px);
+  }
+  button:active:not(:disabled){transform:translateY(0) scale(.97)}
+  button:disabled{opacity:.3;cursor:not-allowed}
+  button.primary{border-color:var(--accent);color:var(--accent)}
+  button.primary:hover:not(:disabled){background:var(--accent);color:var(--bg)}
+  button.danger{border-color:var(--bad);color:var(--bad)}
+  button.danger:hover:not(:disabled){background:var(--bad);color:#fff}
+  button.good{border-color:var(--good);color:var(--good)}
+  button.good:hover:not(:disabled){background:var(--good);color:var(--bg)}
+  button.small{padding:3px 8px;font-size:10px}
+
+  /* ── Travel ── */
+  .loc-list{display:flex;flex-direction:column;gap:6px}
+  .loc-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 9px;border:1.5px solid var(--border);border-radius:3px;
+    background:var(--panel-2);cursor:pointer;transition:.12s;
+    font-size:12px;
+  }
+  .loc-item:hover:not(.current){border-color:var(--accent);transform:translateX(2px)}
+  .loc-item.current{border-color:var(--accent);background:rgba(34,211,238,.1);cursor:default}
+  .loc-item .loc-name{font-weight:800;letter-spacing:.04em}
+  .loc-item .loc-tag{font-size:9.5px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+  .loc-item.current .loc-tag{color:var(--accent)}
+
+  /* ── Shop ── */
+  .shop-grid{display:flex;flex-direction:column;gap:6px}
+  .shop-item{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:8px;padding:6px 9px;border:1.5px solid var(--border);
+    border-radius:3px;background:var(--panel-2);transition:.12s;
+  }
+  .shop-item.owned{border-color:var(--good);opacity:.75}
+  .shop-item .info{display:flex;flex-direction:column;gap:1px;min-width:0}
+  .shop-item .name{font-weight:800;letter-spacing:.04em;font-size:12px}
+  .shop-item .meta{font-size:10px;color:var(--text-dim);letter-spacing:.04em}
+  .shop-item .price-tag{font-weight:800;color:var(--warn);font-size:12px;margin-right:4px}
+  .shop-item.owned .price-tag{color:var(--good)}
+
+  /* ── Actions ── */
+  .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .action-grid button{padding:8px 6px;font-size:10.5px}
+
+  /* ── Log ── */
+  .log-box{
+    height:140px;overflow-y:auto;padding:6px 4px;
+    font-size:11.5px;line-height:1.6;
+    scrollbar-width:thin;
+    scrollbar-color:var(--border) transparent;
+  }
+  .log-box::-webkit-scrollbar{width:6px}
+  .log-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .log-line{padding:1px 4px;border-radius:2px;animation:slideIn .2s ease}
+  .log-line::before{content:'> ';color:var(--text-dim);margin-right:2px}
+  .log-line.good{color:var(--good)}
+  .log-line.bad{color:var(--bad)}
+  .log-line.warn{color:var(--warn)}
+  .log-line.info{color:var(--accent)}
+  .log-line.day{
+    color:var(--accent-2);font-weight:800;letter-spacing:.1em;
+    text-transform:uppercase;font-size:10.5px;margin-top:4px;
+  }
+  .log-line.day::before{content:''}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+
+  /* ── Modal ── */
+  .modal{
+    position:fixed;inset:0;z-index:100;
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;
+    background:rgba(0,0,0,.6);
+    backdrop-filter:blur(4px);
+    opacity:0;pointer-events:none;transition:opacity .22s;
+  }
+  .modal.show{opacity:1;pointer-events:auto}
+  .modal-content{
+    width:min(520px,100%);
+    animation:pop .24s cubic-bezier(.2,.9,.3,1.3);
+  }
+  @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .modal fieldset{box-shadow:0 30px 60px -20px rgba(0,0,0,.9)}
+
+  /* ── Combat ── */
+  .combat-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+  .combat-name{font-size:14px;font-weight:900;letter-spacing:.08em}
+  .combat-kind{font-size:10px;color:var(--bad);letter-spacing:.12em;text-transform:uppercase}
+  .hp-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px}
+  .hp-label{width:60px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim)}
+  .hp-bar{
+    flex:1;height:12px;border:1.5px solid var(--border);
+    border-radius:3px;overflow:hidden;background:var(--panel-3);
+  }
+  .hp-fill{
+    height:100%;transition:width .35s cubic-bezier(.2,.9,.3,1);
+    background:linear-gradient(90deg,var(--good),#22c55e);
+  }
+  .hp-fill.enemy{background:linear-gradient(90deg,var(--bad),#e11d48)}
+  .hp-fill.low{background:linear-gradient(90deg,var(--warn),var(--bad))}
+  .hp-num{width:54px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums;font-size:11px}
+
+  .combat-log{
+    margin:10px 0;padding:8px;height:96px;overflow-y:auto;
+    background:var(--panel-3);border:1.5px solid var(--border);border-radius:3px;
+    font-size:11px;line-height:1.55;
+    scrollbar-width:thin;
+  }
+  .combat-log::-webkit-scrollbar{width:5px}
+  .combat-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  .combat-log div{padding:1px 0}
+  .combat-log .you{color:var(--accent)}
+  .combat-log .them{color:var(--bad)}
+  .combat-log .loot{color:var(--good);font-weight:700}
+
+  .weapon-list{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+  .weapon-btn{
+    display:flex;flex-direction:column;align-items:flex-start;
+    padding:7px 9px;text-align:left;
+  }
+  .weapon-btn .wname{font-weight:800;letter-spacing:.04em;font-size:11px}
+  .weapon-btn .wdmg{font-size:9.5px;color:var(--text-dim);letter-spacing:.06em}
+  .weapon-btn:hover:not(:disabled) .wdmg{color:var(--accent)}
+
+  .combat-actions{display:flex;gap:6px}
+  .combat-actions button{flex:1;padding:9px}
+
+  /* ── Big buttons ── */
+  .big-btn{
+    width:100%;padding:11px;font-size:12px;letter-spacing:.14em;
+    margin-top:6px;
+  }
+
+  /* ── Flash ── */
+  @keyframes flashGood{0%,100%{background:var(--panel)}50%{background:rgba(74,222,128,.18)}}
+  @keyframes flashBad{0%,100%{background:var(--panel)}50%{background:rgba(244,63,94,.18)}}
+  .flash-good{animation:flashGood .5s ease}
+  .flash-bad{animation:flashBad .5s ease}
+
+  /* ── Goal banner ── */
+  .goal{
+    display:flex;align-items:center;justify-content:center;
+    gap:8px;padding:6px 10px;
+    font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--text-dim);text-align:center;
+  }
+  .goal b{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>DOPE&nbsp;WARS</h1>
+    <div class="header-btns">
+      <button id="muteBtn" title="Toggle sound">🔊</button>
+      <button id="themeBtn" title="Toggle theme">☀ LIGHT</button>
+    </div>
+  </header>
+
+  <div class="hud">
+    <fieldset><legend>Cash</legend><span class="val good" id="hudCash">$2,000</span></fieldset>
+    <fieldset><legend>Debt</legend><span class="val bad" id="hudDebt">$5,000</span></fieldset>
+    <fieldset><legend>Health</legend><span class="val" id="hudHealth">100</span></fieldset>
+    <fieldset><legend>Space</legend><span class="val" id="hudSpace">0/50</span></fieldset>
+    <fieldset><legend>Day</legend><span class="val" id="hudDay">1</span></fieldset>
+    <fieldset><legend>Location</legend><span class="val" id="hudLoc">Bronx</span></fieldset>
+  </div>
+
+  <div class="goal" id="goalBanner"></div>
+
+  <div class="grid">
+    <fieldset>
+      <legend id="marketLegend">Market — Bronx</legend>
+      <div class="qty-row">
+        <span class="label">Buy/Sell qty:</span>
+        <button class="qty-btn" data-qty="1">1</button>
+        <button class="qty-btn" data-qty="5">5</button>
+        <button class="qty-btn" data-qty="10">10</button>
+        <button class="qty-btn active" data-qty="max">MAX</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Drug</th><th>Price</th><th>Own</th><th style="text-align:right">Trade</th>
+          </tr>
+        </thead>
+        <tbody id="marketBody"></tbody>
+      </table>
+    </fieldset>
+
+    <div class="col">
+      <fieldset>
+        <legend>Travel</legend>
+        <div class="loc-list" id="travelList"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Black Market</legend>
+        <div class="shop-grid" id="shopList"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Street Actions</legend>
+        <div class="action-grid" id="actionGrid"></div>
+      </fieldset>
+    </div>
+  </div>
+
+  <fieldset>
+    <legend>Log</legend>
+    <div class="log-box" id="logBox"></div>
+  </fieldset>
+
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <fieldset>
+      <legend id="modalLegend">COMBAT</legend>
+      <div id="modalBody"></div>
+    </fieldset>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════════════════ */
+const DRUGS = [
+  { id:'weed',    name:'Weed',     base:40,  min:15,  max:130 },
+  { id:'coke',    name:'Cocaine',  base:200, min:90,  max:480 },
+  { id:'heroin',  name:'Heroin',   base:280, min:130, max:620 },
+  { id:'crack',   name:'Crack',    base:140, min:60,  max:330 },
+  { id:'meth',    name:'Meth',     base:100, min:45,  max:230 },
+  { id:'ecstasy', name:'Ecstasy',  base:70,  min:30,  max:180 },
+];
+
+const LOCS = [
+  { id:'bronx',     name:'Bronx',         mod:1.00, bias:{weed:1.2,coke:0.9,heroin:1.1,crack:1.0,meth:1.0,ecstasy:0.9}, tag:'Home turf' },
+  { id:'brooklyn',  name:'Brooklyn',      mod:0.95, bias:{weed:1.0,coke:1.0,heroin:0.9,crack:1.2,meth:0.9,ecstasy:1.0}, tag:'Crack hub' },
+  { id:'manhattan', name:'Manhattan',     mod:1.25, bias:{weed:0.9,coke:1.3,heroin:1.2,crack:1.1,meth:1.2,ecstasy:1.3}, tag:'High rollers' },
+  { id:'queens',    name:'Queens',        mod:0.90, bias:{weed:1.1,coke:1.1,heroin:1.0,crack:0.9,meth:1.1,ecstasy:1.0}, tag:'Cheap weed' },
+  { id:'staten',    name:'Staten Island', mod:1.10, bias:{weed:1.0,coke:0.8,heroin:1.2,crack:0.9,meth:0.9,ecstasy:1.1}, tag:'Quiet money' },
+  { id:'coney',     name:'Coney Island',  mod:0.85, bias:{weed:1.3,coke:0.9,heroin:0.8,crack:1.2,meth:1.0,ecstasy:0.9}, tag:'Tourist trap' },
+];
+
+const WEAPONS = [
+  { id:'knife',   name:'Knife',        dmg:[8,14],  price:250,  desc:'Quick & quiet' },
+  { id:'bat',     name:'Baseball Bat', dmg:[13,21], price:500,  desc:'Heavy swing' },
+  { id:'pistol',  name:'Pistol',       dmg:[26,42], price:1100, desc:'Reliable sidearm' },
+  { id:'shotgun', name:'Shotgun',      dmg:[42,68], price:2200, desc:'Close range devastation' },
+  { id:'uzi',     name:'Uzi',          dmg:[34,56], price:3600, desc:'Spray and pray' },
+];
+
+const COAT_TIERS = [
+  { cap:100, price:1500 },
+  { cap:200, price:4000 },
+  { cap:400, price:10000 },
+];
+
+const WIN_CASH = 20000;
+
+/* ═══════════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════════ */
+const state = {
+  cash: 2000,
+  debt: 5000,
+  health: 100,
+  maxHealth: 100,
+  capacity: 50,
+  coatTier: 0,
+  day: 1,
+  loc: 0,
+  inventory: { weed:0, coke:0, heroin:0, crack:0, meth:0, ecstasy:0 },
+  weapons: ['knife'],
+  prices: {},
+  prevPrices: {},
+  qty: 'max',
+  gameOver: false,
+  won: false,
+  muted: false,
+};
+
+let combat = null;
+let modalAction = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function invTotal() {
+  let n = 0;
+  for (const d of DRUGS) n += state.inventory[d.id];
+  return n;
+}
+function spaceLeft() { return state.capacity - invTotal(); }
+
+function netWorth() {
+  let v = state.cash - state.debt;
+  for (const d of DRUGS) v += state.inventory[d.id] * (state.prices[d.id] || d.base);
+  return v;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AUDIO
+   ═══════════════════════════════════════════════════════════════ */
+const Audio = {
+  ctx: null, master: null, ready: false, failed: false,
+  init() {
+    if (this.ready || this.failed) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) { this.failed = true; return; }
+    try {
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.16;
+      this.master.connect(this.ctx.destination);
+      this.ready = true;
+    } catch(e) { this.failed = true; }
+  },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  tone(f, dur, type, vol, when, glide) {
+    if (!this.ready || state.muted) return;
+    type = type || 'square'; vol = vol == null ? 0.4 : vol; when = when || 0;
+    const t = this.ctx.currentTime + when;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    if (glide) o.frequency.exponentialRampToValueAtTime(Math.max(1, glide), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.02);
+  },
+  noise(dur, vol, when, freq) {
+    if (!this.ready || state.muted) return;
+    vol = vol == null ? 0.3 : vol; when = when || 0; freq = freq || 1800;
+    const t = this.ctx.currentTime + when;
+    const n = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
+    const buf = this.ctx.createBuffer(1, n, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = this.ctx.createBufferSource(); src.buffer = buf;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq;
+    const g = this.ctx.createGain(); g.gain.value = vol;
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t);
+  }
+};
+
+const sfx = {
+  buy()   { Audio.tone(680, 0.07, 'square', 0.30); Audio.tone(1020, 0.08, 'square', 0.22, 0.05); },
+  sell()  { Audio.tone(560, 0.09, 'square', 0.30); Audio.tone(840, 0.10, 'square', 0.22, 0.06); },
+  travel(){ Audio.tone(220, 0.18, 'triangle', 0.30, 0, 440); Audio.noise(0.2, 0.10, 0, 900); },
+  hit()   { Audio.noise(0.14, 0.42, 0, 1400); Audio.tone(180, 0.11, 'sawtooth', 0.32); },
+  hurt()  { Audio.tone(140, 0.22, 'sawtooth', 0.36, 0, 70); Audio.noise(0.16, 0.22, 0, 700); },
+  win()   { [0,4,7,12].forEach((s,i)=>Audio.tone(440*Math.pow(2,s/12),0.22,'square',0.28,i*0.07)); },
+  lose()  { [0,-3,-7,-12].forEach((s,i)=>Audio.tone(330*Math.pow(2,s/12),0.32,'sawtooth',0.30,i*0.11)); },
+  error() { Audio.tone(160, 0.13, 'sawtooth', 0.30); },
+  ui()    { Audio.tone(880, 0.04, 'square', 0.16); },
+  jackpot(){ [0,4,7,12,16,19].forEach((s,i)=>Audio.tone(523*Math.pow(2,s/12),0.4,'square',0.26,i*0.08)); },
+};
+
+function initAudioOnce() {
+  Audio.init(); Audio.resume();
+  document.removeEventListener('pointerdown', initAudioOnce);
+  document.removeEventListener('keydown', initAudioOnce);
+}
+document.addEventListener('pointerdown', initAudioOnce);
+document.addEventListener('keydown', initAudioOnce);
+
+/* ═══════════════════════════════════════════════════════════════
+   LOG
+   ═══════════════════════════════════════════════════════════════ */
+function log(msg, cls) {
+  const box = $('#logBox');
+  const div = document.createElement('div');
+  div.className = 'log-line' + (cls ? ' ' + cls : '');
+  div.textContent = msg;
+  box.appendChild(div);
+  while (box.children.length > 60) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRICES
+   ═══════════════════════════════════════════════════════════════ */
+function genPrices() {
+  state.prevPrices = Object.assign({}, state.prices);
+  const loc = LOCS[state.loc];
+  state.prices = {};
+  for (const d of DRUGS) {
+    const v = d.base * loc.mod * loc.bias[d.id] * (0.7 + Math.random() * 0.6);
+    state.prices[d.id] = Math.round(clamp(v, d.min, d.max));
+  }
+}
+
+function priceClass(price, base) {
+  if (price < base * 0.75) return 'cheap';
+  if (price > base * 1.35) return 'dear';
+  return '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════ */
+function renderHUD() {
+  $('#hudCash').textContent = fmt(state.cash);
+  $('#hudDebt').textContent = fmt(state.debt);
+  $('#hudHealth').textContent = state.health + '/' + state.maxHealth;
+  $('#hudHealth').className = 'val ' + (state.health < 30 ? 'bad' : state.health < 60 ? 'warn' : 'good');
+  $('#hudSpace').textContent = invTotal() + '/' + state.capacity;
+  $('#hudSpace').className = 'val ' + (spaceLeft() === 0 ? 'warn' : '');
+  $('#hudDay').textContent = state.day;
+  $('#hudLoc').textContent = LOCS[state.loc].name;
+  $('#marketLegend').textContent = 'Market — ' + LOCS[state.loc].name;
+
+  const goal = $('#goalBanner');
+  if (state.debt > 0) {
+    goal.innerHTML = `Goal: clear debt <b>${fmt(state.debt)}</b> & retire with <b>${fmt(WIN_CASH)}</b>`;
+  } else if (state.cash < WIN_CASH) {
+    goal.innerHTML = `Debt cleared! Accumulate <b>${fmt(WIN_CASH - state.cash)}</b> more to retire`;
+  } else {
+    goal.innerHTML = 'Goal complete';
+  }
+}
+
+function renderMarket() {
+  const tbody = $('#marketBody');
+  tbody.innerHTML = '';
+  for (const d of DRUGS) {
+    const price = state.prices[d.id];
+    const prev = state.prevPrices[d.id];
+    const owned = state.inventory[d.id];
+    const tr = document.createElement('tr');
+
+    let delta = '';
+    if (prev != null && prev !== price) {
+      const up = price > prev;
+      delta = `<span class="delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'}</span>`;
+    }
+
+    tr.innerHTML = `
+      <td class="drug-name">${d.name}</td>
+      <td><span class="price ${priceClass(price, d.base)}">${fmt(price)}</span>${delta}</td>
+      <td class="owned">${owned}</td>
+      <td>
+        <div class="btns">
+          <button class="small" data-buy="${d.id}">BUY</button>
+          <button class="small" data-sell="${d.id}">SELL</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderTravel() {
+  const list = $('#travelList');
+  list.innerHTML = '';
+  LOCS.forEach((loc, i) => {
+    const div = document.createElement('div');
+    div.className = 'loc-item' + (i === state.loc ? ' current' : '');
+    div.innerHTML = `
+      <div>
+        <div class="loc-name">${loc.name}</div>
+        <div class="loc-tag">${loc.tag}</div>
+      </div>
+      <div class="loc-tag">${i === state.loc ? 'HERE' : 'GO →'}</div>`;
+    if (i !== state.loc) div.addEventListener('click', () => travel(i));
+    list.appendChild(div);
+  });
+}
+
+function renderShop() {
+  const box = $('#shopList');
+  box.innerHTML = '';
+
+  // Weapons
+  for (const w of WEAPONS) {
+    const owned = state.weapons.includes(w.id);
+    const canAfford = state.cash >= w.price;
+    const div = document.createElement('div');
+    div.className = 'shop-item' + (owned ? ' owned' : '');
+    div.innerHTML = `
+      <div class="info">
+        <div class="name">${w.name}</div>
+        <div class="meta">${w.dmg[0]}–${w.dmg[1]} dmg · ${w.desc}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="price-tag">${owned ? 'OWNED' : fmt(w.price)}</span>
+        ${owned ? '' : `<button class="small" data-weapon="${w.id}" ${canAfford ? '' : 'disabled'}>BUY</button>`}
+      </div>`;
+    box.appendChild(div);
+  }
+
+  // Coat upgrade
+  if (state.coatTier < COAT_TIERS.length) {
+    const tier = COAT_TIERS[state.coatTier];
+    const canAfford = state.cash >= tier.price;
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    div.innerHTML = `
+      <div class="info">
+        <div class="name">Bigger Coat</div>
+        <div class="meta">Capacity ${state.capacity} → ${tier.cap}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <span class="price-tag">${fmt(tier.price)}</span>
+        <button class="small" data-coat="1" ${canAfford ? '' : 'disabled'}>BUY</button>
+      </div>`;
+    box.appendChild(div);
+  } else {
+    const div = document.createElement('div');
+    div.className = 'shop-item owned';
+    div.innerHTML = `<div class="info"><div class="name">Bigger Coat</div><div class="meta">Max capacity reached (${state.capacity})</div></div><span class="price-tag">MAXED</span>`;
+    box.appendChild(div);
+  }
+
+  // Clinic
+  const clinicCost = 400;
+  const needHeal = state.health < state.maxHealth;
+  const div = document.createElement('div');
+  div.className = 'shop-item';
+  div.innerHTML = `
+    <div class="info">
+      <div class="name">Back-Alley Clinic</div>
+      <div class="meta">Full heal · costs 1 day</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:4px">
+      <span class="price-tag">${fmt(clinicCost)}</span>
+      <button class="small" data-clinic="1" ${(state.cash >= clinicCost && needHeal) ? '' : 'disabled'}>VISIT</button>
+    </div>`;
+  box.appendChild(div);
+}
+
+function renderActions() {
+  const box = $('#actionGrid');
+  box.innerHTML = '';
+
+  const restBtn = document.createElement('button');
+  restBtn.textContent = 'Rest (+15 HP)';
+  restBtn.disabled = state.health >= state.maxHealth;
+  restBtn.addEventListener('click', rest);
+  box.appendChild(restBtn);
+
+  const payBtn = document.createElement('button');
+  payBtn.className = 'good';
+  payBtn.textContent = 'Pay Debt';
+  payBtn.disabled = state.debt <= 0 || state.cash <= 0;
+  payBtn.addEventListener('click', payDebt);
+  box.appendChild(payBtn);
+
+  const payAllBtn = document.createElement('button');
+  payAllBtn.textContent = 'Pay All Debt';
+  payAllBtn.disabled = state.debt <= 0 || state.cash < state.debt;
+  payAllBtn.addEventListener('click', () => payDebt(true));
+  box.appendChild(payAllBtn);
+
+  const medBtn = document.createElement('button');
+  medBtn.textContent = 'Buy Medkit ($250)';
+  medBtn.disabled = state.cash < 250 || state.health >= state.maxHealth;
+  medBtn.addEventListener('click', buyMedkit);
+  box.appendChild(medBtn);
+}
+
+function renderAll() {
+  renderHUD();
+  renderMarket();
+  renderTravel();
+  renderShop();
+  renderActions();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIONS — TRADING
+   ═══════════════════════════════════════════════════════════════ */
+function qtyFor(kind, drugId) {
+  if (state.qty === 'max') {
+    if (kind === 'buy') {
+      const price = state.prices[drugId];
+      return Math.min(Math.floor(state.cash / price), spaceLeft());
+    } else {
+      return state.inventory[drugId];
+    }
+  }
+  return state.qty;
+}
+
+function buy(drugId) {
+  if (state.gameOver || combat) return;
+  const d = DRUGS.find(x => x.id === drugId);
+  const price = state.prices[drugId];
+  const qty = qtyFor('buy', drugId);
+  if (qty <= 0) { sfx.error(); log('Nothing to buy — no cash or no space.', 'bad'); return; }
+  const cost = price * qty;
+  if (state.cash < cost) { sfx.error(); log('Not enough cash.', 'bad'); return; }
+  if (spaceLeft() < qty) { sfx.error(); log('Not enough space in your coat.', 'bad'); return; }
+  state.cash -= cost;
+  state.inventory[drugId] += qty;
+  sfx.buy();
+  log(`Bought ${qty} × ${d.name} for ${fmt(cost)}.`, 'good');
+  renderAll();
+  checkWin();
+}
+
+function sell(drugId) {
+  if (state.gameOver || combat) return;
+  const d = DRUGS.find(x => x.id === drugId);
+  const price = state.prices[drugId];
+  const qty = qtyFor('sell', drugId);
+  if (qty <= 0) { sfx.error(); log(`You have no ${d.name} to sell.`, 'bad'); return; }
+  const revenue = price * qty;
+  state.cash += revenue;
+  state.inventory[drugId] -= qty;
+  sfx.sell();
+  log(`Sold ${qty} × ${d.name} for ${fmt(revenue)}.`, 'good');
+  renderAll();
+  checkWin();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIONS — SHOP
+   ═══════════════════════════════════════════════════════════════ */
+function buyWeapon(id) {
+  if (state.gameOver || combat) return;
+  const w = WEAPONS.find(x => x.id === id);
+  if (state.weapons.includes(id)) return;
+  if (state.cash < w.price) { sfx.error(); return; }
+  state.cash -= w.price;
+  state.weapons.push(id);
+  sfx.jackpot();
+  log(`Purchased a ${w.name} for ${fmt(w.price)}. It's dangerous out there.`, 'warn');
+  renderAll();
+}
+
+function upgradeCoat() {
+  if (state.gameOver || combat) return;
+  if (state.coatTier >= COAT_TIERS.length) return;
+  const tier = COAT_TIERS[state.coatTier];
+  if (state.cash < tier.price) { sfx.error(); return; }
+  state.cash -= tier.price;
+  state.capacity = tier.cap;
+  state.coatTier++;
+  sfx.jackpot();
+  log(`Upgraded your coat. Capacity now ${state.capacity}.`, 'good');
+  renderAll();
+}
+
+function clinic() {
+  if (state.gameOver || combat) return;
+  const cost = 400;
+  if (state.cash < cost) { sfx.error(); return; }
+  state.cash -= cost;
+  state.health = state.maxHealth;
+  sfx.win();
+  log('Patched up at the clinic. Feeling like new.', 'good');
+  advanceDay(true);
+  renderAll();
+}
+
+function rest() {
+  if (state.gameOver || combat) return;
+  state.health = Math.min(state.maxHealth, state.health + 15);
+  sfx.ui();
+  log('Rested for a bit. +15 HP.', 'good');
+  advanceDay(true);
+  renderAll();
+}
+
+function buyMedkit() {
+  if (state.gameOver || combat) return;
+  if (state.cash < 250) { sfx.error(); return; }
+  state.cash -= 250;
+  state.health = Math.min(state.maxHealth, state.health + 40);
+  sfx.buy();
+  log('Bought a medkit and patched up. +40 HP.', 'good');
+  renderAll();
+}
+
+function payDebt(all) {
+  if (state.gameOver || combat) return;
+  if (state.debt <= 0) return;
+  const pay = all ? Math.min(state.cash, state.debt) : Math.min(500, state.cash, state.debt);
+  if (pay <= 0) return;
+  state.cash -= pay;
+  state.debt -= pay;
+  sfx.buy();
+  if (state.debt <= 0) {
+    log('You paid off the loan shark. He nods, unimpressed.', 'good');
+  } else {
+    log(`Paid ${fmt(pay)} toward your debt. Remaining: ${fmt(state.debt)}.`, 'info');
+  }
+  renderAll();
+  checkWin();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TRAVEL & DAY
+   ═══════════════════════════════════════════════════════════════ */
+function advanceDay(silent) {
+  state.day++;
+  if (state.day % 7 === 0) {
+    const interest = Math.round(state.debt * 0.10);
+    if (interest > 0) {
+      state.debt += interest;
+      log(`Loan shark interest: +${fmt(interest)} debt.`, 'bad');
+    }
+  }
+  if (!silent) genPrices();
+  renderHUD();
+}
+
+function travel(idx) {
+  if (state.gameOver || combat || idx === state.loc) return;
+  state.loc = idx;
+  sfx.travel();
+  log(`Day ${state.day + 1} — arrived in ${LOCS[idx].name}.`, 'day');
+  advanceDay(false);
+  rollEvent();
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RANDOM EVENTS
+   ═══════════════════════════════════════════════════════════════ */
+function rollEvent() {
+  if (state.gameOver) return;
+  const r = Math.random();
+  if (r < 0.14) {
+    startCombat(makeEnemy('thug'));
+  } else if (r < 0.20) {
+    startCombat(makeEnemy('cop'));
+  } else if (r < 0.29) {
+    const d = pick(DRUGS);
+    const qty = Math.min(randInt(1, 4), spaceLeft());
+    if (qty > 0) {
+      state.inventory[d.id] += qty;
+      log(`Found ${qty} × ${d.name} on the ground. Nice.`, 'good');
+      sfx.buy();
+    } else {
+      log('Found some product but your coat was full.', 'warn');
+    }
+  } else if (r < 0.38) {
+    const amt = randInt(150, 500);
+    state.cash += amt;
+    log(`A grateful customer tipped you ${fmt(amt)}.`, 'good');
+    sfx.sell();
+  } else if (r < 0.46) {
+    const heal = randInt(5, 15);
+    state.health = Math.min(state.maxHealth, state.health + heal);
+    log(`Grabbed a hot meal. +${heal} HP.`, 'good');
+  } else if (r < 0.50) {
+    const d = pick(DRUGS);
+    log(`Word on the street: ${d.name} is moving fast here.`, 'info');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMBAT
+   ═══════════════════════════════════════════════════════════════ */
+function makeEnemy(kind) {
+  const scale = Math.min(3, 1 + state.day * 0.055);
+  if (kind === 'cop') {
+    const hp = Math.round((50 + Math.random() * 30) * scale);
+    return {
+      name: 'Undercover Cop',
+      kind: 'cop',
+      hp, maxHp: hp,
+      dmg: [Math.round(5 * scale), Math.round(11 * scale)],
+      loot: Math.round(300 + Math.random() * 500),
+      flavor: 'Badge glinting in the streetlight. "You\'re coming with me."',
+    };
+  }
+  const names = ['Mugger', 'Rival Dealer', 'Gang Member', 'Thug', 'Junkie'];
+  const name = pick(names);
+  const hp = Math.round((30 + Math.random() * 30) * scale);
+  return {
+    name, kind: 'thug',
+    hp, maxHp: hp,
+    dmg: [Math.round(3 * scale), Math.round(8 * scale)],
+    loot: Math.round(80 + Math.random() * 280),
+    flavor: 'Wants what you have. Doesn\'t plan to ask nicely.',
+  };
+}
+
+function startCombat(enemy) {
+  combat = {
+    enemy,
+    log: [enemy.flavor],
+    busy: false,
+  };
+  showModal('COMBAT', renderCombatBody());
+}
+
+function renderCombatBody() {
+  if (!combat) return '';
+  const e = combat.enemy;
+  const epct = Math.max(0, (e.hp / e.maxHp) * 100);
+  const ppct = Math.max(0, (state.health / state.maxHealth) * 100);
+  const pLow = state.health < state.maxHealth * 0.35;
+
+  const weaponBtns = state.weapons.map(id => {
+    const w = WEAPONS.find(x => x.id === id);
+    return `<button class="weapon-btn" data-attack="${w.id}">
+      <span class="wname">${w.name}</span>
+      <span class="wdmg">${w.dmg[0]}–${w.dmg[1]} dmg</span>
+    </button>`;
+  }).join('');
+
+  return `
+    <div class="combat-head">
+      <div>
+        <div class="combat-name">${e.name}</div>
+        <div class="combat-kind">${e.kind === 'cop' ? 'HOSTILE · LAW' : 'HOSTILE'}</div>
+      </div>
+    </div>
+
+    <div class="hp-row">
+      <span class="hp-label">Enemy</span>
+      <div class="hp-bar"><div class="hp-fill enemy" style="width:${epct}%"></div></div>
+      <span class="hp-num">${Math.max(0, e.hp)}/${e.maxHp}</span>
+    </div>
+    <div class="hp-row">
+      <span class="hp-label">You</span>
+      <div class="hp-bar"><div class="hp-fill ${pLow ? 'low' : ''}" style="width:${ppct}%"></div></div>
+      <span class="hp-num">${Math.max(0, state.health)}/${state.maxHealth}</span>
+    </div>
+
+    <div class="combat-log" id="combatLog">
+      ${combat.log.slice(-6).map(l => `<div class="${l.cls || ''}">${l.text}</div>`).join('')}
+    </div>
+
+    <div class="weapon-list">${weaponBtns}</div>
+    <div class="combat-actions">
+      <button class="danger" data-flee="1">Flee (50%)</button>
+    </div>
+  `;
+}
+
+function pushCombatLog(text, cls) {
+  combat.log.push({ text, cls });
+  if (combat.log.length > 40) combat.log.shift();
+}
+
+async function playerAttack(weaponId) {
+  if (!combat || combat.busy) return;
+  combat.busy = true;
+  const w = WEAPONS.find(x => x.id === weaponId);
+  const dmg = randInt(w.dmg[0], w.dmg[1]);
+  combat.enemy.hp -= dmg;
+  sfx.hit();
+
+  pushCombatLog(`You hit ${combat.enemy.name} with ${w.name} for ${dmg} dmg.`, 'you');
+  updateCombatUI();
+
+  await sleep(320);
+  if (combat.enemy.hp <= 0) {
+    combat.busy = false;
+    await winCombat();
+    return;
+  }
+
+  // Enemy turn
+  const edmg = randInt(combat.enemy.dmg[0], combat.enemy.dmg[1]);
+  state.health -= edmg;
+  sfx.hurt();
+  pushCombatLog(`${combat.enemy.name} strikes back for ${edmg} dmg.`, 'them');
+  updateCombatUI();
+
+  await sleep(320);
+  combat.busy = false;
+  if (state.health <= 0) {
+    state.health = 0;
+    await loseCombat();
+  }
+}
+
+async function flee() {
+  if (!combat || combat.busy) return;
+  combat.busy = true;
+  if (Math.random() < 0.5) {
+    pushCombatLog('You slipped away into the crowd.', '');
+    sfx.travel();
+    updateCombatUI();
+    await sleep(500);
+    combat.busy = false;
+    closeCombat();
+  } else {
+    pushCombatLog('You tried to run — they caught you.', 'them');
+    updateCombatUI();
+    await sleep(320);
+    const edmg = randInt(combat.enemy.dmg[0], combat.enemy.dmg[1]);
+    state.health -= edmg;
+    sfx.hurt();
+    pushCombatLog(`${combat.enemy.name} hits you for ${edmg} dmg.`, 'them');
+    updateCombatUI();
+    await sleep(320);
+    combat.busy = false;
+    if (state.health <= 0) {
+      state.health = 0;
+      await loseCombat();
+    }
+  }
+}
+
+async function winCombat() {
+  const e = combat.enemy;
+  pushCombatLog(`${e.name} goes down.`, 'loot');
+  sfx.win();
+  updateCombatUI();
+  await sleep(550);
+
+  const loot = e.loot;
+  state.cash += loot;
+  pushCombatLog(`Looted ${fmt(loot)}.`, 'loot');
+
+  // Chance to find drugs or a weapon
+  if (Math.random() < 0.25) {
+    const d = pick(DRUGS);
+    const qty = Math.min(randInt(1, 3), spaceLeft());
+    if (qty > 0) {
+      state.inventory[d.id] += qty;
+      pushCombatLog(`Found ${qty} × ${d.name} on them.`, 'loot');
+    }
+  }
+
+  // Small heal after a fight
+  const heal = 10;
+  state.health = Math.min(state.maxHealth, state.health + heal);
+  pushCombatLog(`You catch your breath. +${heal} HP.`, 'loot');
+
+  updateCombatUI();
+  await sleep(1100);
+  closeCombat();
+  renderAll();
+  checkWin();
+}
+
+async function loseCombat() {
+  pushCombatLog('Everything goes dark...', 'them');
+  sfx.lose();
+  updateCombatUI();
+  await sleep(900);
+  closeCombat();
+  gameOver(false);
+}
+
+function updateCombatUI() {
+  if (!combat) return;
+  const e = combat.enemy;
+  const epct = Math.max(0, (e.hp / e.maxHp) * 100);
+  const ppct = Math.max(0, (state.health / state.maxHealth) * 100);
+  const pLow = state.health < state.maxHealth * 0.35;
+
+  const eFill = document.querySelector('.hp-fill.enemy');
+  const pFill = document.querySelector('.hp-fill:not(.enemy)');
+  if (eFill) eFill.style.width = epct + '%';
+  if (pFill) {
+    pFill.style.width = ppct + '%';
+    pFill.classList.toggle('low', pLow);
+  }
+
+  const nums = document.querySelectorAll('.hp-num');
+  if (nums[0]) nums[0].textContent = Math.max(0, e.hp) + '/' + e.maxHp;
+  if (nums[1]) nums[1].textContent = Math.max(0, state.health) + '/' + state.maxHealth;
+
+  const clog = document.getElementById('combatLog');
+  if (clog) {
+    clog.innerHTML = combat.log.slice(-6).map(l => `<div class="${l.cls || ''}">${l.text}</div>`).join('');
+    clog.scrollTop = clog.scrollHeight;
+  }
+}
+
+function closeCombat() {
+  combat = null;
+  hideModal();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODAL
+   ═══════════════════════════════════════════════════════════════ */
+function showModal(legend, bodyHtml) {
+  $('#modalLegend').textContent = legend;
+  $('#modalBody').innerHTML = bodyHtml;
+  $('#modal').classList.add('show');
+}
+function hideModal() {
+  $('#modal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WIN / LOSE
+   ═══════════════════════════════════════════════════════════════ */
+function checkWin() {
+  if (state.won || state.gameOver) return;
+  if (state.debt <= 0 && state.cash >= WIN_CASH) {
+    state.won = true;
+    state.gameOver = true;
+    sfx.jackpot();
+    log('You retired rich. The streets remember your name.', 'good');
+    showGameOver(true);
+  }
+}
+
+function gameOver(won) {
+  state.gameOver = true;
+  state.won = won;
+  showGameOver(won);
+}
+
+function showGameOver(won) {
+  const title = won ? 'YOU WIN' : 'GAME OVER';
+  const html = won
+    ? `<div style="text-align:center;padding:8px 0">
+         <div style="font-size:42px;margin-bottom:8px">💰</div>
+         <div style="font-size:15px;font-weight:800;letter-spacing:.12em;color:var(--good);margin-bottom:8px">RETIRED CLEAN</div>
+         <div style="color:var(--text-dim);font-size:12px;margin-bottom:14px">
+           You cleared your debt and walked away with ${fmt(state.cash)}.<br>
+           Final net worth: <b style="color:var(--accent)">${fmt(netWorth())}</b><br>
+           Survived ${state.day} days on the street.
+         </div>
+         <button class="big-btn primary" id="restartBtn">Play Again</button>
+       </div>`
+    : `<div style="text-align:center;padding:8px 0">
+         <div style="font-size:42px;margin-bottom:8px">💀</div>
+         <div style="font-size:15px;font-weight:800;letter-spacing:.12em;color:var(--bad);margin-bottom:8px">YOU DIED</div>
+         <div style="color:var(--text-dim);font-size:12px;margin-bottom:14px">
+           The streets took everything.<br>
+           Final net worth: <b style="color:var(--bad)">${fmt(netWorth())}</b><br>
+           Survived ${state.day} days.
+         </div>
+         <button class="big-btn primary" id="restartBtn">Play Again</button>
+       </div>`;
+  showModal(title, html);
+  const btn = document.getElementById('restartBtn');
+  if (btn) btn.addEventListener('click', () => {
+    hideModal();
+    resetGame();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════════════════════════════ */
+function resetGame() {
+  Object.assign(state, {
+    cash: 2000,
+    debt: 5000,
+    health: 100,
+    maxHealth: 100,
+    capacity: 50,
+    coatTier: 0,
+    day: 1,
+    loc: 0,
+    inventory: { weed:0, coke:0, heroin:0, crack:0, meth:0, ecstasy:0 },
+    weapons: ['knife'],
+    prices: {},
+    prevPrices: {},
+    qty: 'max',
+    gameOver: false,
+    won: false,
+  });
+  combat = null;
+  $('#logBox').innerHTML = '';
+  genPrices();
+  log('You hit the streets with $2,000 and a knife.', 'day');
+  log('You owe the loan shark $5,000. Interest hits every 7 days.', 'warn');
+  log('Buy low, sell high, and don\'t get killed.', 'info');
+  renderAll();
+  updateQtyButtons();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME
+   ═══════════════════════════════════════════════════════════════ */
+let theme = 'dark';
+function applyTheme(t) {
+  theme = t;
+  document.body.classList.toggle('light', t === 'light');
+  const btn = $('#themeBtn');
+  btn.textContent = t === 'light' ? '☾ DARK' : '☀ LIGHT';
+  try { localStorage.setItem('dopewars-theme', t); } catch(e) {}
+}
+function loadTheme() {
+  let t = 'dark';
+  try { t = localStorage.getItem('dopewars-theme') || 'dark'; } catch(e) {}
+  applyTheme(t);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   QTY BUTTONS
+   ═══════════════════════════════════════════════════════════════ */
+function updateQtyButtons() {
+  $$('.qty-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.qty === String(state.qty));
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   EVENT WIRING
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button');
+  if (!t) return;
+
+  if (t.dataset.buy)    { buy(t.dataset.buy); return; }
+  if (t.dataset.sell)   { sell(t.dataset.sell); return; }
+  if (t.dataset.weapon) { buyWeapon(t.dataset.weapon); return; }
+  if (t.dataset.coat)   { upgradeCoat(); return; }
+  if (t.dataset.clinic) { clinic(); return; }
+  if (t.dataset.attack) { playerAttack(t.dataset.attack); return; }
+  if (t.dataset.flee)   { flee(); return; }
+  if (t.dataset.qty) {
+    state.qty = t.dataset.qty === 'max' ? 'max' : parseInt(t.dataset.qty, 10);
+    updateQtyButtons();
+    sfx.ui();
+    return;
+  }
+});
+
+$('#themeBtn').addEventListener('click', () => {
+  sfx.ui();
+  applyTheme(theme === 'light' ? 'dark' : 'light');
+});
+
+$('#muteBtn').addEventListener('click', () => {
+  Audio.init();
+  state.muted = !state.muted;
+  $('#muteBtn').textContent = state.muted ? '🔇' : '🔊';
+  if (!state.muted) sfx.ui();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (state.gameOver) return;
+  if (e.key === 'r' || e.key === 'R') { if (!combat) rest(); }
+  if (e.key === 'p' || e.key === 'P') { if (!combat) payDebt(); }
+  if (e.key === 'Escape' && combat) { /* no escape from a fight */ }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════════════ */
+loadTheme();
+genPrices();
+log('You hit the streets with $2,000 and a knife.', 'day');
+log('You owe the loan shark $5,000. Interest hits every 7 days.', 'warn');
+log('Buy low, sell high, and don\'t get killed.', 'info');
+updateQtyButtons();
+renderAll();
+
+})();
+</script>
+</body>
+</html>

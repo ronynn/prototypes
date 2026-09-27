@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>夜駆け (Yogake) / Night Runner</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; cursor: pointer; touch-action: none; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 22px; left: 26px; z-index: 10; color: #8a7a9e; font-size: 13px; letter-spacing: 3px; pointer-events: none; text-shadow: 0 0 12px #000, 0 0 4px #000; }
+  #hud .dist { color: #f4eaff; font-size: 32px; letter-spacing: 1px; font-weight: bold; line-height: 1; text-shadow: 0 0 20px rgba(200,160,255,0.5), 0 0 8px #000; }
+  #hud .spd { margin-top: 5px; font-size: 11px; color: #6f6086; letter-spacing: 2px; }
+  #hud-right { position: fixed; top: 22px; right: 26px; z-index: 10; text-align: right; pointer-events: none; text-shadow: 0 0 12px #000, 0 0 4px #000; }
+  #hud-right .label { font-size: 10px; color: #6f6086; letter-spacing: 5px; margin-bottom: 4px; }
+  #hud-right .value { font-size: 24px; color: #ff8ab0; letter-spacing: 1px; font-weight: bold; line-height: 1; text-shadow: 0 0 22px rgba(255,138,176,0.55), 0 0 8px #000; }
+  #brand { position: fixed; bottom: 14px; left: 26px; z-index: 10; color: #4a3a5e; font-size: 13px; letter-spacing: 3px; pointer-events: none; text-shadow: 0 0 8px #000; }
+  #brand .en { font-size: 9px; letter-spacing: 5px; color: #3a2e4a; margin-left: 8px; }
+  #overlay { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; pointer-events: none; background: radial-gradient(ellipse at center, rgba(20,10,30,0.25) 0%, rgba(0,0,0,0.88) 100%); opacity: 0; transition: opacity 0.35s ease; }
+  #overlay.show { opacity: 1; }
+  #overlay h1 { font-size: 48px; letter-spacing: 14px; font-weight: normal; color: #f4eaff; margin-bottom: 2px; text-shadow: 0 0 40px rgba(255,107,157,0.5), 0 0 80px rgba(255,107,157,0.2); }
+  #overlay .brand-line { font-size: 18px; color: #b09ac8; letter-spacing: 4px; margin-bottom: 26px; text-shadow: 0 0 12px #000; }
+  #overlay .label { color: #8a7a9e; font-size: 11px; letter-spacing: 6px; }
+  #overlay .final { color: #ff8ab0; font-size: 46px; letter-spacing: 2px; font-weight: bold; line-height: 1; text-shadow: 0 0 30px rgba(255,138,176,0.6); }
+  #overlay .hint { margin-top: 30px; color: #6f6086; font-size: 11px; letter-spacing: 4px; animation: bl 1.3s steps(2, start) infinite; }
+  @keyframes bl { 0%,100% { opacity: 1 } 50% { opacity: 0.2 } }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="dist"><span id="dist">0</span> m</div>
+  <div class="spd" id="spd">SPEED 0</div>
+</div>
+
+<div id="hud-right">
+  <div class="label">BEST</div>
+  <div class="value" id="best">0 m</div>
+</div>
+
+<div id="overlay">
+  <h1 id="overTitle">GAME OVER</h1>
+  <div class="brand-line">夜駆け (Yogake) / Night Runner</div>
+  <div class="label">DISTANCE</div>
+  <div class="final" id="finalDist">0 m</div>
+  <div class="hint">PRESS SPACE OR TAP TO RUN AGAIN</div>
+</div>
+
+<div id="brand">夜駆け (Yogake) <span class="en">NIGHT RUNNER</span></div>
+
+<script src="lib/pixi.js"></script>
+<script>
+"use strict";
+
+const W = 1024;
+const H = 576;
+const PLAYER_X = 320;
+const PW = 22;
+const PH = 42;
+
+const GRAVITY = 2600;
+const JUMP_V = -900;
+const JUMP_CUT = -300;
+const COYOTE = 0.10;
+const BUFFER = 0.12;
+
+const BASE_SPEED = 380;
+const MAX_SPEED = 1100;
+const ACCEL = 13;
+
+const TOP_MIN = 230;
+const TOP_MAX = 450;
+
+const GEN_MARGIN = 260;
+const CULL_MARGIN = 340;
+
+const SHADOW_SPAWN_X = -220;
+const SHADOW_LIFETIME = 6.0;
+const SHADOW_WARN_TIME = 1.8;
+const SHADOW_MIN_DISTANCE = 300;
+const SHADOW_COOLDOWN_MIN = 16;
+const SHADOW_COOLDOWN_MAX = 26;
+const SHADOW_PUSH_X = 520;
+const SHADOW_PUSH_Y = -260;
+const SHADOW_SLOW_FACTOR = 0.55;
+const SHADOW_SLOW_RADIUS = 260;
+
+const COL = {
+  far: 0x251838,
+  farEdge: 0x382a4e,
+  mid: 0x140d20,
+  midEdge: 0x241736,
+  near: 0x060310,
+  nearEdge: 0x4a3a5e,
+  nearSide: 0x4a3a5e,
+  windowLit: 0xffb347,
+  windowDark: 0x0a0612,
+  player: 0xffffff,
+  dust: 0xc8b4dc
+};
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+
+function makeRadialTexture(size, inner, mid, outer)
+{
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grad.addColorStop(0.00, inner);
+  grad.addColorStop(0.42, mid);
+  grad.addColorStop(1.00, outer);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, size, size);
+  return PIXI.Texture.from(c);
+}
+
+const Sfx = {
+  ctx: null,
+  master: null,
+  drone: null,
+
+  ensure()
+  {
+    if (this.ctx) return true;
+    try
+    {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      this.ctx = new AC({ latencyHint: "interactive" });
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.34;
+      const comp = this.ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.knee.value = 24;
+      comp.ratio.value = 6;
+      this.master.connect(comp).connect(this.ctx.destination);
+      return true;
+    }
+    catch (e) { return false; }
+  },
+
+  resume()
+  {
+    if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+  },
+
+  noiseBuffer(dur)
+  {
+    const len = Math.floor(this.ctx.sampleRate * dur);
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  },
+
+  tone(o)
+  {
+    const t = this.ctx.currentTime + (o.delay || 0);
+    const dur = o.dur || 0.2;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = o.type || "sine";
+    osc.frequency.setValueAtTime(o.f0, t);
+    if (o.f1) osc.frequency.exponentialRampToValueAtTime(o.f1, t + dur);
+
+    let tail = osc;
+    if (o.filter)
+    {
+      const f = this.ctx.createBiquadFilter();
+      f.type = o.filter;
+      f.frequency.setValueAtTime(o.filterF0 || 1000, t);
+      if (o.filterF1) f.frequency.exponentialRampToValueAtTime(o.filterF1, t + dur);
+      if (o.filterQ) f.Q.value = o.filterQ;
+      tail.connect(f);
+      tail = f;
+    }
+
+    const attack = o.attack || 0.006;
+    const gain = o.gain || 0.2;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(gain, t + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    tail.connect(g).connect(this.master);
+
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  },
+
+  noise(o)
+  {
+    const t = this.ctx.currentTime;
+    const dur = o.dur || 0.08;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer(dur);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(o.gain || 0.1, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    let tail = src;
+    if (o.filter)
+    {
+      const f = this.ctx.createBiquadFilter();
+      f.type = o.filter;
+      f.frequency.value = o.filterFreq || 1000;
+      if (o.filterQ) f.Q.value = o.filterQ;
+      tail.connect(f);
+      tail = f;
+    }
+    tail.connect(g).connect(this.master);
+    src.start(t);
+    src.stop(t + dur + 0.05);
+  },
+
+  jump()
+  {
+    if (!this.ensure()) return;
+    this.resume();
+    this.tone({ type: "sawtooth", f0: 200, f1: 520, dur: 0.20, gain: 0.20, filter: "lowpass", filterF0: 900, filterF1: 2400, filterQ: 2 });
+    this.tone({ type: "square", f0: 380, f1: 780, dur: 0.16, gain: 0.13 });
+    this.tone({ type: "sine", f0: 110, f1: 70, dur: 0.18, gain: 0.16 });
+    this.noise({ dur: 0.08, gain: 0.09, filter: "bandpass", filterFreq: 1800, filterQ: 1.2 });
+  },
+
+  death()
+  {
+    if (!this.ensure()) return;
+    this.tone({ type: "sawtooth", f0: 420, f1: 55, dur: 0.80, gain: 0.20, attack: 0.02, filter: "lowpass", filterF0: 1800, filterF1: 300 });
+  },
+
+  shadowWarn()
+  {
+    if (!this.ensure()) return;
+    this.resume();
+    this.tone({ type: "triangle", f0: 990, f1: 620, dur: 0.17, gain: 0.16 });
+    this.tone({ type: "triangle", f0: 740, f1: 460, dur: 0.17, gain: 0.16, delay: 0.20 });
+  },
+
+  shadowImpact()
+  {
+    if (!this.ensure()) return;
+    this.tone({ type: "sawtooth", f0: 140, f1: 45, dur: 0.40, gain: 0.24, attack: 0.01 });
+  },
+
+  shadowStart()
+  {
+    if (!this.ensure() || this.drone) return;
+    const t = this.ctx.currentTime;
+    const o1 = this.ctx.createOscillator();
+    const o2 = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter();
+    o1.type = "sawtooth";
+    o1.frequency.value = 55;
+    o2.type = "sine";
+    o2.frequency.value = 82.5;
+    f.type = "lowpass";
+    f.frequency.value = 320;
+    f.Q.value = 3;
+    o1.connect(f);
+    o2.connect(f);
+    f.connect(g).connect(this.master);
+    o1.start();
+    o2.start();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.13, t + 0.5);
+    this.drone = [o1, o2, g];
+  },
+
+  shadowStop()
+  {
+    if (!this.drone) return;
+    const t = this.ctx.currentTime;
+    const o1 = this.drone[0];
+    const o2 = this.drone[1];
+    const g = this.drone[2];
+    g.gain.cancelScheduledValues(t);
+    g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    o1.stop(t + 0.6);
+    o2.stop(t + 0.6);
+    this.drone = null;
+  }
+};
+
+class Rain
+{
+  constructor(container)
+  {
+    this.gfx = new PIXI.Graphics();
+    container.addChild(this.gfx);
+    this.drops = [];
+    for (let i = 0; i < 110; i++)
+    {
+      this.drops.push(this.spawn(true));
+    }
+  }
+
+  spawn(initial)
+  {
+    return {
+      x: Math.random() * (W + 240) - 120,
+      y: initial ? Math.random() * H : -30 - Math.random() * 60,
+      len: 9 + Math.random() * 16,
+      speed: 620 + Math.random() * 420,
+      drift: -70 - Math.random() * 60
+    };
+  }
+
+  update(dt)
+  {
+    for (let i = 0; i < this.drops.length; i++)
+    {
+      const d = this.drops[i];
+      d.y += d.speed * dt;
+      d.x += d.drift * dt;
+      if (d.y > H + 30 || d.x < -140)
+      {
+        this.drops[i] = this.spawn(false);
+      }
+    }
+  }
+
+  draw()
+  {
+    const g = this.gfx;
+    g.clear();
+    for (let i = 0; i < this.drops.length; i++)
+    {
+      const d = this.drops[i];
+      const dx = (d.drift / d.speed) * d.len;
+      g.moveTo(d.x, d.y);
+      g.lineTo(d.x + dx, d.y + d.len);
+    }
+    g.stroke({ width: 1, color: 0xaaccff, alpha: 0.22 });
+  }
+}
+
+class Shadow
+{
+  constructor(game)
+  {
+    this.game = game;
+    this.x = SHADOW_SPAWN_X;
+    this.y = 300;
+    this.w = 26;
+    this.h = 52;
+    this.life = SHADOW_LIFETIME;
+    this.pulse = 0;
+    this.eyePhase = 0;
+    this.targetY = 300;
+    this.targetX = SHADOW_SPAWN_X;
+    this.fadeIn = 0;
+    this.hitCooldown = 0;
+  }
+
+  getAlpha()
+  {
+    return this.fadeIn * clamp(this.life / 0.6, 0, 1);
+  }
+
+  eyesOpen()
+  {
+    return Math.sin(this.eyePhase) > -0.85;
+  }
+
+  findTargetRoof()
+  {
+    const p = this.game.player;
+    let best = null;
+    let bestDist = Infinity;
+    for (const b of this.game.buildings)
+    {
+      if (b.x + b.w < this.x) continue;
+      if (b.x > p.x + 200) continue;
+      const d = Math.abs(b.x - p.x);
+      if (d < bestDist) { bestDist = d; best = b; }
+    }
+    return best;
+  }
+
+  update(dt)
+  {
+    this.life -= dt;
+    this.pulse += dt * 7;
+    this.eyePhase += dt * 2.3;
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
+    this.fadeIn = Math.min(1, this.fadeIn + dt * 3);
+    if (this.life <= 0) return false;
+
+    const roof = this.findTargetRoof();
+    if (roof)
+    {
+      this.targetX = roof.x + roof.w * 0.5 - this.w * 0.5;
+      this.targetY = roof.top - this.h;
+    }
+    else
+    {
+      const p = this.game.player;
+      this.targetX = p.x - 80;
+      this.targetY = p.y;
+    }
+
+    const dtx = this.targetX - this.x;
+    const hSpeed = clamp(Math.abs(dtx) * 3.5, 80, 420);
+    this.x += Math.sign(dtx) * Math.min(hSpeed * dt, Math.abs(dtx));
+    this.y += (this.targetY - this.y) * Math.min(1, dt * 6);
+
+    const p = this.game.player;
+    const dx = (p.x + p.w * 0.5) - (this.x + this.w * 0.5);
+    const dy = (p.y + p.h * 0.5) - (this.y + this.h * 0.5);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < SHADOW_SLOW_RADIUS)
+    {
+      this.game.shadowSlow = Math.max(this.game.shadowSlow, (1 - dist / SHADOW_SLOW_RADIUS) * SHADOW_SLOW_FACTOR);
+    }
+
+    if (this.hitCooldown <= 0 &&
+        this.x + this.w > p.x && this.x < p.x + p.w &&
+        this.y + this.h > p.y && this.y < p.y + p.h)
+    {
+      const dir = (p.x + p.w * 0.5) < (this.x + this.w * 0.5) ? -1 : 1;
+      p.vx = dir * SHADOW_PUSH_X;
+      p.vy = Math.min(p.vy, SHADOW_PUSH_Y);
+      p.grounded = false;
+      this.hitCooldown = 0.4;
+      this.game.shake = Math.max(this.game.shake, 22);
+      this.game.flash = 0.5;
+      this.game.flashCol = 0xff1e28;
+      Sfx.shadowImpact();
+    }
+    return true;
+  }
+
+  pushBack(px)
+  {
+    this.x -= px;
+  }
+}
+
+class Game
+{
+  constructor()
+  {
+    this.buildings = [];
+    this.farLayer = [];
+    this.midLayer = [];
+    this.particles = [];
+    this.stars = [];
+    this.speedLines = [];
+
+    this.player = { x: PLAYER_X, y: 0, vx: 0, w: PW, h: PH, vy: 0, grounded: true, coyote: 0 };
+
+    this.best = this.loadBest();
+    this.speed = BASE_SPEED;
+    this.distance = 0;
+    this.alive = true;
+    this.runPhase = 0;
+    this.shake = 0;
+    this.deathTimer = 0;
+    this.elapsed = 0;
+    this.flash = 0;
+    this.flashCol = 0xffffff;
+
+    this.jumpHeld = false;
+    this.jumpBuffer = 0;
+
+    this.shadow = null;
+    this.shadowWarnTimer = 0;
+    this.shadowCooldown = 4;
+    this.shadowSlow = 0;
+
+    this.lastDistM = -1;
+    this.lastSpeedVal = -1;
+
+    this.lastTime = performance.now();
+    this.acc = 0;
+    this.step = 1 / 60;
+
+    this.init();
+  }
+
+  loadBest()
+  {
+    try { return parseInt(localStorage.getItem("nightrunner.best") || "0", 10) || 0; }
+    catch (e) { return 0; }
+  }
+
+  saveBest(v)
+  {
+    try { localStorage.setItem("nightrunner.best", String(v)); }
+    catch (e) {}
+  }
+
+  refreshBestHud()
+  {
+    document.getElementById("best").textContent = this.best + " m";
+  }
+
+  async init()
+  {
+    if (typeof PIXI === "undefined")
+    {
+      document.body.innerHTML = "<div style='color:#fff;padding:40px;font-family:system-ui'>PIXI failed to load from lib/pixi.js</div>";
+      return;
+    }
+
+    this.app = new PIXI.Application();
+    await this.app.init({
+      width: W,
+      height: H,
+      background: 0x000000,
+      antialias: false,
+      resolution: Math.min(window.devicePixelRatio || 1, 1.5),
+      autoDensity: true,
+      preference: "webgl",
+      powerPreference: "high-performance"
+    });
+
+    document.body.appendChild(this.app.canvas);
+    this.app.canvas.style.width = "100%";
+    this.app.canvas.style.height = "100%";
+    this.app.canvas.style.objectFit = "contain";
+
+    this.world = new PIXI.Container();
+    this.app.stage.addChild(this.world);
+
+    this.bgLayer = new PIXI.Container();
+    this.world.addChild(this.bgLayer);
+
+    this.farContainer = new PIXI.Container();
+    this.midContainer = new PIXI.Container();
+    this.nearContainer = new PIXI.Container();
+    this.world.addChild(this.farContainer, this.midContainer, this.nearContainer);
+
+    this.particleContainer = new PIXI.Container();
+    this.world.addChild(this.particleContainer);
+
+    this.shadowContainer = new PIXI.Container();
+    this.world.addChild(this.shadowContainer);
+
+    this.playerContainer = new PIXI.Container();
+    this.world.addChild(this.playerContainer);
+
+    this.rainLayer = new PIXI.Container();
+    this.world.addChild(this.rainLayer);
+
+    this.fxContainer = new PIXI.Container();
+    this.world.addChild(this.fxContainer);
+
+    this.playerAuraTex = makeRadialTexture(256, "rgba(190, 210, 255, 0.85)", "rgba(160, 180, 255, 0.30)", "rgba(120, 150, 255, 0)");
+    this.shadowAuraTex = makeRadialTexture(256, "rgba(255, 40, 60, 0.75)", "rgba(180, 10, 30, 0.30)", "rgba(120, 0, 20, 0)");
+
+    this.buildSky();
+    this.buildStars();
+    this.buildPlayer();
+    this.rain = new Rain(this.rainLayer);
+    this.bindInput();
+
+    this.reset();
+    this.refreshBestHud();
+    requestAnimationFrame(t => this.loop(t));
+  }
+
+  buildSky()
+  {
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d");
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0.00, "#05051a");
+    grad.addColorStop(0.42, "#14092a");
+    grad.addColorStop(0.78, "#31173d");
+    grad.addColorStop(1.00, "#4a1f42");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+
+    const cx = 700;
+    const cy = 400;
+    const r = 110;
+    const sunGrad = g.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 4.5);
+    sunGrad.addColorStop(0.00, "rgba(255, 138, 176, 0.45)");
+    sunGrad.addColorStop(0.35, "rgba(255, 107, 157, 0.14)");
+    sunGrad.addColorStop(1.00, "rgba(255, 107, 157, 0)");
+    g.fillStyle = sunGrad;
+    g.fillRect(cx - r * 5, cy - r * 5, r * 10, r * 10);
+
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fillStyle = "#ff8ab0";
+    g.fill();
+
+    g.beginPath();
+    g.arc(cx - r * 0.18, cy - r * 0.18, r * 0.72, 0, Math.PI * 2);
+    g.fillStyle = "rgba(255, 210, 230, 0.55)";
+    g.fill();
+
+    g.beginPath();
+    g.arc(cx - r * 0.28, cy - r * 0.28, r * 0.42, 0, Math.PI * 2);
+    g.fillStyle = "rgba(255, 235, 245, 0.75)";
+    g.fill();
+
+    this.skySprite = new PIXI.Sprite(PIXI.Texture.from(c));
+    this.bgLayer.addChild(this.skySprite);
+  }
+
+  buildStars()
+  {
+    this.starGraphics = new PIXI.Graphics();
+    this.bgLayer.addChild(this.starGraphics);
+    for (let i = 0; i < 70; i++)
+    {
+      this.stars.push({
+        x: Math.random() * W,
+        y: Math.random() * 300,
+        s: Math.random() < 0.15 ? 2 : 1,
+        a: 0.25 + Math.random() * 0.65,
+        tw: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  buildPlayer()
+  {
+    this.playerAura = new PIXI.Sprite(this.playerAuraTex);
+    this.playerAura.anchor.set(0.5);
+    this.playerAura.width = 160;
+    this.playerAura.height = 160;
+    this.playerAura.x = PW * 0.5;
+    this.playerAura.y = PH * 0.5;
+    this.playerContainer.addChild(this.playerAura);
+
+    this.playerGfx = new PIXI.Graphics();
+    this.playerContainer.addChild(this.playerGfx);
+
+    this.playerBand = new PIXI.Graphics();
+    this.playerContainer.addChild(this.playerBand);
+  }
+
+  drawPlayerGfx()
+  {
+    this.playerGfx.clear();
+    this.playerGfx.rect(0, 0, PW, PH).fill(this.alive ? COL.player : 0xffb0c0);
+    this.playerBand.clear();
+    this.playerBand.rect(3, 8, PW - 6, 6).fill({ color: 0x3c1450, alpha: 0.55 });
+  }
+
+  reset()
+  {
+    Sfx.shadowStop();
+    this.speed = BASE_SPEED;
+    this.distance = 0;
+    this.alive = true;
+    this.runPhase = 0;
+    this.shake = 0;
+    this.deathTimer = 0;
+    this.elapsed = 0;
+    this.flash = 0;
+    this.jumpBuffer = 0;
+    this.particles.length = 0;
+    this.buildings.length = 0;
+    this.farLayer.length = 0;
+    this.midLayer.length = 0;
+
+    this.farContainer.removeChildren();
+    this.midContainer.removeChildren();
+    this.nearContainer.removeChildren();
+    this.particleContainer.removeChildren();
+    this.shadowContainer.removeChildren();
+
+    this.shadow = null;
+    this.shadowWarnTimer = 0;
+    this.shadowCooldown = 4;
+    this.shadowSlow = 0;
+    this.lastDistM = -1;
+    this.lastSpeedVal = -1;
+
+    this.addBuilding(-200, 1400, 400, true);
+    this.generateAhead();
+
+    this.makeLayer(this.farLayer, this.farContainer, 80,
+      { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 });
+    this.makeLayer(this.midLayer, this.midContainer, 80,
+      { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 });
+
+    const p = this.player;
+    p.x = PLAYER_X;
+    p.y = 400 - PH;
+    p.vy = 0;
+    p.vx = 0;
+    p.grounded = true;
+    p.coyote = 0;
+
+    this.buildSpeedLines();
+    this.drawPlayerGfx();
+
+    document.getElementById("overlay").classList.remove("show");
+    document.getElementById("dist").textContent = "0";
+    document.getElementById("spd").textContent = "SPEED 0";
+  }
+
+  buildSpeedLines()
+  {
+    this.speedLines.length = 0;
+    for (let i = 0; i < 20; i++)
+    {
+      const seed = i * 7.3141;
+      this.speedLines.push({
+        y: 50 + ((seed * 0.137) % 1) * (H - 100),
+        speedFactor: 0.7 + (i % 3) * 0.35,
+        phaseOffset: seed * 53,
+        baseLen: 40 + (i % 4) * 22
+      });
+    }
+  }
+
+  makeWindows(w, top, dense)
+  {
+    const wins = [];
+    if (dense)
+    {
+      const cols = Math.max(1, Math.floor((w - 36) / 34));
+      const rows = Math.max(1, Math.floor((H - top - 70) / 42));
+      for (let c = 0; c < cols; c++)
+      {
+        for (let r = 0; r < rows; r++)
+        {
+          if (Math.random() < 0.40)
+          {
+            wins.push({ x: 18 + c * 34, y: 30 + r * 42, w: 12, h: 16, lit: Math.random() < 0.55 });
+          }
+        }
+      }
+    }
+    else
+    {
+      const n = Math.floor(Math.random() * 5) + 1;
+      const maxY = Math.max(1, H - top - 70);
+      for (let i = 0; i < n; i++)
+      {
+        wins.push({
+          x: 10 + Math.random() * Math.max(1, w - 24),
+          y: 20 + Math.random() * maxY,
+          w: 5 + Math.floor(Math.random() * 4),
+          h: 6 + Math.floor(Math.random() * 4),
+          lit: Math.random() < 0.55
+        });
+      }
+    }
+    return wins;
+  }
+
+  addBuilding(x, w, top, dense)
+  {
+    const b = { x: x, w: w, top: top, windows: this.makeWindows(w, top, dense !== false) };
+    this.buildings.push(b);
+    this.renderBuilding(b, this.nearContainer, true);
+    return b;
+  }
+
+  renderBuilding(b, container, isNear)
+  {
+    if (!b.gfx)
+    {
+      b.gfx = new PIXI.Graphics();
+      container.addChild(b.gfx);
+    }
+    const g = b.gfx;
+    g.clear();
+    g.x = b.x;
+
+    g.rect(0, b.top, b.w, H - b.top + 8).fill(isNear ? COL.near : COL.mid);
+
+    if (isNear)
+    {
+      g.rect(0, b.top, b.w, 2).fill(COL.nearEdge);
+      g.rect(0, b.top, 2, H - b.top).fill({ color: COL.nearSide, alpha: 0.35 });
+    }
+    else
+    {
+      g.rect(0, b.top, b.w, 3).fill(COL.midEdge);
+    }
+
+    const pad = isNear ? 3 : 2;
+    for (const w of b.windows)
+    {
+      const wy = b.top + w.y;
+      if (w.lit)
+      {
+        g.rect(w.x - pad, wy - pad, w.w + pad * 2, w.h + pad * 2).fill({ color: COL.windowLit, alpha: 0.18 });
+        g.rect(w.x, wy, w.w, w.h).fill(COL.windowLit);
+      }
+      else
+      {
+        g.rect(w.x, wy, w.w, w.h).fill(COL.windowDark);
+      }
+    }
+  }
+
+  generateAhead()
+  {
+    let last = this.buildings[this.buildings.length - 1];
+    if (!last) return;
+    const horizon = W + GEN_MARGIN;
+    let guard = 0;
+    while (last.x + last.w < horizon && guard++ < 60)
+    {
+      const reach = this.speed * (2 * Math.abs(JUMP_V) / GRAVITY);
+      const gap = reach * rnd(0.25, 0.68);
+      const t = gap / this.speed;
+      let maxRise = Math.abs(JUMP_V) * t - 0.5 * GRAVITY * t * t;
+      if (maxRise < 0) maxRise = 0;
+      maxRise *= 0.85;
+      const topChange = rnd(-95, maxRise);
+      const w = rnd(220, 520);
+      const top = clamp(last.top + topChange, TOP_MIN, TOP_MAX);
+      last = this.addBuilding(last.x + last.w + gap, w, top, true);
+    }
+  }
+
+  makeLayer(layer, container, count, cfg)
+  {
+    let x = -GEN_MARGIN - 400;
+    for (let i = 0; i < count; i++)
+    {
+      const w = rnd(cfg.minW, cfg.maxW);
+      const top = rnd(cfg.minTop, cfg.maxTop);
+      const b = { x: x, w: w, top: top, windows: this.makeWindows(w, top, false) };
+      layer.push(b);
+      this.renderBuilding(b, container, false);
+      x += w + rnd(cfg.gapMin, cfg.gapMax);
+    }
+  }
+
+  scrollLayer(layer, container, dx, cfg)
+  {
+    const cullLeft = -CULL_MARGIN - 500;
+    let maxR = -Infinity;
+    for (const b of layer) if (b.x + b.w > maxR) maxR = b.x + b.w;
+
+    for (const b of layer)
+    {
+      b.x -= dx;
+      if (b.x + b.w < cullLeft)
+      {
+        const w = rnd(cfg.minW, cfg.maxW);
+        const top = rnd(cfg.minTop, cfg.maxTop);
+        b.x = maxR + rnd(cfg.gapMin, cfg.gapMax);
+        b.w = w;
+        b.top = top;
+        b.windows = this.makeWindows(w, top, false);
+        this.renderBuilding(b, container, false);
+        maxR = b.x + b.w;
+      }
+      else if (b.gfx)
+      {
+        b.gfx.x = b.x;
+      }
+    }
+  }
+
+  die()
+  {
+    if (!this.alive) return;
+    this.alive = false;
+    this.deathTimer = 0;
+    this.shake = 16;
+    this.flash = 0.6;
+    this.flashCol = 0xffffff;
+    this.drawPlayerGfx();
+    Sfx.death();
+  }
+
+  spawnDust(count, scale)
+  {
+    const p = this.player;
+    for (let i = 0; i < count; i++)
+    {
+      const g = new PIXI.Graphics();
+      g.rect(0, 0, 1, 1).fill(COL.dust);
+      g.x = p.x + Math.random() * p.w;
+      g.y = p.y + p.h - Math.random() * 4;
+      g.scale.set(rnd(1.5, 3.2));
+      this.particleContainer.addChild(g);
+      this.particles.push({
+        gfx: g,
+        x: g.x,
+        y: g.y,
+        vx: -rnd(40, 160) * scale,
+        vy: -rnd(20, 130) * scale,
+        life: rnd(0.30, 0.75),
+        max: 0.75
+      });
+    }
+  }
+
+  updateParticles(dt, dx)
+  {
+    const parts = this.particles;
+    for (let i = parts.length - 1; i >= 0; i--)
+    {
+      const pt = parts[i];
+      pt.life -= dt;
+      if (pt.life <= 0)
+      {
+        this.particleContainer.removeChild(pt.gfx);
+        pt.gfx.destroy();
+        parts[i] = parts[parts.length - 1];
+        parts.pop();
+        continue;
+      }
+      pt.vy += 500 * dt;
+      pt.x += (pt.vx - dx) * dt;
+      pt.y += pt.vy * dt;
+      pt.gfx.x = pt.x;
+      pt.gfx.y = pt.y;
+      pt.gfx.alpha = pt.life / pt.max;
+    }
+  }
+
+  update(dt)
+  {
+    this.elapsed += dt;
+    this.shake = Math.max(0, this.shake - dt * 45);
+    this.flash = Math.max(0, this.flash - dt * 2.6);
+    const p = this.player;
+
+    this.rain.update(dt);
+
+    if (!this.alive)
+    {
+      this.deathTimer += dt;
+      const slowFactor = Math.max(0, 1 - this.deathTimer * 2.2);
+      const slowDx = this.speed * dt * slowFactor;
+
+      for (const b of this.buildings)
+      {
+        b.x -= slowDx;
+        if (b.gfx) b.gfx.x = b.x;
+      }
+
+      this.scrollLayer(this.farLayer, this.farContainer, slowDx * 0.10,
+        { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 });
+      this.scrollLayer(this.midLayer, this.midContainer, slowDx * 0.30,
+        { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 });
+
+      p.vy += GRAVITY * dt;
+      p.y += p.vy * dt;
+      p.x += 60 * dt;
+      this.updateParticles(dt, slowDx);
+      this.playerContainer.x = p.x;
+      this.playerContainer.y = p.y;
+
+      if (this.deathTimer > 0.7)
+      {
+        const ov = document.getElementById("overlay");
+        if (!ov.classList.contains("show"))
+        {
+          const metres = Math.floor(this.distance / 40);
+          document.getElementById("finalDist").textContent = metres + " m";
+          if (metres > this.best)
+          {
+            this.best = metres;
+            this.saveBest(metres);
+            this.refreshBestHud();
+          }
+          ov.classList.add("show");
+        }
+      }
+      return;
+    }
+
+    this.shadowSlow = 0;
+    const targetAccel = ACCEL * (1 - this.shadowSlow);
+    this.speed = Math.min(MAX_SPEED, this.speed + targetAccel * dt);
+    this.distance += this.speed * dt;
+    const dx = this.speed * dt;
+
+    this.scrollLayer(this.farLayer, this.farContainer, dx * 0.10,
+      { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 });
+    this.scrollLayer(this.midLayer, this.midContainer, dx * 0.30,
+      { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 });
+
+    for (const b of this.buildings)
+    {
+      b.x -= dx;
+      if (b.gfx) b.gfx.x = b.x;
+    }
+
+    while (this.buildings.length && this.buildings[0].x + this.buildings[0].w < -CULL_MARGIN - 700)
+    {
+      const removed = this.buildings.shift();
+      if (removed.gfx)
+      {
+        this.nearContainer.removeChild(removed.gfx);
+        removed.gfx.destroy();
+      }
+    }
+    this.generateAhead();
+
+    if (p.vx !== 0)
+    {
+      const decay = Math.min(1, (p.grounded ? 6 : 1.6) * dt);
+      if (Math.abs(p.vx) < 4) p.vx = 0;
+      else p.vx *= (1 - decay);
+    }
+    p.x += p.vx * dt;
+    p.x = clamp(p.x, PLAYER_X - 220, PLAYER_X + 140);
+
+    if (this.jumpBuffer > 0) this.jumpBuffer -= dt;
+    if (this.jumpBuffer > 0 && (p.grounded || p.coyote > 0))
+    {
+      p.vy = JUMP_V;
+      p.grounded = false;
+      p.coyote = 0;
+      this.jumpBuffer = 0;
+      this.spawnDust(9, 1.2);
+      Sfx.jump();
+      if (this.shadow) this.shadow.pushBack(110);
+    }
+    if (!this.jumpHeld && p.vy < JUMP_CUT) p.vy = JUMP_CUT;
+
+    if (p.grounded)
+    {
+      p.vy = 0;
+      p.coyote = COYOTE;
+      let supported = false;
+      for (const b of this.buildings)
+      {
+        if (p.x + p.w <= b.x || p.x >= b.x + b.w) continue;
+        if (Math.abs((p.y + p.h) - b.top) < 3) { supported = true; break; }
+      }
+      if (!supported) { p.grounded = false; p.vy = 0; }
+    }
+
+    if (!p.grounded)
+    {
+      p.coyote -= dt;
+      p.vy += GRAVITY * dt;
+      const prevFeet = p.y + p.h;
+      p.y += p.vy * dt;
+      const feet = p.y + p.h;
+      for (const b of this.buildings)
+      {
+        if (p.x + p.w <= b.x || p.x >= b.x + b.w) continue;
+        if (feet <= b.top) continue;
+        if (p.vy >= 0 && prevFeet <= b.top + 4)
+        {
+          const impact = p.vy;
+          p.y = b.top - p.h;
+          p.vy = 0;
+          p.grounded = true;
+          this.spawnDust(10, clamp(impact / 800, 0.6, 1.8));
+          this.shake = Math.max(this.shake, clamp(impact / 170, 2, 11));
+          break;
+        }
+        else
+        {
+          this.die();
+          break;
+        }
+      }
+    }
+
+    if (p.y > H + 120 && this.alive) this.die();
+
+    if (p.grounded)
+    {
+      this.runPhase += dt * this.speed * 0.032;
+      if (Math.sin(this.runPhase) > 0.95) this.spawnDust(1, 0.55);
+    }
+
+    this.updateParticles(dt, dx);
+    this.updateShadow(dt);
+
+    this.playerContainer.x = p.x;
+    this.playerContainer.y = p.y;
+
+    const m = Math.floor(this.distance / 40);
+    if (m !== this.lastDistM)
+    {
+      document.getElementById("dist").textContent = m;
+      this.lastDistM = m;
+    }
+    const s = Math.round(this.speed);
+    if (s !== this.lastSpeedVal)
+    {
+      document.getElementById("spd").textContent = "SPEED " + s;
+      this.lastSpeedVal = s;
+    }
+  }
+
+  updateShadow(dt)
+  {
+    if (this.shadow)
+    {
+      if (!this.shadow.update(dt))
+      {
+        this.shadow = null;
+        Sfx.shadowStop();
+        this.shadowCooldown = rnd(SHADOW_COOLDOWN_MIN, SHADOW_COOLDOWN_MAX);
+      }
+      else
+      {
+        this.shadowContainer.x = this.shadow.x;
+        this.shadowContainer.y = this.shadow.y;
+        this.shadowContainer.alpha = this.shadow.getAlpha();
+        const s = 1 + Math.sin(this.shadow.pulse) * 0.12;
+        this.shadowAura.scale.set(s);
+        this.shadowEyes.visible = this.shadow.eyesOpen();
+      }
+      return;
+    }
+
+    if (this.shadowWarnTimer > 0)
+    {
+      this.shadowWarnTimer -= dt;
+      if (this.shadowWarnTimer <= 0)
+      {
+        this.shadow = new Shadow(this);
+        this.buildShadowGfx();
+        Sfx.shadowStart();
+      }
+      return;
+    }
+
+    if (this.shadowCooldown > 0) { this.shadowCooldown -= dt; return; }
+    if (this.distance < SHADOW_MIN_DISTANCE * 40) return;
+
+    if (Math.random() < dt * 0.033)
+    {
+      this.shadowWarnTimer = SHADOW_WARN_TIME;
+      Sfx.shadowWarn();
+    }
+  }
+
+  buildShadowGfx()
+  {
+    this.shadowContainer.removeChildren();
+
+    this.shadowAura = new PIXI.Sprite(this.shadowAuraTex);
+    this.shadowAura.anchor.set(0.5);
+    this.shadowAura.width = 170;
+    this.shadowAura.height = 170;
+    this.shadowAura.x = 13;
+    this.shadowAura.y = 26;
+    this.shadowContainer.addChild(this.shadowAura);
+
+    this.shadowGfx = new PIXI.Graphics();
+    this.shadowGfx.rect(0, 0, 26, 52).fill(0x000000);
+    this.shadowGfx.rect(0.5, 0.5, 25, 51).stroke({ width: 1.5, color: 0xff283c });
+    this.shadowContainer.addChild(this.shadowGfx);
+
+    this.shadowEyes = new PIXI.Graphics();
+    this.shadowEyes.rect(5, 14, 4, 3).fill(0xff2030);
+    this.shadowEyes.rect(17, 14, 4, 3).fill(0xff2030);
+    this.shadowContainer.addChild(this.shadowEyes);
+  }
+
+  render()
+  {
+    this.starGraphics.clear();
+    const t = this.elapsed * 1.6;
+    for (const st of this.stars)
+    {
+      const tw = 0.6 + 0.4 * Math.sin(t + st.tw);
+      this.starGraphics.rect(st.x, st.y, st.s, st.s).fill({ color: 0xc8d7ff, alpha: st.a * tw });
+    }
+
+    this.rain.draw();
+
+    this.fxContainer.removeChildren();
+
+    if (this.alive && this.speed > 520)
+    {
+      const intensity = (this.speed - 520) / (MAX_SPEED - 520);
+      if (intensity > 0.02)
+      {
+        const n = Math.floor(intensity * 18);
+        const period = W + 320;
+        const tt = this.elapsed * this.speed;
+        const g = new PIXI.Graphics();
+        for (let i = 0; i < n; i++)
+        {
+          const sl = this.speedLines[i];
+          const phase = (tt * sl.speedFactor + sl.phaseOffset) % period;
+          const x = W + 160 - phase;
+          g.rect(x, sl.y, sl.baseLen + intensity * 110, 1).fill({ color: 0xffffff, alpha: intensity * 0.18 });
+        }
+        this.fxContainer.addChild(g);
+      }
+    }
+
+    if (this.shadow || this.shadowWarnTimer > 0)
+    {
+      let intensity = 0;
+      if (this.shadow)
+      {
+        intensity = 0.18 + Math.sin(this.elapsed * 9) * 0.07;
+      }
+      else
+      {
+        const p = 1 - this.shadowWarnTimer / SHADOW_WARN_TIME;
+        intensity = p * 0.30 + Math.sin(this.elapsed * 18) * 0.07 * p;
+      }
+      const warn = new PIXI.Graphics();
+      warn.rect(0, 0, W, H).fill({ color: 0xff0014, alpha: clamp(intensity, 0, 1) });
+      this.fxContainer.addChild(warn);
+    }
+
+    if (this.flash > 0)
+    {
+      const f = new PIXI.Graphics();
+      f.rect(0, 0, W, H).fill({ color: this.flashCol, alpha: this.flash * 0.55 });
+      this.fxContainer.addChild(f);
+    }
+
+    if (this.shake > 0.15)
+    {
+      this.world.x = (Math.random() - 0.5) * this.shake;
+      this.world.y = (Math.random() - 0.5) * this.shake;
+    }
+    else
+    {
+      this.world.x = 0;
+      this.world.y = 0;
+    }
+  }
+
+  bindInput()
+  {
+    const jumpKeys = new Set(["Space", "ArrowUp", "KeyW", "Enter"]);
+    window.addEventListener("keydown", e =>
+    {
+      if (!jumpKeys.has(e.code)) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      this.press();
+    }, { passive: false });
+    window.addEventListener("keyup", e =>
+    {
+      if (!jumpKeys.has(e.code)) return;
+      e.preventDefault();
+      this.release();
+    }, { passive: false });
+    window.addEventListener("mousedown", e => { if (e.button === 0) this.press(); });
+    window.addEventListener("mouseup", e => { if (e.button === 0) this.release(); });
+    window.addEventListener("touchstart", e => { e.preventDefault(); this.press(); }, { passive: false });
+    window.addEventListener("touchend", e => { e.preventDefault(); this.release(); }, { passive: false });
+    window.addEventListener("touchcancel", () => this.release());
+    window.addEventListener("blur", () => this.release());
+  }
+
+  press()
+  {
+    Sfx.ensure();
+    Sfx.resume();
+    if (!this.alive)
+    {
+      if (this.deathTimer > 0.55) this.reset();
+      return;
+    }
+    if (!this.jumpHeld) this.jumpBuffer = BUFFER;
+    this.jumpHeld = true;
+  }
+
+  release()
+  {
+    this.jumpHeld = false;
+  }
+
+  loop(now)
+  {
+    let dt = (now - this.lastTime) / 1000;
+    this.lastTime = now;
+    if (dt > 0.1) dt = 0.1;
+    if (dt < 0) dt = 0;
+    this.acc += dt;
+    let steps = 0;
+    while (this.acc >= this.step && steps < 6)
+    {
+      this.update(this.step);
+      this.acc -= this.step;
+      steps++;
+    }
+    this.render();
+    requestAnimationFrame(t => this.loop(t));
+  }
+}
+
+window.addEventListener("load", () =>
+{
+  new Game();
+});
+</script>
+</body>
+</html>

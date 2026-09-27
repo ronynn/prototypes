@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chapter 1 – Noise & Magic</title>
+  <style>
+    body { margin: 0; display: flex; gap: 20px; flex-wrap: wrap; background: #1a1a2e; padding: 20px; }
+    .sketch-box { background: #16213e; padding: 15px; border-radius: 12px; }
+    h3 { color: #e0e0e0; font-family: sans-serif; margin: 0 0 10px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Wiggly Circle -->
+  <div class="sketch-box">
+    <h3>🌀 Wiggly Circle</h3>
+    <div id="p5-sketch1"></div>
+  </div>
+
+  <!-- Moving Terrain -->
+  <div class="sketch-box">
+    <h3>🏔️ Moving Terrain + Sound</h3>
+    <div id="p5-sketch2"></div>
+  </div>
+
+  <!-- Load p5 and Tone from your lib folder -->
+  <script src="lib/p5.js"></script>
+  <script src="lib/tone.js"></script>
+
+  <script>
+    // ------------------------------------------------------------
+    // SKETCH 1 – Wiggly circle with noise
+    // ------------------------------------------------------------
+    new p5(function(p) {
+      let x, y;
+      let t = 0;
+
+      p.setup = function() {
+        let canvas = p.createCanvas(300, 300);
+        canvas.parent('p5-sketch1');
+        x = p.width / 2;
+        y = p.height / 2;
+        p.background(30);
+      };
+
+      p.draw = function() {
+        p.background(30, 40, 60);
+
+        // Noise‑driven angle (0 → 4π)
+        let angle = p.noise(t) * p.TWO_PI;
+        let radius = 100;
+
+        // Orbit around centre
+        x = p.width/2 + p.cos(angle) * radius;
+        y = p.height/2 + p.sin(angle) * radius;
+
+        p.fill(255, 200, 100);
+        p.noStroke();
+        p.ellipse(x, y, 30, 30);
+
+        // Draw a faint trail
+        p.stroke(255, 255, 255, 30);
+        p.strokeWeight(1);
+        p.line(p.width/2, p.height/2, x, y);
+
+        t += 0.015;
+      };
+    });
+
+    // ------------------------------------------------------------
+    // SKETCH 2 – Moving terrain with Tone.js drone
+    // ------------------------------------------------------------
+    new p5(function(p) {
+      let t = 0;
+      let synth;
+
+      p.setup = function() {
+        let canvas = p.createCanvas(300, 300);
+        canvas.parent('p5-sketch2');
+        p.background(135, 206, 235);
+
+        // Create Tone synth
+        synth = new Tone.Synth({
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.2, release: 0.5 }
+        }).toDestination();
+        // Start audio context on first user click
+        p.mousePressed = function() {
+          if (Tone.context.state !== 'running') {
+            Tone.start();
+          }
+        };
+      };
+
+      p.draw = function() {
+        p.background(135, 206, 235); // sky
+
+        // Draw terrain
+        p.noFill();
+        p.stroke(34, 139, 34);
+        p.strokeWeight(3);
+        p.beginShape();
+        for (let x = 0; x <= p.width; x += 2) {
+          let y = p.noise(x * 0.01, t) * p.height;
+          p.vertex(x, y);
+        }
+        p.endShape();
+
+        // Map the noise at the centre to a frequency
+        let n = p.noise(p.width/2 * 0.01, t);
+        let freq = p.map(n, 0, 1, 130.81, 523.25); // C3 → C5
+        if (synth) {
+          synth.setNote(freq, 0.1);
+        }
+
+        t += 0.01;
+      };
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dashboard</title>
+<script>
+(function()
+{
+  var t = localStorage.getItem("dashTheme") || "gruvbox";
+  var f = localStorage.getItem("dashFont") || "system-ui";
+  var italic = localStorage.getItem("dashFontItalic") === "true";
+  var level = parseInt(localStorage.getItem("dashSizeLevel")) || 3;
+  
+  document.documentElement.setAttribute("data-theme", t);
+  document.documentElement.style.fontSize = (10 + (level * 2)) + "px";
+  document.documentElement.style.fontFamily = f;
+  if (italic)
+  {
+    document.documentElement.classList.add("italic-mode");
+  }
+})();
+</script>
+<style>
+:root { --bg: #282828; --surface: #3c3836; --border: #d79921; --text: #ebdbb2; --accent: #fabd2f; --accent-txt: #282828; --gray: #928374; }
+[data-theme="dracula"] { --bg: #282a36; --surface: #44475a; --border: #ff79c6; --text: #f8f8f2; --accent: #bd93f9; --accent-txt: #282a36; --gray: #6272a4; }
+[data-theme="monokai"] { --bg: #272822; --surface: #3e3d32; --border: #f92672; --text: #f8f8f2; --accent: #a6e22e; --accent-txt: #272822; --gray: #75715e; }
+[data-theme="nord"] { --bg: #2e3440; --surface: #3b4252; --border: #88c0d0; --text: #d8dee9; --accent: #81a1c1; --accent-txt: #2e3440; --gray: #4c566a; }
+[data-theme="purple"] { --bg: #ffffff; --surface: #f5f5f5; --border: #8e24aa; --text: #333333; --accent: #8e24aa; --accent-txt: #ffffff; --gray: #888888; }
+[data-theme="amoled"] { --bg: #000000; --surface: #121212; --border: #ffffff; --text: #ffffff; --accent: #ffffff; --accent-txt: #000000; --gray: #555555; }
+[data-theme="cupcake"] { --bg: #faf7f5; --surface: #efeae6; --border: #ffb6c1; --text: #2e282a; --accent: #ffb6c1; --accent-txt: #2e282a; --gray: #b0a8a6; }
+[data-theme="catppuccin"] { --bg: #1e1e2e; --surface: #313244; --border: #cba6f7; --text: #cdd6f4; --accent: #cba6f7; --accent-txt: #11111b; --gray: #6c7086; }
+[data-theme="catppuccin-frappe"] { --bg: #303446; --surface: #414559; --border: #ca9ee6; --text: #c6d0f5; --accent: #ca9ee6; --accent-txt: #232634; --gray: #737994; }
+[data-theme="everforest"] { --bg: #2d353b; --surface: #3d484d; --border: #a7c080; --text: #d3c6aa; --accent: #a7c080; --accent-txt: #232a2e; --gray: #859289; }
+[data-theme="everforest-light"] { --bg: #fdf6e3; --surface: #eee8d5; --border: #859900; --text: #586e75; --accent: #859900; --accent-txt: #fdf6e3; --gray: #93a1a1; }
+[data-theme="tokyo-night"] { --bg: #1a1b26; --surface: #24283c; --border: #7aa2f7; --text: #a9b1d6; --accent: #7aa2f7; --accent-txt: #1d202f; --gray: #565f89; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; border-radius: 0; -webkit-tap-highlight-color: transparent; font-family: inherit; }
+html { font-size: 16px; padding-top:24px; }
+html.italic-mode * { font-style: italic !important; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+
+header { display: flex; justify-content: flex-start; gap: 1.25rem; padding: 1.25rem 1.25rem 0.625rem; font-size: 1.625rem; background: var(--bg); z-index: 10; align-items: center; }
+header div { opacity: 0.4; transition: opacity 0.2s; padding-bottom: 0.3rem; cursor: pointer; }
+header div.active { opacity: 1; color: var(--accent); border-bottom: 2px solid var(--accent); margin-bottom: -2px; }
+
+#viewport { display: flex; flex: 1; width: 300vw; height: calc(100vh - 4rem); transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1); }
+.screen { width: 100vw; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 1.25rem; display: block; }
+
+.box { border: 1px solid var(--border); padding: 1.5rem 1rem 1rem; position: relative; background: var(--bg); margin-bottom: 1.5rem; line-height: 1.5; }
+.box-title { position: absolute; top: -0.625rem; left: 0.625rem; background: var(--bg); padding: 0 0.3rem; font-size: 0.75rem; color: var(--text); font-weight: bold; text-transform: uppercase; cursor: pointer; }
+.box-title[data-clickable="true"] { cursor: pointer; }
+
+button, input, textarea { padding: 0.75rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 1rem; outline: none; }
+button { background: var(--accent); color: var(--accent-txt); cursor: pointer; border: none; text-transform: uppercase; font-weight: bold; width: 100%; }
+button:active { filter: brightness(0.8); }
+
+.tabs-container { display: flex; gap: 0.375rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 0.75rem; scrollbar-width: none; }
+.tabs-container::-webkit-scrollbar { display: none; }
+.sub-tab { padding: 0.375rem 0.75rem; background: var(--surface); color: var(--gray); border: 1px solid var(--border); font-size: 0.75rem; font-weight: bold; cursor: pointer; white-space: nowrap; }
+.sub-tab.active { background: var(--border); color: var(--bg); }
+
+.grid-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.375rem; }
+.theme-btn { padding: 0.625rem 0.25rem; background: var(--surface); color: var(--gray); border: 1px solid var(--border); text-transform: uppercase; font-size: 0.6875rem; font-weight: bold; width: 100%; text-align: center; }
+.theme-btn.active { background: var(--accent); color: var(--accent-txt); }
+
+.heading-large { font-size: 1.375rem; margin: 1rem 0 0.625rem; color: var(--text); }
+.font-size-ctrl { display: flex; align-items: center; gap: 0.75rem; margin-top: 1.25rem; }
+.font-size-ctrl button { flex: 1; padding: 0.625rem 0.25rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 0.875rem; font-weight: bold; }
+.font-size-ctrl button.active { background: var(--accent); color: var(--accent-txt); border-color: var(--accent); }
+
+a { color: var(--accent); text-decoration: none; user-select: auto; }
+.news-item { border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 0.625rem 0; font-size: 0.875rem; }
+.news-item:last-child { border: none; padding-bottom: 0; }
+.loading { color: var(--gray); }
+#news-content { min-height: 25rem; }
+
+.w-big-temp { font-size: 3.375rem; font-weight: bold; color: var(--accent); line-height: 1.1; }
+.w-big-desc { font-size: 1.375rem; color: var(--text); margin-bottom: 0.625rem; text-transform: uppercase; font-weight: bold; }
+.w-grid-extended { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.875rem; margin-bottom: 1rem; }
+.w-astro-box { border-top: 1px dashed var(--border); padding-top: 0.625rem; margin-top: 0.625rem; display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.8125rem; color: var(--gray); }
+
+.hourly-grid { display: grid; grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, auto); grid-auto-flow: column; gap: 0.5rem; margin-top: 1rem; }
+.hourly-card { background: var(--surface); border: 1px solid var(--border); padding: 0.75rem; font-size: 0.8125rem; min-height: 5rem; display: flex; flex-direction: column; justify-content: space-between; }
+.hourly-time { color: var(--gray); font-weight: bold; }
+.hourly-temp { font-weight: bold; color: var(--accent); font-size: 1rem; }
+
+.feed-row { border-bottom: 1px dashed var(--border); padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
+.feed-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.feed-row-inputs { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+.feed-row-inputs input { flex: 1; padding: 0.5rem; font-size: 0.75rem; min-width: 0; }
+.feed-row-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.feed-row-actions button { width: auto; padding: 0.4rem 0.75rem; font-size: 0.7rem; }
+
+#bottom-clock { text-align: center; margin-top: 1.5rem; font-size: 0.875rem; font-weight: bold; color: var(--accent); font-variant-numeric: tabular-nums; }
+.refreshable-title { cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div id="tab-home" class="active" onclick="switchScreen(0)">Dashboard</div>
+  <div id="tab-calendar" onclick="switchScreen(1)">Calendar</div>
+  <div id="tab-settings" onclick="switchScreen(2)">Config</div>
+</header>
+
+<div id="viewport">
+  <div class="screen" id="home-screen">
+    <div class="box">
+      <span class="box-title refreshable-title" onclick="refreshWeather()">Weather Intelligence</span>
+      <div id="weather-current">
+        <div class="loading">Parsing skies...</div>
+      </div>
+      <div class="tabs-container" style="margin-top:1rem; margin-bottom:0.625rem;" id="w-day-tabs">
+        <div class="sub-tab active" onclick="switchWeatherDay(0)">Today</div>
+        <div class="sub-tab" onclick="switchWeatherDay(1)">Tomorrow</div>
+        <div class="sub-tab" onclick="switchWeatherDay(2)">Day After</div>
+      </div>
+      <div id="weather-hourly"></div>
+    </div>
+
+    <div class="box">
+      <span class="box-title refreshable-title" onclick="refreshNews()">Global Dispatch</span>
+      <div class="tabs-container" id="news-tabs"></div>
+      <div id="news-content" class="loading">Streaming dispatch...</div>
+    </div>
+
+    <div class="box">
+      <span class="box-title refreshable-title" onclick="refreshAdvice()">Wisdom</span>
+      <div id="advice" class="loading">Parsing thoughts...</div>
+    </div>
+
+    <div id="bottom-clock">--:-- | --:--:--</div>
+  </div>
+
+  <div class="screen" id="calendar-screen">
+    <div class="box">
+      <span class="box-title" data-clickable="true" id="calendar-title">Calendar</span>
+      <div id="calendar-container"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="settings-screen">
+    <div class="box">
+      <span class="box-title">Data Config</span>
+      <h2 class="heading-large" style="margin-top:0;">Weather Location</h2>
+      <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
+        <input type="text" id="loc-input" placeholder="City (blank = auto)">
+        <button onclick="saveLocation()" style="width:auto;">Fetch</button>
+      </div>
+
+      <h2 class="heading-large">Manage Feeds</h2>
+      <div id="feed-manager"></div>
+      <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem; border-top:1px dashed var(--border); padding-top:1rem;">
+        <input type="text" id="new-feed-name" placeholder="Tab Name (e.g., Tech)">
+        <input type="text" id="new-feed-url" placeholder="RSS or API URL">
+        <button onclick="addFeed()">Add Feed</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <span class="box-title">Looks</span>
+      <h2 class="heading-large" style="margin-top:0;">Theme</h2>
+      <div class="grid-btns" id="theme-btns">
+        <button class="theme-btn" onclick="setTheme('gruvbox')">GRUVBOX</button>
+        <button class="theme-btn" onclick="setTheme('dracula')">DRACULA</button>
+        <button class="theme-btn" onclick="setTheme('monokai')">MONOKAI</button>
+        <button class="theme-btn" onclick="setTheme('nord')">NORD</button>
+        <button class="theme-btn" onclick="setTheme('purple')">PURPLE</button>
+        <button class="theme-btn" onclick="setTheme('amoled')">AMOLED</button>
+        <button class="theme-btn" onclick="setTheme('cupcake')">CUPCAKE</button>
+        <button class="theme-btn" onclick="setTheme('catppuccin')">CATPPUCCIN</button>
+        <button class="theme-btn" onclick="setTheme('catppuccin-frappe')">FRAPPE</button>
+        <button class="theme-btn" onclick="setTheme('everforest')">EVERFOREST</button>
+        <button class="theme-btn" onclick="setTheme('everforest-light')">EV-LIGHT</button>
+        <button class="theme-btn" onclick="setTheme('tokyo-night')">TOKYO</button>
+      </div>
+      
+      <h2 class="heading-large">Type</h2>
+      <div style="display: flex; gap: 0.375rem; flex-wrap: wrap;" id="font-type-btns">
+        <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('system-ui')">SYS</button>
+        <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('monospace')">MONO</button>
+        <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('serif')">SERIF</button>
+        <button class="theme-btn" id="italic-btn" style="width:auto; flex:1;" onclick="toggleItalic()">ITALIC</button>
+      </div>
+      
+      <div class="font-size-ctrl" id="font-size-btns">
+        <button data-size="1" onclick="setFontSize(1)">S</button>
+        <button data-size="2" onclick="setFontSize(2)">M</button>
+        <button data-size="3" onclick="setFontSize(3)">L</button>
+        <button data-size="4" onclick="setFontSize(4)">XL</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="calendar.js"></script>
+<script>
+let theme = localStorage.getItem("dashTheme") || "gruvbox";
+let font = localStorage.getItem("dashFont") || "system-ui";
+let isItalic = localStorage.getItem("dashFontItalic") === "true";
+let fLevel = parseInt(localStorage.getItem("dashSizeLevel")) || 3;
+let locationStr = localStorage.getItem("dashLocation") || "";
+let currentNewsIndex = 0;
+let clockInterval = null;
+
+let defaultFeeds = [
+  { name: 'r/WorldNews', url: 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.reddit.com%2Fr%2Fworldnews%2F.rss' },
+  { name: 'BBC World', url: 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Ffeeds.bbci.co.uk%2Fnews%2Fworld%2Frss.xml' },
+  { name: 'Al Jazeera', url: 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.aljazeera.com%2Fxml%2Frss%2Fall.xml' },
+  { name: 'Hindu Int', url: 'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.thehindu.com%2Fnews%2Finternational%2F%3Fservice%3Drss' }
+];
+
+let feeds = JSON.parse(localStorage.getItem("dashFeeds")) || defaultFeeds;
+let weatherData = null;
+
+function playSound()
+{
+  try
+  {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.03);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.03);
+  }
+  catch (e)
+  {
+  }
+}
+
+document.addEventListener('click', function(e)
+{
+  const target = e.target.closest('button, .sub-tab, .theme-btn, .box-title, .calendar-day, .month-btn, .cal-prev, .cal-next, .calendar-add-btn, .calendar-modal-close, .feed-row-actions button, .refreshable-title, #font-size-btns button, #theme-btns .theme-btn');
+  if (target)
+  {
+    playSound();
+  }
+});
+
+function init()
+{
+  setTheme(theme);
+  setFont(font);
+  updateItalicState();
+  setFontSize(fLevel);
+  updateFontSizeButtons();
+  document.getElementById('loc-input').value = locationStr;
+  renderFeedsConfig();
+  renderNewsTabs();
+  startClock();
+  fetchWeather();
+  if (feeds.length > 0) fetchNews(0);
+  fetchAdvice();
+}
+
+function startClock()
+{
+  if (clockInterval) clearInterval(clockInterval);
+  clockInterval = setInterval(() =>
+  {
+    let d = new Date();
+    let dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
+    let timeStr = d.toTimeString().split(' ')[0];
+    document.getElementById('bottom-clock').innerText = dateStr + ' | ' + timeStr;
+  }, 1000);
+}
+
+function switchScreen(idx)
+{
+  document.getElementById('viewport').style.transform = `translateX(-${idx * 100}vw)`;
+  document.getElementById('tab-home').classList.toggle('active', idx === 0);
+  document.getElementById('tab-calendar').classList.toggle('active', idx === 1);
+  document.getElementById('tab-settings').classList.toggle('active', idx === 2);
+}
+
+function setTheme(t)
+{
+  theme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  document.querySelectorAll('#theme-btns .theme-btn').forEach(b =>
+  {
+    b.classList.toggle('active', b.innerText.toLowerCase() === t || (t==='catppuccin-frappe' && b.innerText==='FRAPPE') || (t==='everforest-light' && b.innerText==='EV-LIGHT') || (t==='tokyo-night' && b.innerText==='TOKYO'));
+  });
+  localStorage.setItem("dashTheme", t);
+}
+
+function setFont(f)
+{
+  font = f;
+  document.documentElement.style.fontFamily = f;
+  document.body.style.fontFamily = f;
+  localStorage.setItem("dashFont", f);
+  
+  document.querySelectorAll('#font-type-btns .theme-btn:not(#italic-btn)').forEach(b =>
+  {
+    let bText = b.innerText.toLowerCase();
+    let isActive = (f === 'system-ui' && bText === 'sys') ||
+                   (f === 'monospace' && bText === 'mono') ||
+                   (f === 'serif' && bText === 'serif');
+    b.classList.toggle('active', isActive);
+  });
+}
+
+function toggleItalic()
+{
+  isItalic = !isItalic;
+  localStorage.setItem("dashFontItalic", isItalic);
+  updateItalicState();
+}
+
+function updateItalicState()
+{
+  document.documentElement.classList.toggle('italic-mode', isItalic);
+  document.getElementById('italic-btn').classList.toggle('active', isItalic);
+}
+
+function setFontSize(level)
+{
+  fLevel = Math.max(1, Math.min(4, level));
+  document.documentElement.style.fontSize = (10 + (fLevel * 2)) + 'px';
+  localStorage.setItem("dashSizeLevel", fLevel);
+  updateFontSizeButtons();
+}
+
+function updateFontSizeButtons()
+{
+  document.querySelectorAll('#font-size-btns button').forEach(btn =>
+  {
+    btn.classList.toggle('active', parseInt(btn.dataset.size) === fLevel);
+  });
+}
+
+function refreshWeather()
+{
+  document.getElementById('weather-current').innerHTML = '<div class="loading">Parsing skies...</div>';
+  document.getElementById('weather-hourly').innerHTML = '';
+  fetchWeather();
+}
+
+function saveLocation()
+{
+  locationStr = document.getElementById('loc-input').value.trim();
+  localStorage.setItem("dashLocation", locationStr);
+  refreshWeather();
+}
+
+function fetchWeather()
+{
+  let target = locationStr ? locationStr : '';
+  fetch(`https://wttr.in/${target}?format=j1`)
+    .then(r => r.json())
+    .then(d =>
+    {
+      weatherData = d;
+      renderCurrentWeather();
+      renderHourlyWeather(0);
+      document.querySelectorAll('#w-day-tabs .sub-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+    }).catch(() =>
+    {
+      document.getElementById('weather-current').innerText = 'Weather link dead.';
+    });
+}
+
+function renderCurrentWeather()
+{
+  let cc = weatherData.current_condition[0];
+  let day0 = weatherData.weather[0];
+  let area = weatherData.nearest_area[0];
+  
+  document.getElementById('weather-current').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px dashed var(--border); padding-bottom:0.625rem; margin-bottom:1rem;">
+      <div>
+        <div class="w-big-temp">${cc.temp_C}°C</div>
+        <div class="w-big-desc">${cc.weatherDesc[0].value}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:1rem; font-weight:bold; color:var(--text);">${area.areaName[0].value}</div>
+        <div style="font-size:0.75rem; color:var(--gray);">${area.country[0].value}</div>
+        <div style="font-size:0.625rem; color:var(--gray); margin-top:0.3rem;">Fetched: ${cc.observation_time}</div>
+      </div>
+    </div>
+    <div class="w-grid-extended">
+      <div>Feels Like: ${cc.FeelsLikeC}°C</div>
+      <div>Max / Min: ${day0.maxtempC}°C / ${day0.mintempC}°C</div>
+      <div>Humidity: ${cc.humidity}%</div>
+      <div>Wind: ${cc.windspeedKmph} km/h</div>
+      <div>Precipitation: ${cc.precipMM} mm</div>
+      <div>Visibility: ${cc.visibility} km</div>
+      <div>Pressure: ${cc.pressure} hPa</div>
+      <div>Cloud Cover: ${cc.cloudcover}%</div>
+    </div>
+  `;
+}
+
+function switchWeatherDay(idx)
+{
+  let tabs = document.querySelectorAll('#w-day-tabs .sub-tab');
+  tabs.forEach((t, i) => t.classList.toggle('active', i === idx));
+  renderHourlyWeather(idx);
+}
+
+function renderHourlyWeather(dayIdx)
+{
+  if (!weatherData) return;
+  let day = weatherData.weather[dayIdx];
+  let astro = day.astronomy[0];
+
+  let astroHtml = `
+    <div class="w-astro-box">
+      <div>Sunrise: ${astro.sunrise}</div>
+      <div>Sunset: ${astro.sunset}</div>
+      <div>Moonrise: ${astro.moonrise}</div>
+      <div>Moonset: ${astro.moonset}</div>
+      <div>Phase: ${astro.moon_phase}</div>
+      <div>Illum: ${astro.moon_illumination}%</div>
+    </div>
+  `;
+
+  let hourlyHtml = day.hourly.map(h =>
+  {
+    let hourStr = h.time === "0" ? "00:00" : (h.time.length === 3 ? "0" + h.time[0] + ":00" : h.time.slice(0,2) + ":00");
+    return `
+      <div class="hourly-card">
+        <div>
+          <div class="hourly-time">${hourStr}</div>
+          <div class="hourly-temp">${h.tempC}°C <span style="font-size:0.75rem; font-weight:normal;">(${h.FeelsLikeC}°C)</span></div>
+        </div>
+        <div style="font-size:0.6875rem; color:var(--text); margin-top:0.25rem; line-height:1.2;">
+          ${h.weatherDesc[0].value}<br>
+          <span style="color:var(--gray)">${h.windspeedKmph} km/h ${h.winddir16Point}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('weather-hourly').innerHTML = astroHtml + '<div class="hourly-grid">' + hourlyHtml + '</div>';
+}
+
+function refreshNews()
+{
+  if (feeds.length > 0)
+  {
+    fetchNews(currentNewsIndex);
+  }
+}
+
+function renderFeedsConfig()
+{
+  let fm = document.getElementById('feed-manager');
+  fm.innerHTML = feeds.map((f, i) => `
+    <div class="feed-row">
+      <div class="feed-row-inputs">
+        <input type="text" value="${f.name}" readonly style="flex:1;">
+        <input type="text" value="${f.url}" readonly style="flex:2;">
+      </div>
+      <div class="feed-row-actions">
+        <button onclick="moveFeed(${i}, -1)">UP</button>
+        <button onclick="moveFeed(${i}, 1)">DOWN</button>
+        <button onclick="delFeed(${i})" style="background:var(--border); color:var(--bg);">DEL</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function saveFeeds()
+{
+  localStorage.setItem("dashFeeds", JSON.stringify(feeds));
+  renderFeedsConfig();
+  renderNewsTabs();
+  if(feeds.length > 0) fetchNews(0);
+}
+
+function moveFeed(idx, dir)
+{
+  if (idx + dir < 0 || idx + dir >= feeds.length) return;
+  let temp = feeds[idx];
+  feeds[idx] = feeds[idx + dir];
+  feeds[idx + dir] = temp;
+  saveFeeds();
+}
+
+function delFeed(idx)
+{
+  feeds.splice(idx, 1);
+  saveFeeds();
+}
+
+function addFeed()
+{
+  let n = document.getElementById('new-feed-name').value.trim();
+  let u = document.getElementById('new-feed-url').value.trim();
+  if (n && u)
+  {
+    if (!u.includes('rss2json') && !u.endsWith('.json'))
+    {
+      u = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(u);
+    }
+    feeds.push({ name: n, url: u });
+    document.getElementById('new-feed-name').value = '';
+    document.getElementById('new-feed-url').value = '';
+    saveFeeds();
+  }
+}
+
+function renderNewsTabs()
+{
+  let c = document.getElementById('news-tabs');
+  c.innerHTML = feeds.map((f, i) => `
+    <div class="sub-tab" onclick="switchNews(${i})">${f.name}</div>
+  `).join('');
+  if (feeds.length > 0)
+  {
+    switchNews(0);
+  }
+}
+
+function switchNews(idx)
+{
+  currentNewsIndex = idx;
+  document.querySelectorAll('#news-tabs .sub-tab').forEach((t, i) =>
+  {
+    t.classList.toggle('active', i === idx);
+  });
+  fetchNews(idx);
+}
+
+function fetchNews(idx)
+{
+  if (!feeds[idx])
+  {
+    document.getElementById('news-content').innerText = 'No feeds.';
+    return;
+  }
+  
+  document.getElementById('news-content').innerHTML = '<div class="loading">Re-routing satellite feed...</div>';
+  
+  fetch(feeds[idx].url)
+    .then(r => r.json())
+    .then(d =>
+    {
+      let items = d.items || d.articles;
+      if (!items || items.length === 0) throw new Error();
+      document.getElementById('news-content').innerHTML = items.slice(0, 10).map(item => `
+        <div class="news-item">
+          <a href="${item.link || item.url}" target="_blank">${item.title}</a>
+          <div style="font-size:0.6875rem; color:var(--gray); margin-top:0.2rem;">${item.pubDate || item.publishedAt || ''}</div>
+        </div>
+      `).join('');
+    }).catch(() =>
+    {
+      document.getElementById('news-content').innerText = 'Feed connection timed out.';
+    });
+}
+
+function refreshAdvice()
+{
+  document.getElementById('advice').innerHTML = '<div class="loading">Parsing thoughts...</div>';
+  fetchAdvice();
+}
+
+function fetchAdvice()
+{
+  fetch('https://api.adviceslip.com/advice')
+    .then(r => r.json())
+    .then(d =>
+    {
+      document.getElementById('advice').innerText = d.slip.advice;
+    }).catch(() =>
+    {
+      document.getElementById('advice').innerText = 'Wisdom pipeline empty.';
+    });
+}
+
+init();
+</script>
+</body>
+</html>

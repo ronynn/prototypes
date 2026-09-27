@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chapter 3 – Oscillation & Waves</title>
+  <style>
+    body { background: #1a1a2e; padding: 20px; font-family: sans-serif; }
+    .sketch-box { background: #16213e; padding: 15px; border-radius: 12px; display: inline-block; }
+    h3 { color: #e0e0e0; margin: 0 0 10px 0; }
+    #startBtn3 {
+      background: #4ecdc4;
+      border: none;
+      color: #1a1a2e;
+      padding: 10px 25px;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+    #startBtn3:hover { background: #6ee7de; }
+  </style>
+</head>
+<body>
+
+  <div class="sketch-box">
+    <h3>🌊 Wave & Sound</h3>
+    <button id="startBtn3">▶ Start Audio</button>
+    <div id="p5-ch3"></div>
+    <p style="color:#aaa; font-size:14px;">Move your mouse left/right to change frequency</p>
+  </div>
+
+  <script src="lib/p5.js"></script>
+  <script src="lib/tone.js"></script>
+
+  <script>
+    document.getElementById('startBtn3').addEventListener('click', async () => {
+      if (Tone.context.state !== 'running') {
+        await Tone.start();
+        console.log('Audio started!');
+      }
+    });
+
+    new p5(function(p) {
+      let time = 0;
+      let synth;
+      let currentFreq = 220; // A3
+
+      p.setup = function() {
+        let canvas = p.createCanvas(500, 300);
+        canvas.parent('p5-ch3');
+
+        // A continuous synth – plays a smooth tone
+        synth = new Tone.Synth({
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.01, release: 0.5 }
+        }).toDestination();
+        // start the note silently (it will only be heard after Tone starts)
+        synth.triggerAttack(220);
+      };
+
+      p.draw = function() {
+        p.background(10, 10, 30);
+
+        // ---- Draw a moving wave ----
+        p.noFill();
+        p.stroke(100, 200, 255, 180);
+        p.strokeWeight(3);
+        p.beginShape();
+        let amplitude = 80;
+        let frequency = p.map(p.mouseX, 0, p.width, 1, 10); // mouse controls frequency
+        for (let x = 0; x <= p.width; x += 2) {
+          // y = centre + amplitude * sin( frequency * x + time )
+          let y = p.height/2 + amplitude * p.sin(frequency * 0.02 * x + time);
+          p.vertex(x, y);
+        }
+        p.endShape();
+
+        // ---- Sound: update frequency based on the wave at the centre ----
+        let centreX = p.width / 2;
+        let waveValue = p.sin(frequency * 0.02 * centreX + time);
+        // map waveValue (-1..1) to a frequency range (C3 to C6)
+        let freq = p.map(waveValue, -1, 1, 130.81, 1046.5);
+        if (synth) {
+          synth.setNote(freq, 0.1);
+          currentFreq = freq;
+        }
+
+        // ---- Show current frequency ----
+        p.fill(255, 200);
+        p.noStroke();
+        p.textSize(14);
+        p.text('Frequency: ' + p.nf(currentFreq, 1, 2) + ' Hz', 20, 30);
+        p.text('Move mouse → change wave speed', 20, 50);
+
+        // ---- Advance time ----
+        time += 0.05;
+      };
+
+      // Stop the synth when the page is closed (optional)
+      p.remove = function() {
+        if (synth) synth.dispose();
+      };
+    });
+  </script>
+</body>
+</html>

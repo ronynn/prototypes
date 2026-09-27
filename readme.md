@@ -2,34 +2,52 @@
 
 Welcome to the "Prototypes" repository, where you can find various experimental projects and prototypes developed by me. Explore the following projects:
 
-## Projects
+This is my tinkering folder so I don't feel like updating the readme that often. Here are the best ones:-
 
-### Cat Generator
-- **Description**: A fun project that generates random cat images.
-- **Link**: [Cat Generator](https://ronynn.github.io/prototypes/catgen)
+### Historical/Educational
 
-### CatGPT
-- **Description**: An interactive project involving cats and GPT (Generative Pre-trained Transformer) models.
-- **Link**: [CatGPT](https://ronynn.github.io/prototypes/catgpt)
+- [Sumerian Game Clone](https://ronynn.github.io/prototypes/code/nolib/sumeriangame)
+- [Oregon Trail Clone](https://ronynn.github.io/prototypes/code/nolib/oregon)
+- [Rekishi - Historical Calendar](https://ronynn.github.io/prototypes/code/nolib/rekishi)
+- [Shintaku](https://ronynn.github.io/prototypes/code/nolib/shintaku)
 
-### GlassCalc
-- **Description**: A calculator with a sleek glassy design.
-- **Link**: [GlassCalc](https://ronynn.github.io/prototypes/glasscalc)
 
-### Glass Calendar
-- **Description**: A stylish calendar application with a glassy interface.
-- **Link**: [Glass Calendar](https://ronynn.github.io/prototypes/glasscalendar)
 
-### Weather
-- **Description**: A weather application providing current weather information.
-- **Link**: [Weather](https://ronynn.github.io/prototypes/weather)
+### Apps
 
-### 4k Weather
-- **Description**: A weather project optimized for 4k resolution displays.
-- **Link**: [4k Weather](https://ronynn.github.io/prototypes/old-weather)
+- [Kisoku - Breathing App](https://ronynn.github.io/prototypes/code/nolib/kisoku)
+- [wttr-Dash](https://ronynn.github.io/prototypes/code/nolib/wttr-dash)
+- [Eliza](https://ronynn.github.io/prototypes/portfolio)
 
-### WebGL Rain
-- **Description**: Experience a rain simulation using WebGL technology.
-- **Link**: [WebGL Rain](https://ronynn.github.io/prototypes/old-weather/demo)
+### Games
+
+- [jQuery Stock Market](https://ronynn.github.io/prototypes/code/jquerystock)
+- [Yogake - Night Runner game using pixijs](https://ronynn.github.io/prototypes/code/pixirunner)
+- [Be Not Afraid - Flappy Bird using W lib](https://ronynn.github.io/prototypes/code/wflaphorror)
+- [Eat the Blob game using canvas api](https://ronynn.github.io/prototypes/code/nolib/blob2)
+- [Dopewars clone game using canvas api](https://ronynn.github.io/prototypes/code/nolib/dopewars)
+- [Sweeper of Mines](https://ronynn.github.io/prototypes/code/nolib/sweeperofmines)
+- [Super tictactoe](https://ronynn.github.io/prototypes/code/nolib/supertictactoe)
+- [Unicorn Runner](https://ronynn.github.io/prototypes/code/nolib/unicorn)
+
+
+
+
+
+### Older
+
+- CatGPT /Eliza - An interactive project involving talking with cats: [Eliza](https://ronynn.github.io/prototypes/code/nolib/eliza)
+
+- GlassCalc - A calculator with a sleek glassy design: [GlassCalc](https://ronynn.github.io/prototypes/glasscalc)
+
+
+- [Portfolio](https://ronynn.github.io/prototypes/portfolio) of my older interactive fiction games.
+
+- WebGL Rain - Experience a rain simulation using WebGL technology: [WebGL Rain](https://ronynn.github.io/prototypes/webglweather/demo)
+
+
+### Slides
+
+Some of these are multilingual: <https://ronynn.github.io/prototypes/slides>
 
 Feel free to explore these projects and provide feedback or suggestions. Thank you for visiting the "Prototypes" repository! 🌟

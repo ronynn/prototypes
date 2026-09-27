@@ -1,0 +1,1469 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
+    <title>Karui</title>
+
+    <script>
+      (function () {
+        var t = localStorage.getItem("theme") || "gruvbox";
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
+
+    <style>
+      :root {
+        --bg: #1d2021;
+        --surface: #282828;
+        --border: #504945;
+        --text: #ebdbb2;
+        --dim: #928374;
+        --accent: #d79921;
+        --accent-text: #1d2021;
+      }
+      [data-theme="dracula"] {
+        --bg: #1e1f29; --surface: #282a36; --border: #44475a;
+        --text: #f8f8f2; --dim: #6272a4; --accent: #bd93f9; --accent-text: #1e1f29;
+      }
+      [data-theme="monokai"] {
+        --bg: #1e1f1c; --surface: #272822; --border: #3e3d32;
+        --text: #f8f8f2; --dim: #75715e; --accent: #a6e22e; --accent-text: #1e1f1c;
+      }
+      [data-theme="nord"] {
+        --bg: #242933; --surface: #2e3440; --border: #434c5e;
+        --text: #d8dee9; --dim: #4c566a; --accent: #88c0d0; --accent-text: #2e3440;
+      }
+      [data-theme="purple"] {
+        --bg: #f5f5f7; --surface: #ffffff; --border: #d8d8dc;
+        --text: #2a2a2a; --dim: #888888; --accent: #8e24aa; --accent-text: #ffffff;
+      }
+      [data-theme="amoled"] {
+        --bg: #000000; --surface: #0a0a0a; --border: #1f1f1f;
+        --text: #ffffff; --dim: #666666; --accent: #ffffff; --accent-text: #000000;
+      }
+      [data-theme="cupcake"] {
+        --bg: #faf7f5; --surface: #ffffff; --border: #efeae6;
+        --text: #2e282a; --dim: #b0a8a6; --accent: #ff8fab; --accent-text: #ffffff;
+      }
+      [data-theme="catppuccin"] {
+        --bg: #11111b; --surface: #1e1e2e; --border: #313244;
+        --text: #cdd6f4; --dim: #6c7086; --accent: #cba6f7; --accent-text: #11111b;
+      }
+      [data-theme="catppuccin-frappe"] {
+        --bg: #232634; --surface: #303446; --border: #414559;
+        --text: #c6d0f5; --dim: #737994; --accent: #ca9ee6; --accent-text: #232634;
+      }
+      [data-theme="everforest"] {
+        --bg: #232a2e; --surface: #2d353b; --border: #475258;
+        --text: #d3c6aa; --dim: #859289; --accent: #a7c080; --accent-text: #232a2e;
+      }
+      [data-theme="everforest-light"] {
+        --bg: #fdf6e3; --surface: #ffffff; --border: #e6ddc4;
+        --text: #586e75; --dim: #93a1a1; --accent: #859900; --accent-text: #ffffff;
+      }
+      [data-theme="tokyo-night"] {
+        --bg: #16161e; --surface: #1a1b26; --border: #2a2e44;
+        --text: #a9b1d6; --dim: #565f89; --accent: #7aa2f7; --accent-text: #16161e;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html, body { height: 100%; }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 15px;
+        overflow: hidden;
+        user-select: none;
+        transition: background 0.2s, color 0.2s;
+      }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .header {
+        display: flex;
+        gap: 6px;
+        padding: 12px 18px 0;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .header button {
+        background: none;
+        border: 1px solid transparent;
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        color: var(--dim);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 10px 16px;
+        cursor: pointer;
+        margin-bottom: -1px;
+        transition: color 0.15s, background 0.15s, border-color 0.15s;
+      }
+      .header button:hover { color: var(--text); }
+      .header button.active {
+        background: var(--surface);
+        border-color: var(--border);
+        border-bottom: 1px solid var(--surface);
+        color: var(--accent);
+      }
+
+      .screens {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        width: 200vw;
+        overflow: hidden;
+        transition: transform 0.25s cubic-bezier(0.1, 0.9, 0.2, 1);
+      }
+      .screen {
+        width: 100vw;
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex-shrink: 0;
+        padding: 18px 18px 80px;
+      }
+
+      fieldset {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 14px 16px 12px;
+        margin: 0 0 16px;
+        background: var(--surface);
+        min-width: 0;
+      }
+      legend {
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--dim);
+        background: var(--bg);
+      }
+
+      .label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        margin: 12px 0 8px;
+      }
+      .label:first-child { margin-top: 0; }
+
+      .note-input, .search-input {
+        width: 100%;
+        padding: 12px 14px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .search-input {
+        padding: 9px 12px;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      .note-input:focus, .search-input:focus { border-color: var(--accent); }
+      .note-input::placeholder, .search-input::placeholder { color: var(--dim); }
+
+      .stats {
+        font-size: 11px;
+        color: var(--dim);
+        margin-top: 10px;
+        display: flex;
+        gap: 16px;
+        font-family: ui-monospace, monospace;
+        letter-spacing: 0.03em;
+      }
+      .stats b { color: var(--text); font-weight: 700; }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        scrollbar-width: none;
+      }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tab {
+        padding: 6px 14px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--dim);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .tab:hover { color: var(--text); border-color: var(--dim); }
+      .tab.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-text);
+      }
+
+      .notes {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 40px;
+      }
+      .note {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 11px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: border-color 0.15s, opacity 0.15s;
+      }
+      .note:hover { border-color: var(--dim); }
+      .note.dragging { opacity: 0.2; }
+      .note-text {
+        flex: 1;
+        font-size: 15px;
+        line-height: 1.4;
+        word-break: break-word;
+        color: var(--text);
+      }
+      .note.completed .note-text {
+        color: var(--dim);
+        text-decoration: line-through;
+      }
+      .note-text mark {
+        background: var(--accent);
+        color: var(--accent-text);
+        padding: 0 2px;
+        border-radius: 2px;
+      }
+
+      .note-actions {
+        display: flex;
+        gap: 2px;
+        opacity: 0.4;
+        transition: opacity 0.15s;
+        flex-shrink: 0;
+      }
+      .note:hover .note-actions,
+      .note:focus-within .note-actions { opacity: 1; }
+      .note-actions button {
+        background: none;
+        border: none;
+        color: var(--dim);
+        font-family: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        padding: 2px 7px;
+        border-radius: 4px;
+        line-height: 1;
+        transition: background 0.15s, color 0.15s;
+      }
+      .note-actions button:hover {
+        background: var(--border);
+        color: var(--text);
+      }
+
+      .empty {
+        color: var(--dim);
+        font-size: 13px;
+        font-style: italic;
+        padding: 10px 2px;
+      }
+
+      .theme-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      .theme-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 11px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .theme-card:hover { border-color: var(--dim); }
+      .theme-card.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+      .theme-dots { display: flex; gap: 2px; flex-shrink: 0; }
+      .theme-dot {
+        width: 10px; height: 10px; border-radius: 2px;
+        border: 1px solid rgba(128, 128, 128, 0.25);
+      }
+      .theme-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 8px 14px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .btn:hover { border-color: var(--dim); }
+      .btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-text);
+      }
+      .btn.full { width: 100%; margin-top: 10px; }
+
+      .size-row {
+        display: flex;
+        gap: 6px;
+      }
+      .size-row .btn { flex: 1; }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 0;
+        cursor: pointer;
+      }
+      .toggle-row + .toggle-row { border-top: 1px solid var(--border); }
+      .toggle-label { font-size: 13px; color: var(--text); }
+      .switch {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        background: var(--border);
+        border-radius: 10px;
+        flex-shrink: 0;
+        transition: background 0.2s;
+      }
+      .switch.on { background: var(--accent); }
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 2px; left: 2px;
+        width: 16px; height: 16px;
+        background: var(--text);
+        border-radius: 50%;
+        transition: transform 0.2s, background 0.2s;
+      }
+      .switch.on::after {
+        transform: translateX(18px);
+        background: var(--accent-text);
+      }
+
+      .bin-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .bin-row:last-child { border-bottom: none; }
+      .bin-text {
+        flex: 1;
+        font-size: 13px;
+        color: var(--dim);
+        word-break: break-word;
+      }
+      .bin-restore {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      .bin-restore:hover { border-color: var(--accent); }
+
+      .about-text {
+        font-size: 13px;
+        line-height: 1.65;
+        color: var(--dim);
+      }
+      .about-text a { color: var(--accent); text-decoration: none; }
+      .about-text a:hover { text-decoration: underline; }
+      .about-text code {
+        background: var(--bg);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--text);
+        font-family: ui-monospace, monospace;
+      }
+
+      .ctx-menu {
+        position: fixed;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px;
+        min-width: 160px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+        z-index: 100;
+      }
+      .ctx-menu button {
+        display: block;
+        width: 100%;
+        padding: 9px 12px;
+        background: none;
+        border: none;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 13px;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background 0.12s, color 0.12s;
+      }
+      .ctx-menu button:hover { background: var(--bg); color: var(--accent); }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 200;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 18px;
+        width: 100%;
+        max-width: 340px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+      }
+      .modal h3 {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin-bottom: 14px;
+      }
+      .modal input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        outline: none;
+        margin-bottom: 14px;
+        transition: border-color 0.15s;
+      }
+      .modal input:focus { border-color: var(--accent); }
+      .modal-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+      }
+
+      .drag-ghost {
+        position: fixed;
+        z-index: 9999;
+        pointer-events: none;
+        background: var(--surface);
+        border: 1px solid var(--accent);
+        border-radius: 6px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+        padding: 11px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-size: 15px;
+        opacity: 0.95;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="app"></div>
+
+    <script type="module">
+      import {
+        h,
+        render,
+        useRef,
+        useEffect,
+        signal,
+        effect,
+      } from "/lib/preacthtmsignals.es.js";
+
+      function cx() {
+        var out = [];
+        for (var i = 0; i < arguments.length; i++) {
+          if (arguments[i]) out.push(arguments[i]);
+        }
+        return out.join(" ");
+      }
+
+      function readJSON(key, fallback) {
+        try {
+          var raw = localStorage.getItem(key);
+          if (raw == null) return fallback;
+          var v = JSON.parse(raw);
+          return v == null ? fallback : v;
+        } catch (e) {
+          return fallback;
+        }
+      }
+
+      var THEMES = [
+        { id: "gruvbox", name: "Gruvbox", colors: ["#1d2021", "#d79921", "#fabd2f"] },
+        { id: "dracula", name: "Dracula", colors: ["#1e1f29", "#bd93f9", "#ff79c6"] },
+        { id: "monokai", name: "Monokai", colors: ["#1e1f1c", "#a6e22e", "#f92672"] },
+        { id: "nord", name: "Nord", colors: ["#242933", "#88c0d0", "#81a1c1"] },
+        { id: "purple", name: "Purple", colors: ["#f5f5f7", "#8e24aa", "#c158dc"] },
+        { id: "amoled", name: "AMOLED", colors: ["#000000", "#ffffff", "#888888"] },
+        { id: "cupcake", name: "Cupcake", colors: ["#faf7f5", "#ff8fab", "#ffb6c1"] },
+        { id: "catppuccin", name: "Catppuccin", colors: ["#11111b", "#cba6f7", "#f5c2e7"] },
+        { id: "catppuccin-frappe", name: "Frappé", colors: ["#232634", "#ca9ee6", "#e5c890"] },
+        { id: "everforest", name: "Everforest", colors: ["#232a2e", "#a7c080", "#d3c6aa"] },
+        { id: "everforest-light", name: "Ev. Light", colors: ["#fdf6e3", "#859900", "#2aa198"] },
+        { id: "tokyo-night", name: "Tokyo Night", colors: ["#16161e", "#7aa2f7", "#bb9af7"] },
+      ];
+
+      var SIZE_PRESETS = [
+        { id: "s", label: "S", px: 13 },
+        { id: "m", label: "M", px: 15 },
+        { id: "l", label: "L", px: 17 },
+        { id: "xl", label: "XL", px: 20 },
+      ];
+      var SIZE_PX = { s: 13, m: 15, l: 17, xl: 20 };
+
+      var categories = signal(readJSON("noteCategories", ["Main"]));
+      var activeCategory = signal("Main");
+      var notes = signal(readJSON("notes", []));
+      var recycleBin = signal(readJSON("recycleBin", []));
+
+      var theme = signal(localStorage.getItem("theme") || "gruvbox");
+      var font = signal(localStorage.getItem("font") || "system-ui");
+
+      var storedSize = localStorage.getItem("fontSizeLevel");
+      var validSize = SIZE_PX[storedSize] ? storedSize : "m";
+      var fontSizeLevel = signal(validSize);
+
+      var doubleTapDelete = signal(localStorage.getItem("doubleTapDelete") === "true");
+      var addNoteBottom = signal(localStorage.getItem("addNoteBottom") === "true");
+
+      var activeScreen = signal(0);
+      var search = signal("");
+
+      var noteInput = signal("");
+      var modalInput = signal("");
+      var contextMenu = signal({ visible: false, x: 0, y: 0, tab: "" });
+      var modal = signal({ visible: false, title: "", onSubmit: null });
+
+      effect(function () { localStorage.setItem("noteCategories", JSON.stringify(categories.value)); });
+      effect(function () { localStorage.setItem("notes", JSON.stringify(notes.value)); });
+      effect(function () { localStorage.setItem("recycleBin", JSON.stringify(recycleBin.value)); });
+      effect(function () { localStorage.setItem("theme", theme.value); });
+      effect(function () { localStorage.setItem("font", font.value); });
+      effect(function () { localStorage.setItem("fontSizeLevel", fontSizeLevel.value); });
+      effect(function () { localStorage.setItem("doubleTapDelete", String(doubleTapDelete.value)); });
+      effect(function () { localStorage.setItem("addNoteBottom", String(addNoteBottom.value)); });
+
+      effect(function () {
+        var t = theme.value;
+        document.documentElement.setAttribute("data-theme", t);
+        document.body.setAttribute("data-theme", t);
+      });
+      effect(function () { document.body.style.fontFamily = font.value; });
+      effect(function () {
+        document.body.style.fontSize = (SIZE_PX[fontSizeLevel.value] || 15) + "px";
+      });
+
+      var lastTapTime = 0;
+      var tabPressTimer = null;
+
+      function addNote(text) {
+        if (text.indexOf("/newtab") === 0) {
+          var name = text.slice(7).trim();
+          if (name && categories.value.indexOf(name) === -1) {
+            categories.value = categories.value.concat([name]);
+            activeCategory.value = name;
+          }
+          return;
+        }
+        if (text.indexOf("\\deletetab") === 0) {
+          deleteTab(activeCategory.value);
+          return;
+        }
+        var note = {
+          id: Date.now(),
+          text: text,
+          completed: false,
+          category: activeCategory.value,
+        };
+        notes.value = addNoteBottom.value
+          ? notes.value.concat([note])
+          : [note].concat(notes.value);
+      }
+
+      function toggleNote(note) {
+        notes.value = notes.value.map(function (n) {
+          return n.id === note.id ? Object.assign({}, n, { completed: !n.completed }) : n;
+        });
+      }
+
+      function copyNote(note) {
+        if (navigator.clipboard) navigator.clipboard.writeText(note.text);
+        if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+      }
+
+      function trashNote(id) {
+        var target = null;
+        notes.value.forEach(function (n) { if (n.id === id) target = n; });
+        if (!target) return;
+        notes.value = notes.value.filter(function (n) { return n.id !== id; });
+        recycleBin.value = recycleBin.value.concat([target]);
+      }
+
+      function deleteNote(id) {
+        if (doubleTapDelete.value) {
+          var now = Date.now();
+          if (now - lastTapTime < 300) trashNote(id);
+          else if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+          lastTapTime = now;
+        } else {
+          trashNote(id);
+        }
+      }
+
+      function restoreNote(idx) {
+        var target = recycleBin.value[idx];
+        if (!target) return;
+        recycleBin.value = recycleBin.value.filter(function (_, i) { return i !== idx; });
+        notes.value = notes.value.concat([target]);
+      }
+
+      function deleteTab(tabName) {
+        if (categories.value.length <= 1) return;
+        var remaining = categories.value.filter(function (c) { return c !== tabName; });
+        var removed = notes.value.filter(function (n) { return n.category === tabName; });
+        notes.value = notes.value.filter(function (n) { return n.category !== tabName; });
+        recycleBin.value = recycleBin.value.concat(removed);
+        categories.value = remaining;
+        if (activeCategory.value === tabName) activeCategory.value = remaining[0];
+      }
+
+      function moveNoteToCategory(noteId, targetCat) {
+        notes.value = notes.value.map(function (n) {
+          return n.id === noteId ? Object.assign({}, n, { category: targetCat }) : n;
+        });
+      }
+
+      function reorderWithinTab(draggedId, clientY) {
+        var container = document.querySelector(".notes");
+        if (!container) return;
+        var visible = notes.value.filter(function (n) {
+          return n.category === activeCategory.value;
+        });
+        var cardById = {};
+        visible.forEach(function (n) { cardById[n.id] = n; });
+
+        var els = [].slice.call(container.querySelectorAll(".note"));
+        var others = els.filter(function (el) {
+          return String(el.dataset.id) !== String(draggedId);
+        });
+
+        var insertIndex = others.length;
+        for (var i = 0; i < others.length; i++) {
+          var rect = others[i].getBoundingClientRect();
+          if (clientY < rect.top + rect.height / 2) {
+            insertIndex = i;
+            break;
+          }
+        }
+
+        var orderIds = visible
+          .map(function (n) { return n.id; })
+          .filter(function (id) { return id !== draggedId; });
+        orderIds.splice(insertIndex, 0, draggedId);
+
+        var reordered = orderIds.map(function (id) { return cardById[id]; });
+        var others_ = notes.value.filter(function (n) {
+          return n.category !== activeCategory.value;
+        });
+        notes.value = reordered.concat(others_);
+      }
+
+      function exportData() {
+        var blob = new Blob([JSON.stringify(notes.value)], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "karui-notes.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function importData(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+          try {
+            var imported = JSON.parse(ev.target.result);
+            if (!Array.isArray(imported)) return;
+            var newCats = categories.value.slice();
+            var newNotes = notes.value.slice();
+            imported.forEach(function (n) {
+              if (n.category && newCats.indexOf(n.category) === -1) newCats.push(n.category);
+              var exists = newNotes.some(function (x) { return x.id === n.id; });
+              if (!exists) newNotes.push(n);
+            });
+            categories.value = newCats;
+            notes.value = newNotes;
+          } catch (err) {
+            alert("Import failed.");
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = "";
+      }
+
+      function highlightMatch(text, query) {
+        if (!query) return [text];
+        var lower = text.toLowerCase();
+        var q = query.toLowerCase();
+        var idx = lower.indexOf(q);
+        if (idx === -1) return [text];
+        var nodes = [];
+        var i = 0;
+        while (idx !== -1) {
+          if (idx > i) nodes.push(text.slice(i, idx));
+          nodes.push(h("mark", { key: "m" + idx }, text.slice(idx, idx + q.length)));
+          i = idx + q.length;
+          idx = lower.indexOf(q, i);
+        }
+        if (i < text.length) nodes.push(text.slice(i));
+        return nodes;
+      }
+
+      /* ---------- Header ---------- */
+
+      function Header() {
+        function tab(idx, label) {
+          return h(
+            "button",
+            {
+              class: cx(activeScreen.value === idx && "active"),
+              onClick: function () { activeScreen.value = idx; },
+            },
+            label
+          );
+        }
+        return h("div", { class: "header" }, tab(0, "Notes"), tab(1, "Settings"));
+      }
+
+      /* ---------- Add note ---------- */
+
+      function NotesInput() {
+        var list = notes.value.filter(function (n) {
+          return n.category === activeCategory.value;
+        });
+        var remaining = list.filter(function (n) { return !n.completed; }).length;
+        var done = list.filter(function (n) { return n.completed; }).length;
+
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Add Note"),
+          h("input", {
+            class: "note-input",
+            type: "text",
+            placeholder: "Write a note, or type /newtab Name",
+            value: noteInput.value,
+            onInput: function (e) { noteInput.value = e.target.value; },
+            onKeyDown: function (e) {
+              if (e.key === "Enter" && noteInput.value.trim()) {
+                addNote(noteInput.value.trim());
+                noteInput.value = "";
+              }
+            },
+          }),
+          h(
+            "div",
+            { class: "stats" },
+            h("span", null, h("b", null, remaining), " remaining"),
+            h("span", null, h("b", null, done), " done")
+          )
+        );
+      }
+
+      /* ---------- Notes list ---------- */
+
+      function NotesList() {
+        var drag = useRef(null);
+
+        function beginDrag(e, note) {
+          var el = e.currentTarget;
+          var touch = e.touches[0];
+          var sx = touch.clientX;
+          var sy = touch.clientY;
+
+          drag.current = {
+            noteId: note.id,
+            el: el,
+            startX: sx,
+            startY: sy,
+            active: false,
+            hoveredTab: null,
+            lastX: sx,
+            lastY: sy,
+            timer: setTimeout(function () {
+              var d = drag.current;
+              if (!d) return;
+              d.active = true;
+              if (navigator.vibrate) try { navigator.vibrate(50); } catch (_) {}
+
+              el.classList.add("dragging");
+              el.style.pointerEvents = "none";
+
+              var ghost = document.createElement("div");
+              ghost.className = "drag-ghost";
+              ghost.textContent = note.text;
+              ghost.style.left = d.startX - 20 + "px";
+              ghost.style.top = d.startY - 20 + "px";
+              ghost.style.minWidth = "160px";
+              ghost.style.maxWidth = "80vw";
+              document.body.appendChild(ghost);
+              d.ghost = ghost;
+            }, 300),
+          };
+        }
+
+        function moveDrag(e) {
+          var d = drag.current;
+          if (!d) return;
+          var touch = e.touches[0];
+          d.lastX = touch.clientX;
+          d.lastY = touch.clientY;
+
+          if (!d.active) {
+            var dx = touch.clientX - d.startX;
+            var dy = touch.clientY - d.startY;
+            if (Math.sqrt(dx * dx + dy * dy) > 15) {
+              clearTimeout(d.timer);
+              drag.current = null;
+            }
+            return;
+          }
+
+          e.preventDefault();
+          if (d.ghost) {
+            d.ghost.style.left = touch.clientX - 20 + "px";
+            d.ghost.style.top = touch.clientY - 20 + "px";
+          }
+
+          var pointEl = document.elementFromPoint(touch.clientX, touch.clientY);
+          var tabEl = pointEl && pointEl.closest ? pointEl.closest(".tab") : null;
+          d.hoveredTab = tabEl;
+
+          document.querySelectorAll(".tab").forEach(function (t) {
+            t.style.outline = "";
+          });
+          if (tabEl) tabEl.style.outline = "2px solid var(--accent)";
+        }
+
+        function endDrag() {
+          var d = drag.current;
+          if (!d) return;
+          clearTimeout(d.timer);
+
+          document.querySelectorAll(".tab").forEach(function (t) {
+            t.style.outline = "";
+          });
+
+          if (d.el) {
+            d.el.classList.remove("dragging");
+            d.el.style.pointerEvents = "";
+          }
+          if (d.ghost) d.ghost.remove();
+
+          if (d.active) {
+            if (d.hoveredTab && d.hoveredTab.dataset.tab) {
+              moveNoteToCategory(d.noteId, d.hoveredTab.dataset.tab);
+            } else {
+              reorderWithinTab(d.noteId, d.lastY);
+            }
+          }
+
+          drag.current = null;
+        }
+
+        function tabTouchStart(e, cat) {
+          var touch = e.touches[0];
+          tabPressTimer = setTimeout(function () {
+            if (navigator.vibrate) try { navigator.vibrate(50); } catch (_) {}
+            contextMenu.value = {
+              visible: true,
+              x: touch.clientX,
+              y: touch.clientY,
+              tab: cat,
+            };
+          }, 400);
+        }
+
+        var cats = categories.value;
+        var active = activeCategory.value;
+        var q = search.value.trim().toLowerCase();
+        var visible = notes.value
+          .filter(function (n) { return n.category === active; })
+          .filter(function (n) {
+            return !q || n.text.toLowerCase().indexOf(q) !== -1;
+          });
+
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Notes"),
+          h("input", {
+            class: "search-input",
+            type: "text",
+            placeholder: "Search notes in this tab",
+            value: search.value,
+            onInput: function (e) { search.value = e.target.value; },
+          }),
+          h(
+            "div",
+            { class: "tabs" },
+            cats.map(function (cat) {
+              return h(
+                "button",
+                {
+                  key: cat,
+                  "data-tab": cat,
+                  class: cx("tab", active === cat && "active"),
+                  onClick: function () { activeCategory.value = cat; },
+                  onTouchStart: function (e) { tabTouchStart(e, cat); },
+                  onTouchEnd: function () { clearTimeout(tabPressTimer); },
+                  onTouchMove: function () { clearTimeout(tabPressTimer); },
+                },
+                cat
+              );
+            })
+          ),
+          h(
+            "div",
+            { class: "notes" },
+            visible.length === 0
+              ? h(
+                  "div",
+                  { class: "empty" },
+                  q ? "No matches." : "No notes yet."
+                )
+              : visible.map(function (note) {
+                  return h(
+                    "div",
+                    {
+                      key: note.id,
+                      "data-id": note.id,
+                      class: cx("note", note.completed && "completed"),
+                      onClick: function () { toggleNote(note); },
+                      onTouchStart: function (e) { beginDrag(e, note); },
+                      onTouchMove: moveDrag,
+                      onTouchEnd: endDrag,
+                      onTouchCancel: endDrag,
+                    },
+                    h(
+                      "div",
+                      { class: "note-text" },
+                      q ? highlightMatch(note.text, q) : note.text
+                    ),
+                    h(
+                      "div",
+                      { class: "note-actions" },
+                      h(
+                        "button",
+                        {
+                          title: "Copy",
+                          onClick: function (e) {
+                            e.stopPropagation();
+                            copyNote(note);
+                          },
+                        },
+                        "\u29C9"
+                      ),
+                      h(
+                        "button",
+                        {
+                          title: "Delete",
+                          onClick: function (e) {
+                            e.stopPropagation();
+                            deleteNote(note.id);
+                          },
+                        },
+                        "\u2715"
+                      )
+                    )
+                  );
+                })
+          )
+        );
+      }
+
+      /* ---------- Settings cards ---------- */
+
+      function ThemeCard() {
+        var current = theme.value;
+        function themeCard(t) {
+          return h(
+            "button",
+            {
+              key: t.id,
+              class: cx("theme-card", current === t.id && "active"),
+              onClick: function () { theme.value = t.id; },
+            },
+            h(
+              "div",
+              { class: "theme-dots" },
+              t.colors.map(function (c, i) {
+                return h("div", {
+                  key: i,
+                  class: "theme-dot",
+                  style: { background: c },
+                });
+              })
+            ),
+            h("div", { class: "theme-name" }, t.name)
+          );
+        }
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Theme"),
+          h("div", { class: "theme-grid" }, THEMES.map(themeCard))
+        );
+      }
+
+      function FontCard() {
+        var currentFont = font.value;
+        var currentSize = fontSizeLevel.value;
+
+        function fontBtn(id, label) {
+          return h(
+            "button",
+            {
+              class: cx("btn", currentFont === id && "active"),
+              onClick: function () { font.value = id; },
+            },
+            label
+          );
+        }
+
+        function sizeBtn(p) {
+          return h(
+            "button",
+            {
+              class: cx("btn", currentSize === p.id && "active"),
+              onClick: function () { fontSizeLevel.value = p.id; },
+            },
+            p.label
+          );
+        }
+
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Typography"),
+          h("div", { class: "label" }, "Font family"),
+          h(
+            "div",
+            { class: "btn-row" },
+            fontBtn("system-ui", "System"),
+            fontBtn("monospace", "Mono"),
+            fontBtn("serif", "Serif")
+          ),
+          h("div", { class: "label" }, "Text size"),
+          h("div", { class: "size-row" }, SIZE_PRESETS.map(sizeBtn))
+        );
+      }
+
+      function BehaviorCard() {
+        function toggleRow(label, sig) {
+          return h(
+            "div",
+            { class: "toggle-row", onClick: function () { sig.value = !sig.value; } },
+            h("div", { class: "toggle-label" }, label),
+            h("div", { class: cx("switch", sig.value && "on") })
+          );
+        }
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Behavior"),
+          toggleRow("Double-tap to delete", doubleTapDelete),
+          toggleRow("Add new notes at bottom", addNoteBottom)
+        );
+      }
+
+      function BinCard() {
+        var bin = recycleBin.value;
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Recycle Bin"),
+          bin.length === 0
+            ? h("div", { class: "empty" }, "Empty.")
+            : bin.map(function (n, idx) {
+                return h(
+                  "div",
+                  { key: idx, class: "bin-row" },
+                  h("div", { class: "bin-text" }, n.text),
+                  h(
+                    "button",
+                    { class: "bin-restore", onClick: function () { restoreNote(idx); } },
+                    "Restore"
+                  )
+                );
+              }),
+          bin.length > 0 &&
+            h(
+              "button",
+              { class: "btn full", onClick: function () { recycleBin.value = []; } },
+              "Clear Recycle Bin"
+            )
+        );
+      }
+
+      function DataCard() {
+        var fileRef = useRef(null);
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "Data"),
+          h(
+            "div",
+            { class: "btn-row" },
+            h("button", { class: "btn", onClick: exportData }, "Export JSON"),
+            h(
+              "button",
+              { class: "btn", onClick: function () { fileRef.current.click(); } },
+              "Import JSON"
+            ),
+            h("input", {
+              ref: fileRef,
+              type: "file",
+              accept: ".json",
+              style: "display:none",
+              onChange: importData,
+            })
+          )
+        );
+      }
+
+      function AboutCard() {
+        return h(
+          "fieldset",
+          null,
+          h("legend", null, "About"),
+          h(
+            "div",
+            { class: "about-text" },
+            "A small, offline todo list. All data stays on this device.",
+            h("br"),
+            h("br"),
+            h("code", null, "/newtab Name"),
+            " adds a tab. ",
+            h("code", null, "\\deletetab"),
+            " removes the current one. Long-press a tab to rename, move or delete it. Long-press a note, then drag it onto a tab to move it, or between notes to reorder.",
+            h("br"),
+            h("br"),
+            h(
+              "a",
+              { href: "https://github.com/ronynn/karui", target: "_blank", rel: "noopener" },
+              "github.com/ronynn/karui"
+            )
+          )
+        );
+      }
+
+      function NotesScreen() {
+        return h("div", { class: "screen" }, h(NotesInput), h(NotesList));
+      }
+
+      function SettingsScreen() {
+        return h(
+          "div",
+          { class: "screen" },
+          h(ThemeCard),
+          h(FontCard),
+          h(BehaviorCard),
+          h(BinCard),
+          h(DataCard),
+          h(AboutCard)
+        );
+      }
+
+      /* ---------- Context menu ---------- */
+
+      function ContextMenu() {
+        var cm = contextMenu.value;
+        if (!cm.visible) return null;
+
+        function close() {
+          contextMenu.value = Object.assign({}, cm, { visible: false });
+        }
+
+        function move(dir) {
+          var from = categories.value.indexOf(cm.tab);
+          var to = from + dir;
+          if (to < 0 || to >= categories.value.length) return;
+          var updated = categories.value.slice();
+          var tmp = updated[from];
+          updated[from] = updated[to];
+          updated[to] = tmp;
+          categories.value = updated;
+        }
+
+        var idx = categories.value.indexOf(cm.tab);
+
+        return h(
+          "div",
+          {
+            class: "ctx-menu",
+            style: { top: cm.y + "px", left: cm.x + "px" },
+            onClick: function (e) { e.stopPropagation(); },
+          },
+          idx > 0 && h("button", { onClick: function () { move(-1); } }, "Move left"),
+          idx < categories.value.length - 1 &&
+            h("button", { onClick: function () { move(1); } }, "Move right"),
+          h(
+            "button",
+            {
+              onClick: function () {
+                modalInput.value = cm.tab;
+                modal.value = {
+                  visible: true,
+                  title: "Rename tab",
+                  onSubmit: function (val) {
+                    if (val && categories.value.indexOf(val) === -1) {
+                      categories.value = categories.value.map(function (c) {
+                        return c === cm.tab ? val : c;
+                      });
+                      notes.value = notes.value.map(function (n) {
+                        return n.category === cm.tab
+                          ? Object.assign({}, n, { category: val })
+                          : n;
+                      });
+                      activeCategory.value = val;
+                    }
+                    modal.value = { visible: false };
+                  },
+                };
+                close();
+              },
+            },
+            "Rename"
+          ),
+          h(
+            "button",
+            { onClick: function () { deleteTab(cm.tab); close(); } },
+            "Delete"
+          ),
+          h(
+            "button",
+            {
+              onClick: function () {
+                modalInput.value = "";
+                modal.value = {
+                  visible: true,
+                  title: "New tab",
+                  onSubmit: function (val) {
+                    if (val && categories.value.indexOf(val) === -1) {
+                      categories.value = categories.value.concat([val]);
+                      activeCategory.value = val;
+                    }
+                    modal.value = { visible: false };
+                  },
+                };
+                close();
+              },
+            },
+            "Add tab"
+          )
+        );
+      }
+
+      function Modal() {
+        var m = modal.value;
+        if (!m.visible) return null;
+
+        function submit() {
+          if (m.onSubmit) m.onSubmit(modalInput.value);
+        }
+
+        return h(
+          "div",
+          {
+            class: "modal-backdrop",
+            onClick: function () { modal.value = { visible: false }; },
+          },
+          h(
+            "div",
+            {
+              class: "modal",
+              onClick: function (e) { e.stopPropagation(); },
+            },
+            h("h3", null, m.title),
+            h("input", {
+              type: "text",
+              autoFocus: true,
+              value: modalInput.value,
+              onInput: function (e) { modalInput.value = e.target.value; },
+              onKeyDown: function (e) { if (e.key === "Enter") submit(); },
+            }),
+            h(
+              "div",
+              { class: "modal-actions" },
+              h(
+                "button",
+                { class: "btn", onClick: function () { modal.value = { visible: false }; } },
+                "Cancel"
+              ),
+              h("button", { class: "btn active", onClick: submit }, "Save")
+            )
+          )
+        );
+      }
+
+      function App() {
+        var swipe = useRef({ startX: 0, startY: 0, isSwipe: false });
+
+        useEffect(function () {
+          function onStart(e) {
+            var t = e.target;
+            if (!t || !t.closest) return;
+            if (
+              t.closest(".note") ||
+              t.closest(".tab") ||
+              t.closest("input") ||
+              t.closest("button") ||
+              t.closest(".ctx-menu") ||
+              t.closest(".modal")
+            )
+              return;
+            swipe.current.startX = e.touches[0].clientX;
+            swipe.current.startY = e.touches[0].clientY;
+            swipe.current.isSwipe = true;
+          }
+          function onMove(e) {
+            if (!swipe.current.isSwipe) return;
+            var dX = e.touches[0].clientX - swipe.current.startX;
+            var dY = e.touches[0].clientY - swipe.current.startY;
+            if (Math.abs(dX) > Math.abs(dY) && Math.abs(dX) > 40) {
+              activeScreen.value = dX > 0 ? 0 : 1;
+              swipe.current.isSwipe = false;
+            }
+          }
+          function onEnd() { swipe.current.isSwipe = false; }
+
+          window.addEventListener("touchstart", onStart, { passive: true });
+          window.addEventListener("touchmove", onMove, { passive: true });
+          window.addEventListener("touchend", onEnd, { passive: true });
+          window.addEventListener("touchcancel", onEnd, { passive: true });
+          return function () {
+            window.removeEventListener("touchstart", onStart);
+            window.removeEventListener("touchmove", onMove);
+            window.removeEventListener("touchend", onEnd);
+            window.removeEventListener("touchcancel", onEnd);
+          };
+        }, []);
+
+        return h(
+          "div",
+          {
+            class: "app",
+            onClick: function () {
+              if (contextMenu.value.visible) {
+                contextMenu.value = Object.assign({}, contextMenu.value, {
+                  visible: false,
+                });
+              }
+            },
+          },
+          h(Header),
+          h(
+            "div",
+            {
+              class: "screens",
+              style: { transform: "translateX(-" + activeScreen.value * 100 + "vw)" },
+            },
+            h(NotesScreen),
+            h(SettingsScreen)
+          ),
+          h(ContextMenu),
+          h(Modal)
+        );
+      }
+
+      render(h(App), document.getElementById("app"));
+    </script>
+  </body>
+</html>

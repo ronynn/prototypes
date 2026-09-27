@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ronynn's portfolio</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #fff; color: #000; }
+    nav { margin-bottom: 20px; }
+    nav a { margin-right: 15px; color: #000; text-decoration: underline; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media (min-width: 768px) { .grid { grid-template-columns: 1fr 1fr; } }
+    fieldset { border: 4px solid #000; margin-bottom: 20px; padding: 15px; background: #fff; position: relative; }
+    legend { font-weight: bold; }
+    img { max-width: 100%; height: auto; margin-top: 10px; }
+    footer { margin-top: 40px; font-size: 0.9em; text-align: center; }
+    .turtle { position: absolute; top: -18px; left: 10px; font-size: 22px; z-index: 10; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="https://ronynn.github.io">Home</a>
+    <a href="https://m.youtube.com/@ronynn89">Youtube</a>
+    <a href="https://ronynn.github.io/blog/">Blog</a>
+  </nav>
+
+  <h1>ronynn's portfolio ʕ •ᴥ•ʔ</h1>
+
+  <div class="grid">
+    <fieldset>
+      <legend>Aesthetics over plot (Spring Thing 2023)</legend>
+      <p>Get ready to embark on a quirky adventure as you strive to impress an omniscient cactus 🌵, a wall, and a really cool donkey. It's all about aesthetics in this whimsical journey!</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/Aesthetics">Play here</a></p>
+      <img src="aesthetics.jpg" alt="Aesthetics">
+    </fieldset>
+
+    <fieldset>
+      <legend>Lost in the market (Ifcomp 2022)</legend>
+      <p>Dive into a fever dream as you return to your hometown after a failed music career. Explore the surreal landscape and uncover the mysteries that await in this captivating adventure.</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/LATM">Play here</a></p>
+      <img src="latm.jpg" alt="Lost in the market">
+    </fieldset>
+
+    <fieldset>
+      <legend>Abate: Hide behind the curtains (Spring thing 2022)</legend>
+      <p>Peek behind the curtains in this intriguing strand type game made in JavaScript using the Ramus framework and Sugarcube-2. Explore the narrative layers compiled with tweego for a unique gaming experience.</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/abate">Play here</a></p>
+      <img src="abate.jpg" alt="Abate">
+    </fieldset>
+
+    <fieldset>
+      <legend>What remains of me. (Ifcomp 2021)</legend>
+      <p>Immerse yourself in a neo-noir comedy set in the creator's old neighborhood. Navigate through the story with a blend of parser gameplay and retro GUI elements using TIC80. Discover what mysteries lie hidden in the shadows.</p>
+      <p><a href="https://ifcomp.org/play/2558/play_online">Play here</a>, for touch screens <a href="https://ronynn.github.io/Game-Jam-Submissions/wrom/wrom-touch">play here</a></p>
+      <img src="wrom.jpg" alt="What remains of me">
+    </fieldset>
+
+    <fieldset>
+      <legend>Intergalactic Chat Simulator (A drama)</legend>
+      <p>Step into the shoes of an intergalactic communicator in this intense drama. Navigate through complex conversations and uncover the truth hidden within the vast reaches of space.</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/Intergalactic-Chat-Simulator.html">Play here</a></p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dawn (A post-apocalyptic survival demo)</legend>
+      <p>Experience the harsh realities of a post-apocalyptic world in this survival demo. Adapt to the challenges of the environment and forge your path towards a new dawn.</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/Dawn.html">Play here</a></p>
+      <img src="dawn.jpg" alt="Dawn">
+    </fieldset>
+
+    <fieldset>
+      <legend>Nimble Brass (A millionaire simulator)</legend>
+      <p>Take on the role of a millionaire in this simulation game. Manage your wealth, make strategic decisions, and navigate the challenges of high society in your quest for success.</p>
+      <p><a href="https://ronynn.github.io/Game-Jam-Submissions/Nimble-Brass.html">Play here</a></p>
+      <img src="nimble.jpg" alt="Nimble Brass">
+    </fieldset>
+  </div>
+
+  <footer>
+    <hr>
+    <p>&copy; ronynn</p>
+  </footer>
+
+  <script>
+    // turtle pacing animation
+    const firstFieldset = document.querySelector('fieldset')
+    const turtle = document.createElement('div')
+    turtle.className = 'turtle'
+    turtle.innerHTML = '🐢'
+    firstFieldset.appendChild(turtle)
+    let posX = 10
+    let speed = 0.4
+    let direction = 1
+    function moveTurtle()
+    {
+      posX += speed * direction
+      const limit = firstFieldset.clientWidth - 40
+      if (posX > limit || posX < 10)
+      {
+        direction *= -1
+        turtle.style.transform = direction < 0 ? 'scaleX(-1)' : 'scaleX(1)'
+      }
+      turtle.style.left = posX + 'px'
+      requestAnimationFrame(moveTurtle)
+    }
+    moveTurtle()
+  </script>
+
+</body>
+</html>

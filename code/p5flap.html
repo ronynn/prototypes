@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="lib/p5.js">
+    </script>
+</head>
+<body>
+    <script>
+        // ─── state ───
+        let bird, pipes, score, over;
+        const GAP = 120,
+            PW = 50,
+            SPD = 3,
+            GRAV = 0.5,
+            FLAP = -8;
+
+        function reset() {
+            bird = { y: 300, vy: 0 };
+            pipes = [];
+            score = 0;
+            over = false;
+        }
+
+        // ─── p5 lifecycle ───
+        function setup() { createCanvas(410, 600);
+            reset(); }
+
+        function draw() {
+            background(135, 206, 235);
+
+            if (!over) {
+                bird.vy += GRAV;
+                bird.y += bird.vy;
+                if (bird.y < 15 || bird.y > 585) over = true;
+
+                // spawn
+                if (frameCount % 90 === 0) {
+                    let h = random(100, 400);
+                    pipes.push({ x: 400, top: h, bot: h + GAP });
+                }
+
+                for (let p of pipes) {
+                    p.x -= SPD;
+                    if (p.x < -PW) pipes.shift();
+                    if (!p.scored && p.x + PW < 100) { p.scored = true;
+                        score++; }
+                    if (p.x < 115 && p.x + PW > 85) {
+                        if (bird.y - 15 < p.top || bird.y + 15 > p.bot) over = true;
+                    }
+                }
+            }
+
+            // ─── draw ───
+            fill(255);
+            ellipse(100, bird.y, 30);
+
+            fill(0, 200, 0);
+            for (let p of pipes) {
+                rect(p.x, 0, PW, p.top);
+                rect(p.x, p.bot, PW, 600 - p.bot);
+            }
+
+            fill(0);
+            textSize(32);
+            text(score, 20, 50);
+
+            if (over) { textSize(32);
+                text("GAME OVER", 90, 300); }
+        }
+
+        // ─── input ───
+        function mousePressed() { flap(); }
+
+        function keyPressed() { if (key === ' ') flap(); }
+
+        function flap() {
+            if (over) reset();
+            else bird.vy = FLAP;
+        }
+    </script>
+</body>
+</html>

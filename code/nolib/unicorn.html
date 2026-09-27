@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Unicorn Odyssey</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0a0618;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  canvas{display:block;touch-action:none;image-rendering:auto;}
+  #hud{position:fixed;inset:0;pointer-events:none;color:#fff;
+    text-shadow:0 2px 12px rgba(0,0,0,.6);user-select:none;}
+  #stats{position:absolute;top:18px;left:22px;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;opacity:.7;}
+  #dist{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;
+    text-transform:none;margin-bottom:4px;opacity:1;}
+  #stylebox{position:absolute;top:18px;right:22px;text-align:right;font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;opacity:.7;}
+  #stylepts{font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1;
+    text-transform:none;margin-bottom:4px;color:#ffd6f7;opacity:1;}
+  #combo{position:absolute;top:100px;right:22px;text-align:right;font-size:20px;
+    font-weight:800;color:#ffe27a;opacity:0;transition:opacity .25s;}
+  #weather{position:absolute;top:18px;left:50%;transform:translateX(-50%);
+    font-size:10px;letter-spacing:.24em;text-transform:uppercase;opacity:.55;}
+  #hint{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+    white-space:nowrap;transition:opacity .6s;text-align:center;line-height:1.7;}
+  #mission{
+    position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
+    width:min(340px, 78vw);
+    background:rgba(20,10,40,0.55);
+    border:1px solid rgba(255,180,255,0.22);
+    border-radius:14px;
+    padding:10px 14px;
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    box-shadow:0 8px 32px rgba(0,0,0,0.4), 0 0 24px rgba(180,80,220,0.14);
+    font-size:11px; letter-spacing:.06em;
+    transition:box-shadow .35s, border-color .35s, transform .35s;
+  }
+  #mission.done{
+    border-color:rgba(255,230,150,0.75);
+    box-shadow:0 0 38px rgba(255,220,120,0.6), 0 0 18px rgba(255,220,120,0.5);
+    transform:translateX(-50%) scale(1.04);
+  }
+  .mrow{display:flex; justify-content:space-between; align-items:center;
+    font-size:9px; letter-spacing:.22em; text-transform:uppercase; opacity:.6;
+    margin-bottom:4px;}
+  .mtext{font-size:14px; font-weight:700; letter-spacing:.01em; margin-bottom:7px;
+    color:#fff;}
+  .mbar{height:3px; background:rgba(255,255,255,0.12); border-radius:2px;
+    overflow:hidden;}
+  .mfill{height:100%; width:0%; border-radius:2px;
+    background:linear-gradient(90deg, #ff7ac6, #b98cff, #7ad4ff);
+    transition:width .22s ease-out;}
+  #toast{position:fixed;left:50%;top:36%;transform:translate(-50%, -10px);
+    font-size:22px;font-weight:800;letter-spacing:-.01em;color:#ffe9a8;
+    text-shadow:0 0 30px rgba(255,200,90,0.9), 0 2px 10px rgba(0,0,0,0.6);
+    opacity:0;transition:opacity .3s, transform .3s;pointer-events:none;
+    text-align:center;white-space:nowrap;}
+  #toast.on{opacity:1;transform:translate(-50%, -30px);}
+  #over{position:fixed;inset:0;display:none;flex-direction:column;
+    align-items:center;justify-content:center;color:#fff;text-align:center;
+    pointer-events:none;background:rgba(10,4,24,.5);
+    backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);}
+  #over.on{display:flex;}
+  #ovtitle{font-size:44px;font-weight:800;letter-spacing:-.03em;
+    color:#ffb0e0;text-shadow:0 0 30px rgba(255,120,220,.8);}
+  #ovsub{margin-top:10px;font-size:11px;letter-spacing:.24em;
+    text-transform:uppercase;opacity:.7;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div id="stats"><div id="dist">0 m</div><div>distance</div></div>
+  <div id="stylebox"><div id="stylepts">0</div><div>style</div></div>
+  <div id="combo"></div>
+  <div id="weather"></div>
+  <div id="hint">space / tap — hop &nbsp;·&nbsp; tap in air — flip<br>dodge the rocks &nbsp;·&nbsp; clear the chasms &nbsp;·&nbsp; ride the rainbows</div>
+  <div id="mission">
+    <div class="mrow"><span>mission</span><span id="mprog">0 / 300 m</span></div>
+    <div class="mtext" id="mtext">Travel 300 m</div>
+    <div class="mbar"><div class="mfill" id="mfill"></div></div>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="over">
+  <div id="ovtitle">CRASHED</div>
+  <div id="ovsub">tap or press space to rise again</div>
+</div>
+<script>
+(() => {
+'use strict';
+
+const TAU = Math.PI * 2;
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d', { alpha: false });
+const elDist  = document.getElementById('dist');
+const elStyle = document.getElementById('stylepts');
+const elCombo = document.getElementById('combo');
+const elHint  = document.getElementById('hint');
+const elOver  = document.getElementById('over');
+const elWeather = document.getElementById('weather');
+const elMission = document.getElementById('mission');
+const elMtext = document.getElementById('mtext');
+const elMprog = document.getElementById('mprog');
+const elMfill = document.getElementById('mfill');
+const elToast = document.getElementById('toast');
+
+let W = 0, H = 0, DPR = 1;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width  = Math.round(W * DPR);
+  cv.height = Math.round(H * DPR);
+  cv.style.width  = W + 'px';
+  cv.style.height = H + 'px';
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- helpers ---------------- */
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const rand  = (a,b) => a + Math.random()*(b-a);
+function hash(n){ const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+
+function lerpAngle(a, b, t){
+  let d = (b - a) % TAU;
+  if (d >  Math.PI) d -= TAU;
+  if (d < -Math.PI) d += TAU;
+  return a + d * t;
+}
+
+/* ---------------- terrain ---------------- */
+const OCT = [
+  { a: 110, f: 0.00260, p: 0.00 },
+  { a:  46, f: 0.00620, p: 1.70 },
+  { a:  16, f: 0.01280, p: 4.20 },
+  { a:   5, f: 0.02620, p: 0.90 },
+];
+function terrainY(x){
+  let y = 0;
+  for (let i = 0; i < OCT.length; i++){
+    const o = OCT[i];
+    y += Math.sin(x * o.f + o.p) * o.a;
+  }
+  return y;
+}
+function terrainSlope(x){
+  let s = 0;
+  for (let i = 0; i < OCT.length; i++){
+    const o = OCT[i];
+    s += Math.cos(x * o.f + o.p) * o.a * o.f;
+  }
+  return s;
+}
+
+/* ---------------- procedural features ---------------- */
+const GAP_SPACING = 1000;
+function gapAt(i){
+  if (i < 1) return null;
+  const h1 = hash(i * 7.13 + 3.7);
+  const h2 = hash(i * 11.7 + 9.3);
+  const x  = i * GAP_SPACING + (h1 - 0.5) * 340;
+  const w  = 120 + h2 * 130;
+  return { start: x, end: x + w };
+}
+function isInGap(x, margin){
+  margin = margin || 0;
+  const base = Math.floor(x / GAP_SPACING);
+  for (let i = base - 2; i <= base + 2; i++){
+    const g = gapAt(i);
+    if (!g) continue;
+    if (x > g.start - margin && x < g.end + margin) return true;
+  }
+  return false;
+}
+
+const OBS_SPACING = 560;
+function obstacleAt(i){
+  if (i < 1) return null;
+  const h1 = hash(i * 3.1 + 11.3);
+  const h2 = hash(i * 5.7 + 22.9);
+  const h3 = hash(i * 9.3 + 33.1);
+  const x  = i * OBS_SPACING + (h1 - 0.5) * 240;
+  if (isInGap(x, 70)) return null;
+  return {
+    x,
+    w: 22 + h2 * 20,
+    h: 38 + h3 * 54,
+    kind: h2 > 0.52 ? 'spike' : 'rock'
+  };
+}
+
+const RB_SPACING = 1500;
+function rainbowAt(i){
+  if (i < 1) return null;
+  const h1 = hash(i * 17.3 + 5.1);
+  const x  = i * RB_SPACING + (h1 - 0.5) * 520;
+  if (isInGap(x, 130)) return null;
+  return { x, r: 100 + hash(i * 23.7 + 7.7) * 60 };
+}
+
+/* ---------------- tuning ---------------- */
+const Z         = 0.80;
+const GRAV      = 1600;
+const MIN_SPEED = 420;
+const MAX_SPEED = 1150;
+const FLIP_TIME = 0.52;
+const DAY_LEN   = 95;
+const MAX_PARTS = 300;
+
+/* ---------------- state ---------------- */
+let P, cam, parts, trail, stars, clouds, rainDrops, snowFlakes, rings;
+let time, stylePts, combo, dustAcc, sparkAcc, started;
+let dayT, weather, wTimer, wDur, wIntensity, flash, nextBolt;
+let state, deathT;
+let totalDist, totalFlips;
+let mission, missionNum, lastMProg;
+
+function makeSky(){
+  stars = [];
+  for (let i = 0; i < 70; i++){
+    stars.push({
+      x: Math.random(), y: Math.random() * 0.60,
+      r: rand(0.4, 1.3)
+    });
+  }
+  clouds = [];
+  for (let i = 0; i < 6; i++){
+    clouds.push({
+      x: Math.random(), y: rand(0.05, 0.40),
+      s: rand(0.7, 1.9), a: rand(0.04, 0.10)
+    });
+  }
+  rainDrops = [];
+  for (let i = 0; i < 180; i++){
+    rainDrops.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vy: rand(760, 1150), vx: rand(-140, -50), len: rand(9, 22)
+    });
+  }
+  snowFlakes = [];
+  for (let i = 0; i < 140; i++){
+    snowFlakes.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vy: rand(38, 115), r: rand(1, 2.8),
+      ph: rand(0, TAU), sp: rand(0.5, 1.7)
+    });
+  }
+}
+
+function reset(){
+  if (P) totalDist += P.x;
+  P = {
+    x: 0, y: terrainY(0), vx: 0, vy: 0,
+    speed: 560, grounded: true, angle: 0,
+    flip: 0, flipVel: 0, flipping: false
+  };
+  cam = { x: P.x - (W / Z) * 0.32, y: P.y - (H / Z) * 0.55 };
+  parts = [];
+  rings = [];
+  trail = [];
+  time = 0;
+  combo = 0;
+  dustAcc = 0; sparkAcc = 0;
+  deathT = 0;
+  state = 'play';
+  elCombo.style.opacity = '0';
+  elOver.classList.remove('on');
+}
+
+function initAll(){
+  makeSky();
+  dayT = 0.06;
+  weather = 'clear';
+  wTimer = 16;
+  wDur = 16;
+  wIntensity = 0;
+  flash = 0;
+  nextBolt = 4;
+  stylePts = 0;
+  totalDist = 0;
+  totalFlips = 0;
+  missionNum = 0;
+  mission = null;
+  lastMProg = '';
+  reset();
+  newMission();
+  state = 'play';
+}
+
+/* ---------------- missions ---------------- */
+function worldDist(){ return totalDist + P.x; }
+
+function newMission(){
+  missionNum++;
+  const level = Math.floor((missionNum - 1) / 3);
+  const type = (missionNum - 1) % 3;
+  if (type === 0){
+    const t = 300 + level * 250;
+    mission = { kind:'distance', target:t, start: worldDist(), label:`Travel ${t} m` };
+  } else if (type === 1){
+    const t = 5 + level * 3;
+    mission = { kind:'flips', target:t, start: totalFlips, label:`Land ${t} flips` };
+  } else {
+    const t = 3000 + level * 2500;
+    mission = { kind:'style', target:t, start: stylePts, label:`Earn ${t} style points` };
+  }
+  lastMProg = '';
+  elMtext.textContent = mission.label;
+  updateMissionProgress();
+}
+
+function updateMissionProgress(){
+  if (!mission) return;
+  let cur = 0, target = mission.target, unit = '';
+  if (mission.kind === 'distance'){
+    cur = Math.floor((worldDist() - mission.start) / 40);
+    unit = ' m';
+  } else if (mission.kind === 'flips'){
+    cur = totalFlips - mission.start;
+  } else {
+    cur = stylePts - mission.start;
+  }
+  cur = clamp(cur, 0, target);
+  const txt = cur + ' / ' + target + unit;
+  if (txt !== lastMProg){
+    elMprog.textContent = txt;
+    elMfill.style.width = (cur / target * 100) + '%';
+    lastMProg = txt;
+  }
+}
+
+function checkMission(){
+  if (!mission) return;
+  let done = false;
+  if (mission.kind === 'distance'){
+    done = (worldDist() - mission.start) / 40 >= mission.target;
+  } else if (mission.kind === 'flips'){
+    done = (totalFlips - mission.start) >= mission.target;
+  } else {
+    done = (stylePts - mission.start) >= mission.target;
+  }
+  if (done){
+    stylePts += 500;
+    elStyle.textContent = stylePts;
+    toast('mission complete  +500');
+    elMission.classList.add('done');
+    setTimeout(() => elMission.classList.remove('done'), 900);
+    setTimeout(() => newMission(), 650);
+    mission = null;
+  }
+}
+
+let toastTid = 0;
+function toast(text){
+  elToast.textContent = text;
+  elToast.classList.add('on');
+  clearTimeout(toastTid);
+  toastTid = setTimeout(() => elToast.classList.remove('on'), 1500);
+}
+
+/* ---------------- particles ---------------- */
+function spawnDust(){
+  const th = Math.atan(terrainSlope(P.x));
+  const ct = Math.cos(th), st = Math.sin(th);
+  const life = rand(0.3, 0.75);
+  parts.push({
+    x: P.x + rand(-8, 8), y: P.y + rand(-4, 4),
+    vx: -ct * rand(60, 230) + rand(-50, 50),
+    vy: -st * rand(60, 230) - rand(30, 140),
+    g: 1000, life, max: life,
+    r: rand(1.6, 4.2), hue: rand(295, 340)
+  });
+}
+
+function spawnBurst(impact){
+  const n  = clamp(Math.round(impact / 55), 4, 14);
+  const th = Math.atan(terrainSlope(P.x));
+  for (let i = 0; i < n; i++){
+    const a = th + rand(-2.4, -0.4);
+    const sp = rand(90, 380);
+    const life = rand(0.35, 0.85);
+    parts.push({
+      x: P.x + rand(-10, 10), y: P.y + rand(-4, 4),
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      g: 1200, life, max: life,
+      r: rand(2, 5), hue: rand(280, 350)
+    });
+  }
+}
+
+function spawnSpark(){
+  const life = rand(0.2, 0.45);
+  parts.push({
+    x: P.x + rand(-30, 8), y: P.y - 26 + rand(-18, 8),
+    vx: rand(-150, -20), vy: rand(-80, 25),
+    g: 120, life, max: life,
+    r: rand(1, 2), hue: rand(40, 70)
+  });
+}
+
+function spawnBoom(){
+  for (let i = 0; i < 36; i++){
+    const a = rand(0, TAU), sp = rand(80, 500);
+    const life = rand(0.4, 1.2);
+    parts.push({
+      x: P.x, y: P.y - 24,
+      vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120,
+      g: 900, life, max: life,
+      r: rand(2, 5.5), hue: rand(280, 360)
+    });
+  }
+}
+
+/* ---------------- death ---------------- */
+function die(){
+  if (state !== 'play') return;
+  state = 'dead';
+  deathT = 0;
+  spawnBoom();
+  elCombo.style.opacity = '0';
+}
+
+/* ---------------- input ---------------- */
+function press(){
+  if (state === 'dead'){
+    if (deathT > 0.75){ reset(); state = 'play'; }
+    return;
+  }
+  if (!started){ started = true; elHint.style.opacity = '0'; }
+  if (P.grounded){
+    const th = Math.atan(terrainSlope(P.x));
+    P.grounded = false;
+    P.vx = P.speed * Math.cos(th);
+    P.vy = P.speed * Math.sin(th) - 520;
+    P.y -= 2;
+  } else if (!P.flipping){
+    P.flipping = true;
+    P.flipVel  = TAU / FLIP_TIME;
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW'){
+    e.preventDefault();
+    press();
+  }
+}, { passive: false });
+
+window.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  press();
+}, { passive: false });
+
+/* ---------------- weather / sky ---------------- */
+const SKY_KEYS = [
+  { t: 0.00, c: [[ 74,158,208],[122,184,232],[184,224,248],[240,248,255]] },
+  { t: 0.20, c: [[ 96,148,204],[170,150,186],[232,158,124],[250,204,146]] },
+  { t: 0.31, c: [[ 60, 46,108],[110, 62,116],[196, 96,116],[240,146,112]] },
+  { t: 0.40, c: [[ 26, 18, 56],[ 62, 36, 86],[128, 62,104],[186, 96, 96]] },
+  { t: 0.50, c: [[  8,  6, 26],[ 22, 16, 52],[ 48, 28, 80],[ 90, 50,110]] },
+  { t: 0.62, c: [[ 34, 26, 72],[ 96, 62,112],[186,110,124],[232,158,134]] },
+  { t: 0.72, c: [[ 84,142,206],[156,196,238],[216,232,250],[255,248,238]] },
+  { t: 1.00, c: [[ 74,158,208],[122,184,232],[184,224,248],[240,248,255]] },
+];
+function lerpC(a, b, t){
+  return [ a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t ];
+}
+function skyColors(t){
+  let k0 = SKY_KEYS[0], k1 = SKY_KEYS[1];
+  for (let i = 0; i < SKY_KEYS.length - 1; i++){
+    if (t >= SKY_KEYS[i].t && t <= SKY_KEYS[i+1].t){
+      k0 = SKY_KEYS[i]; k1 = SKY_KEYS[i+1]; break;
+    }
+  }
+  const span = (k1.t - k0.t) || 1;
+  const u = (t - k0.t) / span;
+  return k0.c.map((c, i) => lerpC(c, k1.c[i], u));
+}
+function nightAmount(t){
+  return (1 - Math.cos(TAU * t)) * 0.5;
+}
+function nextWeather(){
+  const r = Math.random();
+  if (r < 0.34) return 'clear';
+  if (r < 0.58) return 'rain';
+  if (r < 0.80) return 'snow';
+  return 'storm';
+}
+function weatherName(w){
+  return { clear:'clear skies', rain:'light rain', snow:'snowstorm', storm:'thunderstorm' }[w];
+}
+
+/* ---------------- update ---------------- */
+function update(dt){
+  time += dt;
+  dayT = (dayT + dt / DAY_LEN) % 1;
+
+  wTimer -= dt;
+  if (wTimer <= 0){
+    weather = nextWeather();
+    wDur = rand(14, 26);
+    wTimer = wDur;
+    elWeather.textContent = weatherName(weather);
+  }
+  const wt = wTimer / wDur;
+  wIntensity = Math.min(1, Math.min((1 - wt) * 4, wt * 4));
+
+  flash = Math.max(0, flash - dt * 3.2);
+  if (weather === 'storm' && wIntensity > 0.35){
+    nextBolt -= dt;
+    if (nextBolt <= 0){ flash = 1; nextBolt = rand(2.6, 8.0); }
+  }
+
+  if (state === 'dead'){
+    deathT += dt;
+    if (deathT > 0.75) elOver.classList.add('on');
+  } else {
+    const slope = terrainSlope(P.x);
+    const th    = Math.atan(slope);
+
+    if (P.grounded){
+      P.speed += GRAV * Math.sin(th) * dt;
+      P.speed *= Math.exp(-0.15 * dt);
+      P.speed  = clamp(P.speed, MIN_SPEED, MAX_SPEED);
+
+      const ct = Math.cos(th), st = Math.sin(th);
+      const nx = P.x + P.speed * ct * dt;
+      const ny = P.y + P.speed * st * dt;
+
+      if (isInGap(nx, 3)){
+        P.grounded = false;
+        P.vx = P.speed * ct;
+        P.vy = P.speed * st;
+        P.x  = nx;
+      } else {
+        const gy = terrainY(nx);
+        if (gy > ny + 1.5){
+          P.grounded = false;
+          P.x = nx; P.y = ny;
+          P.vx = P.speed * ct;
+          P.vy = P.speed * st;
+        } else {
+          P.x = nx;
+          P.y = gy;
+          P.angle = lerpAngle(P.angle, th * 0.85, 1 - Math.exp(-14 * dt));
+          dustAcc += dt * (5 + P.speed * 0.018);
+          while (dustAcc >= 1){ dustAcc -= 1; if (parts.length < MAX_PARTS) spawnDust(); }
+        }
+      }
+    } else {
+      P.vy += GRAV * dt;
+      P.x  += P.vx * dt;
+      P.y  += P.vy * dt;
+
+      if (P.flipping){
+        P.flip += P.flipVel * dt;
+        if (P.flip >= TAU){
+          P.flip = 0; P.flipVel = 0; P.flipping = false;
+          combo++;
+          totalFlips++;
+          stylePts += 100 * combo;
+          elStyle.textContent = stylePts;
+          elCombo.textContent = '×' + combo + (combo > 1 ? ' flips' : ' flip');
+          elCombo.style.opacity = '1';
+        }
+      } else {
+        P.angle = lerpAngle(P.angle, Math.atan2(P.vy, P.vx), 1 - Math.exp(-9 * dt));
+      }
+
+      const gy = terrainY(P.x);
+      if (!isInGap(P.x, 2) && P.y >= gy){
+        const th2 = Math.atan(terrainSlope(P.x));
+        const ct2 = Math.cos(th2), st2 = Math.sin(th2);
+        const impact = Math.max(0, P.vy);
+
+        P.speed = clamp(P.vx * ct2 + P.vy * st2, MIN_SPEED, MAX_SPEED);
+        P.y = gy;
+        P.grounded = true;
+        P.angle = th2 * 0.85;
+        P.flip = 0; P.flipVel = 0; P.flipping = false;
+
+        if (impact > 150) spawnBurst(impact);
+        for (let i = 0; i < 5; i++) if (parts.length < MAX_PARTS) spawnDust();
+
+        combo = 0;
+        elCombo.style.opacity = '0';
+      }
+
+      if (P.y > terrainY(P.x) + 430) die();
+    }
+
+    if (state === 'play'){
+      const pl = P.x - 15, pr = P.x + 15;
+      const pt = P.y - 48, pb = P.y - 2;
+      const i0 = Math.floor(P.x / OBS_SPACING) - 2;
+      const i1 = Math.floor(P.x / OBS_SPACING) + 2;
+      for (let i = i0; i <= i1; i++){
+        const o = obstacleAt(i);
+        if (!o) continue;
+        const oy = terrainY(o.x);
+        const ol = o.x - o.w * 0.5, or_ = o.x + o.w * 0.5;
+        const ot = oy - o.h, ob = oy;
+        if (pr > ol && pl < or_ && pb > ot && pt < ob){ die(); break; }
+      }
+    }
+
+    if (state === 'play'){
+      const i0 = Math.floor((P.x - 400) / RB_SPACING);
+      const i1 = Math.floor((P.x + 400) / RB_SPACING);
+      for (let i = i0; i <= i1; i++){
+        const rb = rainbowAt(i);
+        if (!rb) continue;
+        if (!rb._hit && Math.abs(P.x - rb.x) < 34){
+          rb._hit = true;
+          stylePts += 250;
+          elStyle.textContent = stylePts;
+          rings.push({ x: rb.x, y: terrainY(rb.x) - 10, r: 10, life: 0.9, max: 0.9 });
+          for (let k = 0; k < 22; k++){
+            const a = rand(0, TAU), sp = rand(80, 360);
+            const life = rand(0.5, 1.0);
+            if (parts.length < MAX_PARTS) parts.push({
+              x: rb.x, y: terrainY(rb.x) - 20 + rand(-40, 40),
+              vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60,
+              g: 400, life, max: life,
+              r: rand(2, 4.5), hue: rand(0, 360)
+            });
+          }
+          elCombo.textContent = 'rainbow!';
+          elCombo.style.opacity = '1';
+          setTimeout(() => { if (state === 'play') elCombo.style.opacity = '0'; }, 900);
+        }
+      }
+    }
+
+    if (P.speed > 720 && P.grounded){
+      sparkAcc += dt * (P.speed - 720) * 0.015;
+      while (sparkAcc >= 1){ sparkAcc -= 1; if (parts.length < MAX_PARTS) spawnSpark(); }
+    }
+  }
+
+  /* camera */
+  const targetX = P.x - (W / Z) * 0.32;
+  const targetY = P.y - (H / Z) * 0.55;
+  cam.x += (targetX - cam.x) * (1 - Math.exp(-14 * dt));
+  cam.y += (targetY - cam.y) * (1 - Math.exp(-7 * dt));
+
+  /* trail */
+  trail.push({ x: P.x, y: P.y - 24 });
+  if (trail.length > 22) trail.shift();
+
+  /* rings */
+  for (let i = rings.length - 1; i >= 0; i--){
+    const r = rings[i];
+    r.life -= dt;
+    if (r.life <= 0){ rings.splice(i, 1); continue; }
+    r.r += 340 * dt;
+  }
+
+  /* particles */
+  for (let i = parts.length - 1; i >= 0; i--){
+    const q = parts[i];
+    q.life -= dt;
+    if (q.life <= 0){ parts.splice(i, 1); continue; }
+    q.vy += q.g * dt;
+    q.vx *= Math.exp(-1.5 * dt);
+    q.x  += q.vx * dt;
+    q.y  += q.vy * dt;
+  }
+
+  /* weather particles */
+  const stormBoost = weather === 'storm' ? 0.7 : 0;
+  if (wIntensity > 0.01 && (weather === 'rain' || weather === 'storm')){
+    for (const d of rainDrops){
+      d.y += d.vy * (1 + stormBoost) * dt;
+      d.x += d.vx * (1 + stormBoost) * dt;
+      if (d.y > H + 40){ d.y = -30; d.x = Math.random() * W; }
+      if (d.x < -40) d.x = W + 40;
+    }
+  }
+  if (wIntensity > 0.01 && weather === 'snow'){
+    const wind = Math.sin(time * 0.5) * 40;
+    for (const f of snowFlakes){
+      f.y += f.vy * dt;
+      f.x += (Math.sin(time * f.sp + f.ph) * 34 + wind) * dt;
+      if (f.y > H + 12){ f.y = -12; f.x = Math.random() * W; }
+      if (f.x < -14) f.x = W + 14;
+      if (f.x > W + 14) f.x = -14;
+    }
+  }
+
+  /* missions */
+  if (state === 'play'){
+    checkMission();
+    updateMissionProgress();
+  }
+
+  elDist.textContent = Math.max(0, Math.round(worldDist() / 40)) + ' m';
+}
+
+/* ---------------- render ---------------- */
+function drawDunes(p, amp, shift, color, step){
+  ctx.beginPath();
+  ctx.moveTo(-20, H + 80);
+  for (let sx = -20; sx <= W + 20; sx += step){
+    const wx = cam.x * p + sx / Z;
+    const wy = terrainY(wx) * amp;
+    const sy = (wy - cam.y * p) * Z + shift;
+    ctx.lineTo(sx, sy);
+  }
+  ctx.lineTo(W + 20, H + 80);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+function drawSky(){
+  const cols = skyColors(dayT);
+  const na   = nightAmount(dayT);
+
+  let dk = 1;
+  if (weather === 'rain')  dk = 1 - 0.28 * wIntensity;
+  else if (weather === 'storm') dk = 1 - 0.55 * wIntensity;
+  else if (weather === 'snow')  dk = 1 - 0.15 * wIntensity;
+
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0.00, `rgb(${cols[0][0]*dk|0},${cols[0][1]*dk|0},${cols[0][2]*dk|0})`);
+  g.addColorStop(0.34, `rgb(${cols[1][0]*dk|0},${cols[1][1]*dk|0},${cols[1][2]*dk|0})`);
+  g.addColorStop(0.64, `rgb(${cols[2][0]*dk|0},${cols[2][1]*dk|0},${cols[2][2]*dk|0})`);
+  g.addColorStop(1.00, `rgb(${cols[3][0]*dk|0},${cols[3][1]*dk|0},${cols[3][2]*dk|0})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  const ang  = TAU * dayT;
+  const sunX = W * 0.5 - Math.sin(ang) * W * 0.45;
+  const sunY = H * 0.62 - Math.cos(ang) * H * 0.50;
+  const moX  = W * 0.5 - Math.sin(ang + Math.PI) * W * 0.45;
+  const moY  = H * 0.62 - Math.cos(ang + Math.PI) * H * 0.50;
+
+  if (na < 0.92){
+    ctx.globalAlpha = (1 - na) * (1 - 0.45 * wIntensity);
+    const sg = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 160);
+    sg.addColorStop(0,    'rgba(255,244,200,0.9)');
+    sg.addColorStop(0.28, 'rgba(255,196,124,0.32)');
+    sg.addColorStop(1,    'rgba(255,150,80,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(sunX, sunY, 160, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fff8e2';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 28, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  if (na > 0.05){
+    ctx.globalAlpha = na * (1 - 0.55 * wIntensity);
+    const mg = ctx.createRadialGradient(moX, moY, 0, moX, moY, 160);
+    mg.addColorStop(0,    'rgba(255,228,255,0.5)');
+    mg.addColorStop(0.28, 'rgba(216,168,255,0.14)');
+    mg.addColorStop(1,    'rgba(180,120,255,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(moX, moY, 160, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#fdf3ff';
+    ctx.beginPath(); ctx.arc(moX, moY, 30, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  if (na > 0.18){
+    ctx.globalAlpha = (na - 0.18) / 0.82 * 0.8 * (1 - 0.7 * wIntensity);
+    ctx.fillStyle = '#ffffff';
+    for (const s of stars){
+      ctx.beginPath();
+      ctx.arc(s.x * W, s.y * H * 0.78, s.r, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const cloudA = 1 - 0.35 * wIntensity;
+  for (const c of clouds){
+    const span = W + 520;
+    let cx = (c.x * span - cam.x * 0.035) % span;
+    if (cx < 0) cx += span;
+    cx -= 260;
+    const cy = c.y * H;
+    ctx.globalAlpha = c.a * cloudA * (1 + 1.4 * wIntensity);
+    ctx.fillStyle = weather === 'storm' ? '#4a3a6a' : '#c9a8ff';
+    ctx.beginPath(); ctx.ellipse(cx, cy, 115 * c.s, 23 * c.s, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 62 * c.s, cy + 9 * c.s, 84 * c.s, 17 * c.s, 0, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMainTerrain(){
+  const wLeft  = cam.x - 70;
+  const wRight = cam.x + W / Z + 70;
+  const bottom = cam.y + H / Z + 250;
+  const step   = 5;
+
+  const segs = [];
+  let cur = null;
+  for (let x = wLeft; x <= wRight; x += step){
+    if (isInGap(x, 0)){
+      cur = null;
+    } else {
+      if (!cur){ cur = []; segs.push(cur); }
+      cur.push({ x, y: terrainY(x) });
+    }
+  }
+
+  const grad = ctx.createLinearGradient(0, cam.y - 260, 0, cam.y + H / Z);
+  grad.addColorStop(0.00, '#7b4fb0');
+  grad.addColorStop(0.35, '#553286');
+  grad.addColorStop(0.75, '#331d5c');
+  grad.addColorStop(1.00, '#1a0f33');
+
+  for (const s of segs){
+    if (s.length < 2) continue;
+    ctx.beginPath();
+    ctx.moveTo(s[0].x, s[0].y);
+    for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y);
+    ctx.lineTo(s[s.length - 1].x, bottom);
+    ctx.lineTo(s[0].x, bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  for (const s of segs){
+    if (s.length < 2) continue;
+    ctx.moveTo(s[0].x, s[0].y);
+    for (let i = 1; i < s.length; i++) ctx.lineTo(s[i].x, s[i].y);
+  }
+  ctx.strokeStyle = 'rgba(255,190,255,0.8)';
+  ctx.lineWidth = 2.4 / Z;
+  ctx.stroke();
+}
+
+function drawObstacle(o){
+  const gy = terrainY(o.x);
+  const sl = clamp(Math.atan(terrainSlope(o.x)), -0.6, 0.6);
+
+  ctx.save();
+  ctx.translate(o.x, gy);
+  ctx.rotate(sl);
+
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = '#0a0618';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, o.w * 0.7, 5, 0, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  if (o.kind === 'spike'){
+    const g = ctx.createLinearGradient(0, -o.h * 1.05, 0, 5);
+    g.addColorStop(0.00, '#eaffff');
+    g.addColorStop(0.42, '#66e0ff');
+    g.addColorStop(1.00, '#1d5580');
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-o.w * 0.50, 4);
+    ctx.lineTo(-o.w * 0.16, -o.h * 1.06);
+    ctx.lineTo( o.w * 0.08, -o.h * 0.42);
+    ctx.lineTo( o.w * 0.50, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo( o.w * 0.10, 4);
+    ctx.lineTo( o.w * 0.34, -o.h * 0.62);
+    ctx.lineTo( o.w * 0.58, 4);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1.3 / Z;
+    ctx.beginPath();
+    ctx.moveTo(-o.w * 0.16, -o.h * 1.02);
+    ctx.lineTo(-o.w * 0.02, -o.h * 0.30);
+    ctx.stroke();
+  } else {
+    const g = ctx.createLinearGradient(0, -o.h * 1.02, 0, 6);
+    g.addColorStop(0.00, '#8a5fb0');
+    g.addColorStop(0.42, '#5a3480');
+    g.addColorStop(1.00, '#26123c');
+
+    ctx.fillStyle = g;
+
+    ctx.beginPath();
+    ctx.ellipse(0, -o.h * 0.34, o.w * 0.66, o.h * 0.44, 0, 0, TAU);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(-o.w * 0.14, -o.h * 0.74, o.w * 0.44, o.h * 0.34, 0.22, 0, TAU);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse( o.w * 0.30, -o.h * 0.58, o.w * 0.34, o.h * 0.28, -0.32, 0, TAU);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#e0b8ff';
+    ctx.beginPath();
+    ctx.ellipse(-o.w * 0.16, -o.h * 0.88, o.w * 0.30, o.h * 0.14, 0.2, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function drawRainbow(rb){
+  const gy = terrainY(rb.x);
+  ctx.save();
+  ctx.translate(rb.x, gy - 6);
+  const cols = ['#ff3b6b','#ff9a3b','#ffe93b','#4bff8a','#3bd4ff','#a03bff'];
+  ctx.lineCap = 'round';
+  for (let i = 0; i < cols.length; i++){
+    ctx.beginPath();
+    ctx.arc(0, 0, rb.r - i * 6, Math.PI * 1.06, Math.PI * 1.94);
+    ctx.strokeStyle = cols[i];
+    ctx.globalAlpha = 0.42 + 0.14 * Math.sin(time * 3 + i * 0.7);
+    ctx.lineWidth = 6.5 / Z;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawTrail(){
+  if (trail.length < 2) return;
+  ctx.lineCap = 'round';
+  for (let i = 1; i < trail.length; i++){
+    const a = i / trail.length;
+    const A = trail[i - 1], B = trail[i];
+    ctx.beginPath();
+    ctx.moveTo(A.x, A.y);
+    ctx.lineTo(B.x, B.y);
+    ctx.strokeStyle = 'hsla(' + (a * 300) + ',100%,72%,' + (a * 0.38) + ')';
+    ctx.lineWidth = a * 6 / Z;
+    ctx.stroke();
+  }
+}
+
+function drawParticles(){
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < parts.length; i++){
+    const q = parts[i];
+    const a = q.life / q.max;
+    if (a <= 0.02) continue;
+    const r = q.r * a;
+    if (r < 0.4) continue;
+    ctx.globalAlpha = a * 0.7;
+    ctx.fillStyle = 'hsl(' + q.hue + ',100%,72%)';
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, r, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+function drawRings(){
+  if (!rings.length) return;
+  ctx.lineCap = 'round';
+  for (const r of rings){
+    const a = r.life / r.max;
+    ctx.globalAlpha = a * 0.55;
+    ctx.strokeStyle = 'hsl(' + (r.r * 2) % 360 + ',100%,75%)';
+    ctx.lineWidth = 5 / Z;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r, 0, TAU);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawLeg(x, phase, w, color){
+  const swing = P.grounded ? Math.sin(time * 16 + phase) * 5 : -5;
+  const lift  = P.grounded ? Math.max(0, Math.sin(time * 16 + phase)) * 3 : 4;
+  ctx.beginPath();
+  ctx.lineWidth   = w;
+  ctx.lineCap     = 'round';
+  ctx.strokeStyle = color;
+  ctx.moveTo(x, 6);
+  ctx.quadraticCurveTo(x + swing * 0.5, 16, x + swing, 25 - lift);
+  ctx.stroke();
+}
+
+const MANE = ['#ff7ac6','#ffb06e','#ffe66e','#8effc0','#7ad4ff','#b98cff'];
+
+function drawUnicorn(){
+  ctx.save();
+  ctx.translate(P.x, P.y);
+
+  if (P.grounded){
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = '#07030f';
+    ctx.beginPath();
+    ctx.ellipse(0, 3, 30, 7, 0, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.rotate(P.angle + P.flip);
+  ctx.translate(0, -26);
+  ctx.scale(0.86, 0.86);
+
+  const body  = '#f6f0ff';
+  const shade = '#d9c9f0';
+  const dark  = '#b9a3dd';
+
+  drawLeg(-17, 1.6, 6, dark);
+  drawLeg( 12, 3.1, 6, dark);
+
+  for (let i = 0; i < 6; i++){
+    const u   = i / 5;
+    const wob = Math.sin(time * 7 + i * 0.8) * 5;
+    ctx.beginPath();
+    ctx.moveTo(-22, -6 + u * 6);
+    ctx.quadraticCurveTo(-40, -12 + u * 8 + wob, -56 - u * 6, -4 + u * 14 + wob * 1.6);
+    ctx.strokeStyle = MANE[i];
+    ctx.lineWidth   = 5.5 - u * 1.6;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(  0,  0, 26, 15, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-13, -1, 15, 13, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( 12, -1, 14, 13, 0, 0, TAU); ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(8, -9);
+  ctx.quadraticCurveTo(20, -22, 29, -31);
+  ctx.lineTo(40, -23);
+  ctx.quadraticCurveTo(28, -12, 20, 2);
+  ctx.closePath();
+  ctx.fillStyle = body;
+  ctx.fill();
+
+  ctx.save();
+  ctx.translate(36, -30);
+  ctx.rotate(-0.42);
+  ctx.beginPath(); ctx.ellipse(0, 0, 13, 8.5, 0, 0, TAU);
+  ctx.fillStyle = body; ctx.fill();
+  ctx.beginPath(); ctx.ellipse(11, 3, 6, 5, 0, 0, TAU);
+  ctx.fillStyle = shade; ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.moveTo(28, -36); ctx.lineTo(31, -47); ctx.lineTo(36, -37);
+  ctx.closePath(); ctx.fillStyle = body; ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(30, -37); ctx.lineTo(31.6, -44); ctx.lineTo(34.6, -38);
+  ctx.closePath(); ctx.fillStyle = '#ffb6e6'; ctx.fill();
+
+  ctx.beginPath(); ctx.arc(41, -32, 1.9, 0, TAU);
+  ctx.fillStyle = '#2a1740'; ctx.fill();
+
+  /* horn */
+  const hg = ctx.createLinearGradient(33, -40, 46, -64);
+  hg.addColorStop(0,   '#fff3c4');
+  hg.addColorStop(0.5, '#ffd76e');
+  hg.addColorStop(1,   '#ffa8e0');
+  ctx.beginPath();
+  ctx.moveTo(32, -40); ctx.lineTo(45, -64); ctx.lineTo(40, -37);
+  ctx.closePath();
+  ctx.fillStyle = hg;
+  ctx.fill();
+
+  /* soft horn glow (radial gradient, no cross) */
+  const sp = 0.5 + 0.5 * Math.sin(time * 5);
+  ctx.globalAlpha = 0.18 + 0.28 * sp;
+  const glow = ctx.createRadialGradient(44, -62, 0, 44, -62, 20);
+  glow.addColorStop(0, 'rgba(255,240,190,0.9)');
+  glow.addColorStop(1, 'rgba(255,200,255,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(44, -62, 20, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  for (let i = 0; i < 6; i++){
+    const u   = i / 5;
+    const bx  = 13 + u * 19;
+    const by  = -12 - u * 22;
+    const len = 15 + u * 10;
+    const wob = Math.sin(time * 8 + i * 0.7) * 5;
+    const a   = -0.45 - u * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.quadraticCurveTo(
+      bx - Math.cos(a) * len * 0.5, by + Math.sin(a) * len * 0.5 + wob,
+      bx - Math.cos(a) * len,       by + Math.sin(a) * len + wob * 1.7
+    );
+    ctx.strokeStyle = MANE[i];
+    ctx.lineWidth   = 5.5 - u * 1.6;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+  }
+
+  drawLeg(-11, 0.2, 7, body);
+  drawLeg( 17, 1.9, 7, body);
+
+  ctx.restore();
+}
+
+function drawWeatherOverlay(){
+  if (wIntensity < 0.02) return;
+
+  if (weather === 'rain' || weather === 'storm'){
+    const stormy = weather === 'storm' ? 1 : 0.45;
+    ctx.strokeStyle = 'rgba(190,215,255,' + (0.26 * wIntensity * (weather === 'storm' ? 1 : 0.75)) + ')';
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (const d of rainDrops){
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - d.vx * 0.014, d.y - d.len * (1 + stormy * 0.5));
+    }
+    ctx.stroke();
+  }
+
+  if (weather === 'snow'){
+    /* single batched path — no per-flake fills */
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.8 * wIntensity) + ')';
+    ctx.beginPath();
+    for (const f of snowFlakes){
+      ctx.moveTo(f.x + f.r, f.y);
+      ctx.arc(f.x, f.y, f.r, 0, TAU);
+    }
+    ctx.fill();
+    ctx.fillStyle = 'rgba(220,235,255,' + (0.06 * wIntensity) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  if (flash > 0.01){
+    ctx.fillStyle = 'rgba(230,240,255,' + (flash * 0.55) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function render(){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  drawSky();
+
+  const dk = weather === 'storm' ? 1 - 0.4 * wIntensity
+           : weather === 'rain'  ? 1 - 0.2 * wIntensity : 1;
+  ctx.globalAlpha = 0.85;
+  drawDunes(0.20, 1.45, -H * 0.28, `rgb(${27*dk|0},${19*dk|0},${56*dk|0})`, 14);
+  drawDunes(0.42, 1.18, -H * 0.12, `rgb(${42*dk|0},${28*dk|0},${80*dk|0})`, 12);
+  drawDunes(0.66, 1.06,  H * 0.02, `rgb(${58*dk|0},${37*dk|0},${104*dk|0})`, 10);
+  ctx.globalAlpha = 1;
+
+  ctx.save();
+  ctx.scale(Z, Z);
+  ctx.translate(-cam.x, -cam.y);
+
+  drawMainTerrain();
+
+  const wx0 = cam.x - 220, wx1 = cam.x + W / Z + 220;
+
+  {
+    const i0 = Math.floor(wx0 / RB_SPACING) - 1;
+    const i1 = Math.ceil(wx1 / RB_SPACING) + 1;
+    for (let i = i0; i <= i1; i++){
+      const rb = rainbowAt(i);
+      if (rb) drawRainbow(rb);
+    }
+  }
+
+  {
+    const i0 = Math.floor(wx0 / OBS_SPACING) - 1;
+    const i1 = Math.ceil(wx1 / OBS_SPACING) + 1;
+    for (let i = i0; i <= i1; i++){
+      const o = obstacleAt(i);
+      if (o) drawObstacle(o);
+    }
+  }
+
+  drawTrail();
+  drawRings();
+  drawParticles();
+  if (state !== 'dead' || deathT < 0.15) drawUnicorn();
+
+  ctx.restore();
+
+  drawWeatherOverlay();
+}
+
+/* ---------------- loop ---------------- */
+let last = performance.now();
+
+function frame(now){
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 1 / 30) dt = 1 / 30;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+initAll();
+elWeather.textContent = weatherName(weather);
+requestAnimationFrame(frame);
+
+window.addEventListener('resize', () => {
+  cam.x = P.x - (W / Z) * 0.32;
+  cam.y = P.y - (H / Z) * 0.55;
+});
+
+})();
+</script>
+</body>
+</html>

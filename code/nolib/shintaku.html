@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shintaku</title>
+<style>
+:root { --bg: #282828; --surface: #3c3836; --border: #d79921; --text: #ebdbb2; --accent: #fabd2f; --accent-txt: #282828; --gray: #928374; }
+[data-theme="dracula"] { --bg: #282a36; --surface: #44475a; --border: #ff79c6; --text: #f8f8f2; --accent: #bd93f9; --accent-txt: #282a36; --gray: #6272a4; }
+[data-theme="monokai"] { --bg: #272822; --surface: #3e3d32; --border: #f92672; --text: #f8f8f2; --accent: #a6e22e; --accent-txt: #272822; --gray: #75715e; }
+[data-theme="nord"] { --bg: #2e3440; --surface: #3b4252; --border: #88c0d0; --text: #d8dee9; --accent: #81a1c1; --accent-txt: #2e3440; --gray: #4c566a; }
+[data-theme="purple"] { --bg: #ffffff; --surface: #f5f5f5; --border: #8e24aa; --text: #333333; --accent: #8e24aa; --accent-txt: #ffffff; --gray: #888888; }
+[data-theme="amoled"] { --bg: #000000; --surface: #121212; --border: #ffffff; --text: #ffffff; --accent: #ffffff; --accent-txt: #000000; --gray: #555555; }
+[data-theme="cupcake"] { --bg: #faf7f5; --surface: #efeae6; --border: #ffb6c1; --text: #2e282a; --accent: #ffb6c1; --accent-txt: #2e282a; --gray: #b0a8a6; }
+[data-theme="catppuccin"] { --bg: #1e1e2e; --surface: #313244; --border: #cba6f7; --text: #cdd6f4; --accent: #cba6f7; --accent-txt: #11111b; --gray: #6c7086; }
+[data-theme="catppuccin-frappe"] { --bg: #303446; --surface: #414559; --border: #ca9ee6; --text: #c6d0f5; --accent: #ca9ee6; --accent-txt: #232634; --gray: #737994; }
+[data-theme="everforest"] { --bg: #2d353b; --surface: #3d484d; --border: #a7c080; --text: #d3c6aa; --accent: #a7c080; --accent-txt: #232a2e; --gray: #859289; }
+[data-theme="everforest-light"] { --bg: #fdf6e3; --surface: #eee8d5; --border: #859900; --text: #586e75; --accent: #859900; --accent-txt: #fdf6e3; --gray: #93a1a1; }
+[data-theme="tokyo-night"] { --bg: #1a1b26; --surface: #24283c; --border: #7aa2f7; --text: #a9b1d6; --accent: #7aa2f7; --accent-txt: #1d202f; --gray: #565f89; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; border-radius: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; font-size: 16px; overflow-x: hidden; }
+
+header { padding-bottom: 20px; display: flex; align-items: baseline; justify-content: space-between; }
+.app-title { font-size: 1.6em; font-weight: bold; color: var(--text); }
+.app-title span { font-size: 0.6em; font-weight: normal; opacity: 0.7; margin-left: 5px; }
+
+.box { border: 1px solid var(--border); padding: 25px 15px 15px; position: relative; background: var(--bg); margin-bottom: 25px; }
+.box-title { position: absolute; top: -10px; left: 10px; background: var(--bg); padding: 0 5px; font-size: 0.8em; color: var(--text); font-weight: bold; }
+
+input, select, button { width: 100%; padding: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: inherit; outline: none; margin-bottom: 10px; font-family: inherit; }
+button { background: var(--accent); color: var(--accent-txt); cursor: pointer; border: none; text-transform: uppercase; font-weight: bold; margin-bottom: 0; }
+button:active { filter: brightness(0.8); }
+
+.grid-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.theme-btn { padding: 10px 4px; background: var(--surface); color: var(--gray); border: 1px solid var(--border); text-transform: uppercase; font-size: 0.7em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+.theme-btn.active { background: var(--accent); color: var(--accent-txt); }
+
+.item-group { margin-bottom: 15px; }
+.tag-header { font-size: 0.9em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; border-bottom: 1px solid var(--surface); padding-bottom: 3px; }
+.item-row { border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.item-main { display: flex; justify-content: space-between; align-items: flex-start; }
+.item-controls { display: flex; gap: 6px; }
+.item-controls button { padding: 6px; font-size: 0.8em; width: auto; margin-bottom: 0; }
+
+.font-size-ctrl { display: flex; align-items: center; justify-content: flex-start; gap: 15px; font-size: 1em; margin-top: 20px; }
+.font-size-ctrl button { width: 45px; height: 45px; padding: 0; font-size: 1.5em; background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+#lock-screen { text-align: center; padding: 40px 0; }
+#lock-screen input { max-width: 300px; margin: 10px auto; display: block; }
+
+.graph-box { margin-bottom: 25px; }
+.graph-box p { font-size: 0.8em; margin-bottom: 4px; color: var(--gray); }
+.graph-box svg { width: 100%; height: 160px; background: var(--surface); border: 1px solid var(--border); }
+
+#modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-box { background: var(--bg); border: 2px solid var(--border); padding: 20px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
+.modal-box label { font-size: 0.8em; color: var(--gray); }
+
+#toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--border); color: var(--bg); padding: 10px 20px; font-weight: bold; z-index: 999; display: none; text-transform: uppercase; font-size: 0.9em; }
+
+.timer-block { font-size: 3em; font-family: monospace; text-align: center; background: var(--surface); border: 2px solid var(--accent); padding: 20px; margin-bottom: 15px; color: var(--accent); text-shadow: 0 0 5px var(--accent); }
+
+#tag-stats-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 0.85em; }
+.tag-stat { background: var(--surface); padding: 8px; border: 1px solid var(--border); }
+.tag-stat span { color: var(--accent); float: right; }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<header>
+  <div class="app-title">Shintaku<span>神託</span></div>
+  <div id="clock-display" style="font-size:0.8em; color:var(--gray);"></div>
+</header>
+
+<div id="lock-screen" class="box">
+  <span class="box-title">Circadian Setup</span>
+  <p style="margin-bottom:15px; font-size:0.9em;">Log bio-context to open the network state.</p>
+  <label style="font-size:0.8em; display:block; margin-bottom:4px;">Yesterday Bedtime</label>
+  <input type="datetime-local" id="sleep-time">
+  <label style="font-size:0.8em; display:block; margin-bottom:4px;">Today Wake Time</label>
+  <input type="datetime-local" id="wake-time">
+  <button onclick="submitSleepLog()" style="max-width:300px; margin:15px auto 0;">Unlock State</button>
+</div>
+
+<div id="main-workspace" style="display:none;">
+  
+  <div class="box">
+    <span class="box-title">The Engine</span>
+    <div id="oracle-action-zone">
+      <button id="oracle-btn" onclick="triggerOracleCalculations()">Consult the Oracle</button>
+    </div>
+    <div id="active-assignment-zone" style="display:none;">
+      <p id="assignment-text" style="font-size:1.1em; margin-bottom:15px; text-align:center;"></p>
+      <div class="timer-block" id="stopwatch-display">00:00</div>
+      <button onclick="completeActiveAssignment()">Mark Done</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Register Material</span>
+    <input type="text" id="book-title" placeholder="Material Name">
+    <select id="book-tag">
+      <option value="math">Math</option>
+      <option value="science">Science</option>
+      <option value="tech">Tech</option>
+      <option value="social_science">Social Science</option>
+      <option value="news">News</option>
+      <option value="cooking">Cooking</option>
+      <option value="language">Language</option>
+      <option value="manga">Manga</option>
+    </select>
+    <div style="display:flex; gap:10px;">
+      <input type="number" id="book-pages" placeholder="Total Pages" min="1">
+      <input type="number" id="book-importance" placeholder="Importance (1-10)" min="1" max="10">
+      <input type="number" id="book-difficulty" placeholder="Difficulty (1-10)" min="1" max="10">
+    </div>
+    <button onclick="addMaterialToLibrary()" style="margin-top:5px;">Commit to Matrix</button>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Material Matrix Inventory</span>
+    <div id="library-inventory-list"></div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Neural Vectors & Analytics</span>
+    
+    <div class="graph-box">
+      <p>Subject Competency Vectors (Cumulative Pages)</p>
+      <div id="graph-growth"></div>
+    </div>
+    
+    <div class="graph-box">
+      <p>Total Volume Invested (Minutes)</p>
+      <div id="graph-volume"></div>
+      <div id="tag-stats-container"></div>
+    </div>
+    
+    <div class="graph-box">
+      <p>Tag Matrix Distribution</p>
+      <div id="graph-distribution"></div>
+    </div>
+    
+    <div class="graph-box">
+      <p>Friction Index vs Sleep Quality Matrix</p>
+      <div id="graph-sleep"></div>
+    </div>
+
+    <div class="graph-box">
+      <p>Sleep Duration Vector (Hours)</p>
+      <div id="graph-sleep-hours"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Theme Control Matrix</span>
+    <div class="grid-btns" id="theme-btns">
+      <button class="theme-btn" onclick="setTheme('gruvbox')">GRUVBOX</button>
+      <button class="theme-btn" onclick="setTheme('dracula')">DRACULA</button>
+      <button class="theme-btn" onclick="setTheme('monokai')">MONOKAI</button>
+      <button class="theme-btn" onclick="setTheme('nord')">NORD</button>
+      <button class="theme-btn" onclick="setTheme('purple')">PURPLE</button>
+      <button class="theme-btn" onclick="setTheme('amoled')">AMOLED</button>
+      <button class="theme-btn" onclick="setTheme('cupcake')">CUPCAKE</button>
+      <button class="theme-btn" onclick="setTheme('catppuccin')">CATPPUCCIN</button>
+      <button class="theme-btn" onclick="setTheme('catppuccin-frappe')">FRAPPE</button>
+      <button class="theme-btn" onclick="setTheme('everforest')">EVERFOREST</button>
+      <button class="theme-btn" onclick="setTheme('everforest-light')">EV-LIGHT</button>
+      <button class="theme-btn" onclick="setTheme('tokyo-night')">TOKYO</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Typography & Data</span>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('system-ui')">SYSTEM</button>
+      <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('monospace')">MONO</button>
+      <button class="theme-btn" style="width:auto; flex:1;" onclick="setFont('serif')">SERIF</button>
+      <button class="theme-btn" style="width:auto; flex:1; border-style: dashed;" onclick="document.getElementById('font-file').click()">+ CUSTOM</button>
+      <input type="file" id="font-file" accept=".ttf,.otf" style="display:none" onchange="loadCustomFont(event)">
+    </div>
+    
+    <div class="font-size-ctrl">
+      <button onclick="chgSize(-1)">-</button>
+      <span>Size <span id="f-size-disp">5</span>/10</span>
+      <button onclick="chgSize(1)">+</button>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button onclick="exportData()" style="background:var(--surface); color:var(--text); border:1px solid var(--border);">Export JSON</button>
+      <button onclick="document.getElementById('import-file').click()" style="background:var(--surface); color:var(--text); border:1px solid var(--border);">Import JSON</button>
+      <input type="file" id="import-file" style="display:none" onchange="importData(event)">
+    </div>
+  </div>
+
+</div>
+
+<div id="modal-overlay">
+  <div class="modal-box" id="modal-content-edit" style="display:none;">
+    <div style="font-weight:bold; font-size:1.1em; border-bottom:1px solid var(--border); padding-bottom:5px;">Modify Registry</div>
+    <input type="hidden" id="edit-book-id">
+    <label>Material Name / Title</label>
+    <input type="text" id="edit-book-title">
+    <label>Total Pages</label>
+    <input type="number" id="edit-book-pages" min="1">
+    <label>Importance Matrix (1-10)</label>
+    <input type="number" id="edit-book-importance" min="1" max="10">
+    <label>Difficulty Rating (1-10)</label>
+    <input type="number" id="edit-book-difficulty" min="1" max="10">
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button style="background:var(--surface); color:var(--text);" onclick="closeModal()">Cancel</button>
+      <button onclick="commitRegistryEdits()">Save</button>
+    </div>
+  </div>
+
+  <div class="modal-box" id="modal-content-manual" style="display:none;">
+    <div style="font-weight:bold; font-size:1.1em; border-bottom:1px solid var(--border); padding-bottom:5px;">Manual Session Input</div>
+    <input type="hidden" id="manual-book-id">
+    <label>Pages Completed</label>
+    <input type="number" id="manual-pages" min="1">
+    <label>Minutes Spent</label>
+    <input type="number" id="manual-mins" min="1">
+    <div style="display:flex; gap:10px; margin-top:10px;">
+      <button style="background:var(--surface); color:var(--text);" onclick="closeModal()">Cancel</button>
+      <button onclick="logManualWorkEngine()">Commit Log</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSTEM_TAG_LIST = ['math', 'science', 'tech', 'social_science', 'news', 'cooking', 'language', 'manga'];
+
+let appState = {
+  library: [],
+  logs: [],
+  sleepRegistry: {},
+  theme: 'gruvbox',
+  font: 'system-ui',
+  fontLevel: 5,
+  customFontData: ''
+};
+
+let currentActiveTask = null;
+let taskTimerRef = null;
+let trackedSeconds = 0;
+
+function appRuntimeInit() {
+  const saved = localStorage.getItem('shintaku_state');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      appState = { ...appState, ...parsed };
+    } catch(e) {}
+  }
+
+  if (appState.customFontData) injectCustomFont(appState.customFontData);
+  setTheme(appState.theme);
+  setFont(appState.font);
+  updateSizeDisplayEngine();
+  startClockEngine();
+  checkCircadianLockState();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function startClockEngine() {
+  const update = () => { document.getElementById('clock-display').innerText = new Date().toLocaleString(); };
+  setInterval(update, 1000);
+  update();
+}
+
+function checkCircadianLockState() {
+  const todayKey = new Date().toISOString().split('T')[0];
+  if (appState.sleepRegistry[todayKey]) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('main-workspace').style.display = 'block';
+    renderLibraryInventory();
+    renderDataVisualizations();
+  } else {
+    document.getElementById('lock-screen').style.display = 'block';
+    document.getElementById('main-workspace').style.display = 'none';
+  }
+}
+
+function submitSleepLog() {
+  const sleepVal = document.getElementById('sleep-time').value;
+  const wakeVal = document.getElementById('wake-time').value;
+  if (!sleepVal || !wakeVal) return showToast("enter both times");
+
+  const tSleep = new Date(sleepVal);
+  const tWake = new Date(wakeVal);
+  const rawDuration = (tWake - tSleep) / (1000 * 60 * 60);
+
+  if (rawDuration <= 0) return showToast("wake must be after sleep");
+
+  let environmentFactor = 1.0;
+  const wakeHour = tWake.getHours();
+  if (wakeHour > 10 && wakeHour < 22) environmentFactor = 0.75;
+
+  const qualityCalculated = Math.min((rawDuration / 8.0) * environmentFactor, 1.2);
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  appState.sleepRegistry[todayKey] = {
+    sleepTime: sleepVal,
+    wakeTime: wakeVal,
+    hoursDuration: rawDuration,
+    computedQuality: qualityCalculated
+  };
+
+  saveToLocalStorage();
+  checkCircadianLockState();
+}
+
+function validateOneToTen(val) {
+  if (isNaN(val) || val < 1 || val > 10) return false;
+  return true;
+}
+
+function addMaterialToLibrary() {
+  const title = document.getElementById('book-title').value.trim();
+  const tag = document.getElementById('book-tag').value;
+  const pages = parseInt(document.getElementById('book-pages').value, 10);
+  const imp = parseInt(document.getElementById('book-importance').value, 10);
+  const diff = parseInt(document.getElementById('book-difficulty').value, 10);
+
+  if (!title) return showToast("name required");
+  if (isNaN(pages) || pages < 1) return showToast("pages invalid");
+  if (!validateOneToTen(imp)) return showToast("importance 1-10 only");
+  if (!validateOneToTen(diff)) return showToast("difficulty 1-10 only");
+
+  appState.library.push({
+    id: Date.now(), title, tag, totalPages: pages, completedPages: 0, importance: imp, difficulty: diff
+  });
+
+  saveToLocalStorage();
+  renderLibraryInventory();
+  
+  document.getElementById('book-title').value = '';
+  document.getElementById('book-pages').value = '';
+  document.getElementById('book-importance').value = '';
+  document.getElementById('book-difficulty').value = '';
+}
+
+function renderLibraryInventory() {
+  const target = document.getElementById('library-inventory-list');
+  target.innerHTML = '';
+
+  if (appState.library.length === 0) {
+    target.innerHTML = '<p style="font-size:0.8em; color:var(--gray);">Empty inventory array.</p>';
+    return;
+  }
+
+  const grouped = {};
+  SYSTEM_TAG_LIST.forEach(t => grouped[t] = []);
+  appState.library.forEach(b => { if(grouped[b.tag]) grouped[b.tag].push(b); else grouped[b.tag] = [b]; });
+
+  SYSTEM_TAG_LIST.forEach(tag => {
+    if (grouped[tag].length === 0) return;
+    
+    const grpDiv = document.createElement('div');
+    grpDiv.className = 'item-group';
+    grpDiv.innerHTML = `<div class="tag-header">${tag}</div>`;
+
+    grouped[tag].forEach((item, idx) => {
+      const percentage = item.totalPages > 0 ? ((item.completedPages / item.totalPages) * 100).toFixed(1) : 0;
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = `
+        <div class="item-main">
+          <span style="font-size:0.9em;">#${idx+1} "${item.title}" - ${item.completedPages}/${item.totalPages} pgs (${percentage}%)</span>
+          <span style="font-size:0.7em; color:var(--gray);">Imp: ${item.importance} | Diff: ${item.difficulty}</span>
+        </div>
+        <div class="item-controls">
+          <button onclick="openManualModal(${item.id})">Manual Session Input</button>
+          <button style="background:var(--surface); color:var(--text); border:1px solid var(--border);" onclick="openEditRegistryModal(${item.id})">Edit</button>
+          <button style="background:var(--bg); color:var(--text); border:1px solid var(--border);" onclick="removeRegistryItem(${item.id})">Del</button>
+        </div>
+      `;
+      grpDiv.appendChild(row);
+    });
+    target.appendChild(grpDiv);
+  });
+}
+
+function openManualModal(id) {
+  document.getElementById('manual-book-id').value = id;
+  document.getElementById('manual-pages').value = '';
+  document.getElementById('manual-mins').value = '';
+  document.getElementById('modal-content-edit').style.display = 'none';
+  document.getElementById('modal-content-manual').style.display = 'flex';
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function logManualWorkEngine() {
+  const id = parseInt(document.getElementById('manual-book-id').value, 10);
+  const pCount = parseInt(document.getElementById('manual-pages').value, 10);
+  const mCount = parseInt(document.getElementById('manual-mins').value, 10);
+
+  if (isNaN(pCount) || isNaN(mCount) || pCount <= 0 || mCount <= 0) return showToast("invalid numbers");
+
+  const item = appState.library.find(x => x.id === id);
+  if (!item) return;
+
+  item.completedPages = Math.min(item.totalPages, item.completedPages + pCount);
+  
+  const todayKey = new Date().toISOString().split('T')[0];
+  let hoursSinceWakeFallback = 6;
+  if (appState.sleepRegistry[todayKey]) {
+    hoursSinceWakeFallback = (new Date() - new Date(appState.sleepRegistry[todayKey].wakeTime)) / (1000 * 60 * 60);
+  }
+
+  appState.logs.push({ date: todayKey, tag: item.tag, difficulty: item.difficulty, pagesRead: pCount, seconds: mCount * 60, hsw: hoursSinceWakeFallback });
+
+  saveToLocalStorage();
+  renderLibraryInventory();
+  renderDataVisualizations();
+  closeModal();
+}
+
+function removeRegistryItem(id) {
+  appState.library = appState.library.filter(x => x.id !== id);
+  saveToLocalStorage();
+  renderLibraryInventory();
+}
+
+function openEditRegistryModal(id) {
+  const item = appState.library.find(x => x.id === id);
+  if (!item) return;
+  document.getElementById('edit-book-id').value = item.id;
+  document.getElementById('edit-book-title').value = item.title;
+  document.getElementById('edit-book-pages').value = item.totalPages;
+  document.getElementById('edit-book-importance').value = item.importance;
+  document.getElementById('edit-book-difficulty').value = item.difficulty;
+  
+  document.getElementById('modal-content-manual').style.display = 'none';
+  document.getElementById('modal-content-edit').style.display = 'flex';
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').style.display = 'none';
+}
+
+function commitRegistryEdits() {
+  const id = parseInt(document.getElementById('edit-book-id').value, 10);
+  const item = appState.library.find(x => x.id === id);
+  if (!item) return;
+
+  const nTitle = document.getElementById('edit-book-title').value.trim();
+  const nPages = parseInt(document.getElementById('edit-book-pages').value, 10);
+  const nImp = parseInt(document.getElementById('edit-book-importance').value, 10);
+  const nDiff = parseInt(document.getElementById('edit-book-difficulty').value, 10);
+
+  if (!nTitle) return showToast("name required");
+  if (isNaN(nPages) || nPages < 1) return showToast("pages invalid");
+  if (!validateOneToTen(nImp)) return showToast("importance 1-10 only");
+  if (!validateOneToTen(nDiff)) return showToast("difficulty 1-10 only");
+
+  item.title = nTitle; item.totalPages = nPages; item.importance = nImp; item.difficulty = nDiff;
+
+  saveToLocalStorage();
+  renderLibraryInventory();
+  closeModal();
+}
+
+function executeMultivariateOLS(tag, currentHsw, itemDifficulty) {
+  const filtered = appState.logs.filter(x => x.tag === tag && x.pagesRead > 0);
+  if (filtered.length < 3) {
+    if (['math', 'science', 'tech'].includes(tag)) return 170;
+    if (['manga', 'news'].includes(tag)) return 35;
+    return 85;
+  }
+  let cX1 = 0, cX2 = 0, cY = 0;
+  filtered.forEach(log => { cX1 += log.hsw || 5; cX2 += log.difficulty || 5; cY += (log.seconds / log.pagesRead); });
+  const mX1 = cX1 / filtered.length, mX2 = cX2 / filtered.length, mY = cY / filtered.length;
+  let vN = 0, vD = 0;
+  filtered.forEach(log => {
+    const s = log.seconds / log.pagesRead;
+    vN += ((log.hsw || 5) - mX1) * (s - mY);
+    vD += Math.pow(((log.hsw || 5) - mX1), 2);
+  });
+  const b1 = vD !== 0 ? vN / vD : 0;
+  const b0 = mY - (b1 * mX1);
+  return Math.max(b0 + (b1 * currentHsw), 12);
+}
+
+function triggerOracleCalculations() {
+  const validIncompletePool = appState.library.filter(x => x.completedPages < x.totalPages);
+  if (validIncompletePool.length === 0) return showToast("Zero incomplete parameters in matrix.");
+
+  const activeBtn = document.getElementById('oracle-btn');
+  activeBtn.disabled = true;
+
+  const frames = ["▖ CONTEXT SYNC", "▘ DECODE BIO", "▝ OLS PREDICT", "▗ ORACLE DECREE"];
+  let fIdx = 0;
+  const loopRef = setInterval(() => { activeBtn.innerText = frames[fIdx % frames.length]; fIdx++; }, 250);
+
+  setTimeout(() => {
+    clearInterval(loopRef);
+    activeBtn.disabled = false;
+    activeBtn.innerText = "Consult the Oracle";
+    processOracleTargetAssignment(validIncompletePool);
+  }, 2000);
+}
+
+function processOracleTargetAssignment(pool) {
+  const todayKey = new Date().toISOString().split('T')[0];
+  const wakeTimestamp = new Date(appState.sleepRegistry[todayKey].wakeTime);
+  const currentHsw = (new Date() - wakeTimestamp) / (1000 * 60 * 60);
+  const iAlert = 0.6 * Math.sin((Math.PI * currentHsw) / 6) + 0.4 * Math.cos((Math.PI * currentHsw) / 12);
+  const optCeil = iAlert * appState.sleepRegistry[todayKey].computedQuality;
+
+  let optimal = null, maxP = -Infinity;
+  pool.forEach(item => {
+    const u = 1.0 - (item.completedPages / item.totalPages);
+    const d = 1.0 - Math.abs(optCeil - (item.difficulty / 10));
+    const score = (item.importance * 2.2) + (d * 9) + (u * 4);
+    if (score > maxP) { maxP = score; optimal = item; }
+  });
+
+  if (optimal) {
+    const pSec = executeMultivariateOLS(optimal.tag, currentHsw, optimal.difficulty);
+    let cPages = Math.round(2700 / pSec);
+    cPages = Math.max(1, Math.min(cPages, (optimal.totalPages - optimal.completedPages), 25));
+
+    currentActiveTask = { bookId: optimal.id, tag: optimal.tag, difficulty: optimal.difficulty, pagesToRead: cPages, hsw: currentHsw };
+
+    document.getElementById('oracle-action-zone').style.display = 'none';
+    document.getElementById('active-assignment-zone').style.display = 'block';
+    document.getElementById('assignment-text').innerText = `Directive: ${cPages} pgs of "${optimal.title}" [${optimal.tag.toUpperCase()}]`;
+
+    trackedSeconds = 0;
+    document.getElementById('stopwatch-display').innerText = `00:00`;
+    taskTimerRef = setInterval(() => {
+      trackedSeconds++;
+      const m = String(Math.floor(trackedSeconds / 60)).padStart(2, '0');
+      const s = String(trackedSeconds % 60).padStart(2, '0');
+      document.getElementById('stopwatch-display').innerText = `${m}:${s}`;
+    }, 1000);
+  }
+}
+
+function completeActiveAssignment() {
+  clearInterval(taskTimerRef);
+  const item = appState.library.find(x => x.id === currentActiveTask.bookId);
+
+  if (item) {
+    item.completedPages = Math.min(item.totalPages, item.completedPages + currentActiveTask.pagesToRead);
+    const todayKey = new Date().toISOString().split('T')[0];
+    appState.logs.push({ date: todayKey, tag: currentActiveTask.tag, difficulty: currentActiveTask.difficulty, pagesRead: currentActiveTask.pagesToRead, seconds: trackedSeconds, hsw: currentActiveTask.hsw });
+    saveToLocalStorage();
+    renderLibraryInventory();
+    renderDataVisualizations();
+  }
+
+  currentActiveTask = null;
+  document.getElementById('active-assignment-zone').style.display = 'none';
+  document.getElementById('oracle-action-zone').style.display = 'block';
+}
+
+function renderDataVisualizations() {
+  const gGrowth = document.getElementById('graph-growth'), gVol = document.getElementById('graph-volume'), gDist = document.getElementById('graph-distribution'), gSleep = document.getElementById('graph-sleep'), gSleepHr = document.getElementById('graph-sleep-hours'), tStats = document.getElementById('tag-stats-container');
+
+  if (appState.logs.length === 0 && Object.keys(appState.sleepRegistry).length === 0) {
+    gGrowth.innerHTML = gVol.innerHTML = gDist.innerHTML = gSleep.innerHTML = gSleepHr.innerHTML = '<p>Awaiting data matrix.</p>';
+    tStats.innerHTML = '';
+    return;
+  }
+
+  const dts = [...new Set(appState.logs.map(x => x.date))].sort().slice(-7);
+  const sleepDts = Object.keys(appState.sleepRegistry).sort().slice(-7);
+
+  // Graph 1
+  if(dts.length > 0) {
+    let s1 = `<svg viewBox="0 0 500 160">`;
+    SYSTEM_TAG_LIST.forEach((tag, idx) => {
+      let acc = 0, pts = [];
+      dts.forEach((d, i) => {
+        appState.logs.filter(x => x.date === d && x.tag === tag).forEach(l => acc += l.pagesRead);
+        pts.push(`${40 + (i * 70)},${130 - Math.min(acc * 2, 110)}`);
+      });
+      if(pts.length > 0) s1 += `<polyline points="${pts.join(' ')}" fill="none" stroke="var(--border)" stroke-width="2" stroke-dasharray="${idx * 2},${idx}"/>`;
+    });
+    gGrowth.innerHTML = s1 + `</svg>`;
+
+    // Graph 2
+    let s2 = `<svg viewBox="0 0 500 160">`;
+    dts.forEach((d, i) => {
+      const m = appState.logs.filter(x => x.date === d).reduce((a, c) => a + c.seconds, 0) / 60;
+      const h = Math.min(m * 1.5, 110);
+      s2 += `<rect x="${40 + (i * 70)}" y="${130 - h}" width="45" height="${h}" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5" /><text x="${45 + (i * 70)}" y="145" fill="var(--text)" font-size="9">${d.slice(5)}</text>`;
+    });
+    gVol.innerHTML = s2 + `</svg>`;
+
+    // Stats
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const sevAgo = new Date(now); sevAgo.setDate(now.getDate() - 7);
+    
+    let stHtml = '';
+    SYSTEM_TAG_LIST.forEach(t => {
+      const lgs = appState.logs.filter(x => x.tag === t);
+      if(lgs.length === 0) return;
+      const tMin = lgs.reduce((a,c)=>a+c.seconds,0)/60;
+      const wLgs = lgs.filter(x => new Date(x.date) >= sevAgo);
+      const wMin = wLgs.reduce((a,c)=>a+c.seconds,0)/60;
+      stHtml += `<div class="tag-stat">${t.toUpperCase()} <span>Wk: ${(wMin/60).toFixed(1)}h | Tot: ${(tMin/60).toFixed(1)}h</span></div>`;
+    });
+    tStats.innerHTML = stHtml;
+
+    // Graph 3
+    let s3 = `<svg viewBox="0 0 500 160">`;
+    dts.forEach((d, i) => {
+      const x = 45 + (i * 70); let y = 130;
+      appState.logs.filter(x => x.date === d).forEach(l => {
+        const h = Math.min((l.seconds / 60) * 1.8, 100); y -= h;
+        s3 += `<rect x="${x}" y="${y}" width="35" height="${h}" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2"/>`;
+      });
+      s3 += `<text x="${x}" y="145" fill="var(--text)" font-size="9">${d.slice(5)}</text>`;
+    });
+    gDist.innerHTML = s3 + `</svg>`;
+
+    // Graph 4
+    let s4 = `<svg viewBox="0 0 500 160">`;
+    dts.forEach((d) => {
+      const s = appState.sleepRegistry[d]; if (!s) return;
+      const dl = appState.logs.filter(x => x.date === d); if (dl.length === 0) return;
+      const c = dl.reduce((a, c) => a + (c.seconds / c.pagesRead), 0) / dl.length;
+      const cx = 50 + (s.computedQuality * 320), cy = 130 - Math.min(c * 0.4, 110);
+      s4 += `<g stroke="var(--accent)" stroke-width="1.5"><line x1="${cx - 5}" y1="${cy}" x2="${cx + 5}" y2="${cy}" /><line x1="${cx}" y1="${cy - 5}" x2="${cx}" y2="${cy + 5}" /></g><text x="${cx + 7}" y="${cy + 3}" fill="var(--text)" font-size="8">${d.slice(5)}</text>`;
+    });
+    gSleep.innerHTML = s4 + `<text x="10" y="20" fill="var(--gray)" font-size="9">Y: Frict</text><text x="380" y="150" fill="var(--gray)" font-size="9">X: Sleep</text></svg>`;
+  }
+
+  // Graph 5: Sleep Hours
+  if(sleepDts.length > 0) {
+    let s5 = `<svg viewBox="0 0 500 160">`;
+    sleepDts.forEach((d, i) => {
+      const hData = appState.sleepRegistry[d].hoursDuration;
+      const hVis = Math.min(hData * 10, 110);
+      const x = 40 + (i * 70);
+      s5 += `<rect x="${x}" y="${130 - hVis}" width="45" height="${hVis}" fill="var(--surface)" stroke="var(--accent)" stroke-width="1" />`;
+      s5 += `<text x="${x+5}" y="${130 - hVis - 5}" fill="var(--accent)" font-size="9">${hData.toFixed(1)}</text>`;
+      s5 += `<text x="${x+5}" y="145" fill="var(--text)" font-size="9">${d.slice(5)}</text>`;
+    });
+    s5 += `<line x1="20" y1="${130 - 80}" x2="480" y2="${130 - 80}" stroke="var(--gray)" stroke-dasharray="4,4" stroke-width="1"/>`; // 8hr target line
+    s5 += `<text x="2" y="${130 - 82}" fill="var(--gray)" font-size="8">8h</text>`;
+    gSleepHr.innerHTML = s5 + `</svg>`;
+  }
+}
+
+function saveToLocalStorage() {
+  localStorage.setItem('shintaku_state', JSON.stringify(appState));
+}
+
+function setTheme(t) {
+  appState.theme = t; 
+  document.body.setAttribute('data-theme', t);
+  document.querySelectorAll('#theme-btns .theme-btn').forEach(b => {
+    b.classList.toggle('active', b.innerText.toLowerCase() === t || (t==='catppuccin-frappe' && b.innerText==='FRAPPE') || (t==='everforest-light' && b.innerText==='EV-LIGHT') || (t==='tokyo-night' && b.innerText==='TOKYO'));
+  });
+  saveToLocalStorage();
+}
+
+function setFont(f) { 
+  appState.font = f; 
+  document.body.style.fontFamily = f; 
+  saveToLocalStorage();
+}
+
+function chgSize(d) { 
+  appState.fontLevel = Math.max(1, Math.min(10, appState.fontLevel + d)); 
+  updateSizeDisplayEngine(); 
+  saveToLocalStorage();
+}
+
+function updateSizeDisplayEngine() { 
+  const px = 10 + (appState.fontLevel * 2);
+  document.body.style.fontSize = px + 'px'; 
+  document.getElementById('f-size-disp').innerText = appState.fontLevel; 
+}
+
+function loadCustomFont(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    appState.customFontData = ev.target.result;
+    injectCustomFont(appState.customFontData);
+    setFont('CustomFont');
+    saveToLocalStorage();
+  };
+  reader.readAsDataURL(file);
+}
+
+function injectCustomFont(data) {
+  let s = document.getElementById('c-font');
+  if(!s) { s = document.createElement('style'); s.id = 'c-font'; document.head.appendChild(s); }
+  s.textContent = `@font-face { font-family: 'CustomFont'; src: url('${data}'); }`;
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(appState)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = "shintaku_data.json"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      appState = { ...appState, ...parsed };
+      saveToLocalStorage();
+      appRuntimeInit();
+      showToast("import ok");
+    } catch(err) { showToast("import failed"); }
+  };
+  reader.readAsText(file);
+}
+
+appRuntimeInit();
+</script>
+</body>
+</html>

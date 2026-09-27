@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Blob Eater</title>
+  <style>
+    *
+    {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body
+    {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #282828;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    #gameCanvas
+    {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .uiOverlay
+    {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 10;
+      color: #ebdbb2;
+    }
+
+    .menuBox
+    {
+      background: #3c3836;
+      border-radius: 16px;
+      padding: 28px;
+      width: 90%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,255,255,0.1);
+    }
+
+    .titleText
+    {
+      font-size: 2rem;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .subText
+    {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .settingRow
+    {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0;
+      font-size: 0.95rem;
+    }
+
+    .btnGroup
+    {
+      display: flex;
+      gap: 6px;
+    }
+
+    .uiBtn
+    {
+      background: #504945;
+      color: inherit;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .uiBtn.active
+    {
+      background: #fe8019;
+      color: #1d2021;
+      font-weight: 600;
+    }
+
+    .startBtn
+    {
+      width: 100%;
+      padding: 14px;
+      margin-top: 18px;
+      font-size: 1.1rem;
+      background: #fe8019;
+      color: #1d2021;
+      font-weight: 700;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #hud
+    {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 5;
+      color: #ebdbb2;
+      font-size: 1.05rem;
+      font-weight: 600;
+    }
+
+    .hudBox
+    {
+      background: rgba(0,0,0,0.45);
+      padding: 8px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(3px);
+    }
+
+    #medalToast
+    {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(40, 40, 40, 0.95);
+      border: 2px solid #fe8019;
+      color: #ebdbb2;
+      padding: 12px 24px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
+      pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    }
+
+    #medalToast.show
+    {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .medalIcon
+    {
+      font-size: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <div class="hudBox" id="sizeDisp">Size: 15</div>
+    <div class="hudBox" id="hiSizeDisp">Best: 15</div>
+  </div>
+
+  <div id="medalToast">
+    <span class="medalIcon">🏅</span>
+    <div>
+      <div style="font-size:0.75rem; opacity:0.8; text-transform:uppercase; letter-spacing:1px;">Medal Unlocked</div>
+      <div id="medalName" style="font-weight:bold; font-size:1rem;">Big Chunk</div>
+    </div>
+  </div>
+
+  <div id="menuOverlay" class="uiOverlay">
+    <div class="menuBox" id="menuPanel">
+      <h1 class="titleText" id="menuTitle">BLOB EATER</h1>
+      <p class="subText" id="menuDesc">Sneak behind big blobs to bite them! Facing their front gets you eaten.</p>
+      
+      <div class="settingRow">
+        <span>Highest Size</span>
+        <span id="menuHiSize" style="font-weight:bold; font-size:1.1rem;">15</span>
+      </div>
+
+      <div class="settingRow">
+        <span>Theme</span>
+        <div class="btnGroup">
+          <button class="uiBtn active" id="thGruv" onclick="setTheme(0)">Gruvbox</button>
+          <button class="uiBtn" id="thNord" onclick="setTheme(1)">Nord</button>
+          <button class="uiBtn" id="thCatp" onclick="setTheme(2)">Frappé</button>
+        </div>
+      </div>
+
+      <div class="settingRow">
+        <span>Sound FX</span>
+        <button class="uiBtn active" id="sndToggle" onclick="toggleSnd()">ON</button>
+      </div>
+
+      <div class="settingRow">
+        <span>Music</span>
+        <button class="uiBtn active" id="musToggle" onclick="toggleMus()">ON</button>
+      </div>
+
+      <button class="startBtn" id="mainActionBtn" onclick="startGame()">START GAME</button>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.0.3/tsparticles.confetti.bundle.min.js"></script>
+
+  <script>
+    let gameState = 0
+
+    let curTheme = 0
+
+    let sndOpt = true
+
+    let musOpt = true
+
+    let plRadius = 15
+
+    let hiSize = parseInt(localStorage.getItem('blob_hi_size') || '15')
+
+    let plPos = { x: 0, y: 0 }
+
+    let plVel = { x: 0, y: 0 }
+
+    let plAngle = 0
+
+    let boundSize = 1300
+
+    let blobs = []
+
+    let foods = []
+
+    let stickBase = null
+
+    let stickCurr = null
+
+    let stickDir = { x: 0, y: 0 }
+
+    let audioCtx = null
+
+    let musSource = null
+
+    let musBuffer = null
+
+    const medalList = [
+      { id: 'size25', name: 'Growing Blob', size: 25, unlocked: false },
+      { id: 'size40', name: 'Big Chunk', size: 40, unlocked: false },
+      { id: 'size60', name: 'Apex Predator', size: 60, unlocked: false },
+      { id: 'size100', name: 'Colossal Blob', size: 100, unlocked: false }
+    ]
+
+    const themeData = [
+      {
+        bg: '#282828',
+        panel: '#3c3836',
+        text: '#ebdbb2',
+        accent: '#fe8019',
+        player: '#fabd2f',
+        wall: '#fb4934',
+        blob1: '#b8bb26',
+        blob2: '#fb4934',
+        blob3: '#83a598',
+        eye: '#fbf1c7',
+        pupil: '#282828'
+      },
+      {
+        bg: '#2e3440',
+        panel: '#3b4252',
+        text: '#eceff4',
+        accent: '#88c0d0',
+        player: '#81a1c1',
+        wall: '#bf616a',
+        blob1: '#a3be8c',
+        blob2: '#bf616a',
+        blob3: '#b48ead',
+        eye: '#e5e9f0',
+        pupil: '#2e3440'
+      },
+      {
+        bg: '#302d41',
+        panel: '#575268',
+        text: '#c9cbff',
+        accent: '#f5c2e7',
+        player: '#89dceb',
+        wall: '#e8a2af',
+        blob1: '#abe9b3',
+        blob2: '#e8a2af',
+        blob3: '#f2cdcd',
+        eye: '#d9e0ee',
+        pupil: '#302d41'
+      }
+    ]
+
+    function loadMedals()
+    {
+      const saved = JSON.parse(localStorage.getItem('blob_medals') || '{}')
+
+      medalList.forEach(m => m.unlocked = !!saved[m.id])
+    }
+
+    function checkMedals()
+    {
+      const saved = JSON.parse(localStorage.getItem('blob_medals') || '{}')
+
+      medalList.forEach(m =>
+      {
+        if (!m.unlocked && plRadius >= m.size)
+        {
+          m.unlocked = true
+
+          saved[m.id] = true
+
+          localStorage.setItem('blob_medals', JSON.stringify(saved))
+
+          showMedalToast(m.name)
+
+          playSound('goal')
+
+          if (typeof confetti === 'function')
+          {
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.2 } })
+          }
+        }
+      })
+    }
+
+    function showMedalToast(name)
+    {
+      const toast = document.getElementById('medalToast')
+
+      document.getElementById('medalName').innerText = name
+
+      toast.style.borderColor = themeData[curTheme].accent
+
+      toast.classList.add('show')
+
+      setTimeout(() => toast.classList.remove('show'), 3000)
+    }
+
+    function getAudio()
+    {
+      if (!audioCtx)
+      {
+        const Ctx = window.AudioContext || window.webkitAudioContext
+
+        if (Ctx) audioCtx = new Ctx()
+      }
+
+      if (audioCtx && audioCtx.state === 'suspended')
+      {
+        audioCtx.resume()
+      }
+
+      return audioCtx
+    }
+
+    function playSound(type)
+    {
+      if (!sndOpt) return
+
+      try
+      {
+        const ctx = getAudio()
+
+        if (!ctx) return
+
+        const osc = ctx.createOscillator()
+
+        const gain = ctx.createGain()
+
+        osc.connect(gain)
+
+        gain.connect(ctx.destination)
+
+        const now = ctx.currentTime
+
+        if (type === 'eat')
+        {
+          osc.frequency.setValueAtTime(200, now)
+
+          osc.frequency.exponentialRampToValueAtTime(400, now + 0.08)
+
+          gain.gain.setValueAtTime(0.12, now)
+
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.08)
+
+          osc.start(now)
+
+          osc.stop(now + 0.08)
+        }
+        else if (type === 'bite')
+        {
+          osc.frequency.setValueAtTime(320, now)
+
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.12)
+
+          gain.gain.setValueAtTime(0.2, now)
+
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12)
+
+          osc.start(now)
+
+          osc.stop(now + 0.12)
+        }
+        else if (type === 'goal')
+        {
+          osc.frequency.setValueAtTime(440, now)
+
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.25)
+
+          gain.gain.setValueAtTime(0.25, now)
+
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25)
+
+          osc.start(now)
+
+          osc.stop(now + 0.25)
+        }
+        else if (type === 'hit')
+        {
+          osc.type = 'sawtooth'
+
+          osc.frequency.setValueAtTime(140, now)
+
+          osc.frequency.linearRampToValueAtTime(45, now + 0.25)
+
+          gain.gain.setValueAtTime(0.3, now)
+
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.25)
+
+          osc.start(now)
+
+          osc.stop(now + 0.25)
+        }
+      }
+      catch (e) {}
+    }
+
+    function generateMusicBuffer()
+    {
+      const ctx = getAudio()
+
+      if (!ctx) return null
+
+      const sampleRate = ctx.sampleRate
+
+      const duration = 8.0
+
+      const numSamples = sampleRate * duration
+
+      const buffer = ctx.createBuffer(1, numSamples, sampleRate)
+
+      const data = buffer.getChannelData(0)
+
+      const notes = [130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63]
+
+      const pattern = [0, 2, 4, 2, 3, 5, 2, 0, 1, 3, 5, 3, 4, 2, 0, 4]
+
+      const noteDuration = duration / pattern.length
+
+      for (let i = 0; i < numSamples; i++)
+      {
+        const t = i / sampleRate
+
+        const step = Math.floor(t / noteDuration) % pattern.length
+
+        const noteT = t % noteDuration
+
+        const freq = notes[pattern[step]]
+
+        const env = Math.exp(-noteT * 5.0)
+
+        const sample = Math.sin(2 * Math.PI * freq * t) * 0.15 * env
+
+        const bassFreq = notes[pattern[step % 4]] / 2
+
+        const bassSample = (Math.sin(2 * Math.PI * bassFreq * t) > 0 ? 0.05 : -0.05) * Math.exp(-noteT * 3.0)
+
+        data[i] = sample + bassSample
+      }
+
+      return buffer
+    }
+
+    function playMusic()
+    {
+      stopMusic()
+
+      if (!musOpt) return
+
+      try
+      {
+        const ctx = getAudio()
+
+        if (!ctx) return
+
+        if (!musBuffer) musBuffer = generateMusicBuffer()
+
+        if (!musBuffer) return
+
+        musSource = ctx.createBufferSource()
+
+        musSource.buffer = musBuffer
+
+        musSource.loop = true
+
+        musSource.connect(ctx.destination)
+
+        musSource.start()
+      }
+      catch (e) {}
+    }
+
+    function stopMusic()
+    {
+      if (musSource)
+      {
+        try { musSource.stop() } catch (e) {}
+
+        musSource = null
+      }
+    }
+
+    function setTheme(idx)
+    {
+      curTheme = idx
+
+      const t = themeData[curTheme]
+
+      document.body.style.background = t.bg
+
+      document.getElementById('menuPanel').style.background = t.panel
+
+      document.getElementById('menuOverlay').style.color = t.text
+
+      document.getElementById('hud').style.color = t.text
+
+      document.getElementById('mainActionBtn').style.background = t.accent
+
+      document.querySelectorAll('.uiBtn').forEach(b => b.style.background = '#504945')
+
+      const activeBtn = [document.getElementById('thGruv'), document.getElementById('thNord'), document.getElementById('thCatp')][idx]
+
+      activeBtn.style.background = t.accent
+
+      document.getElementById('sndToggle').style.background = sndOpt ? t.accent : '#504945'
+
+      document.getElementById('musToggle').style.background = musOpt ? t.accent : '#504945'
+
+      playSound('eat')
+    }
+
+    function toggleSnd()
+    {
+      sndOpt = !sndOpt
+
+      const btn = document.getElementById('sndToggle')
+
+      btn.innerText = sndOpt ? 'ON' : 'OFF'
+
+      btn.style.background = sndOpt ? themeData[curTheme].accent : '#504945'
+
+      playSound('eat')
+    }
+
+    function toggleMus()
+    {
+      musOpt = !musOpt
+
+      const btn = document.getElementById('musToggle')
+
+      btn.innerText = musOpt ? 'ON' : 'OFF'
+
+      btn.style.background = musOpt ? themeData[curTheme].accent : '#504945'
+
+      if (musOpt) playMusic()
+
+      else stopMusic()
+
+      playSound('eat')
+    }
+
+    function spawnFood(px, py)
+    {
+      const margin = boundSize - 40
+
+      return {
+        x: px !== undefined ? px : (Math.random() - 0.5) * 2 * margin,
+        y: py !== undefined ? py : (Math.random() - 0.5) * 2 * margin,
+        r: 4 + Math.random() * 3,
+        color: themeData[curTheme].accent
+      }
+    }
+
+    function dropFoodCluster(x, y, count)
+    {
+      for (let i = 0; i < count; i++)
+      {
+        const ang = Math.random() * Math.PI * 2
+
+        const dist = Math.random() * 30
+
+        foods.push(spawnFood(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist))
+      }
+    }
+
+    function spawnEnemy()
+    {
+      const palette = [themeData[curTheme].blob1, themeData[curTheme].blob2, themeData[curTheme].blob3]
+
+      const margin = boundSize - 60
+
+      const r = 10 + Math.random() * 45
+
+      return {
+        x: (Math.random() - 0.5) * 2 * margin,
+        y: (Math.random() - 0.5) * 2 * margin,
+        vx: 0,
+        vy: 0,
+        r: r,
+        ang: Math.random() * Math.PI * 2,
+        color: palette[Math.floor(Math.random() * palette.length)],
+        aggro: 0
+      }
+    }
+
+    function resetGame()
+    {
+      plRadius = 15
+
+      plPos = { x: 0, y: 0 }
+
+      plVel = { x: 0, y: 0 }
+
+      plAngle = 0
+
+      blobs = Array.from({ length: 24 }, spawnEnemy)
+
+      foods = Array.from({ length: 110 }, () => spawnFood())
+
+      loadMedals()
+
+      updateHUD()
+    }
+
+    function startGame()
+    {
+      getAudio()
+
+      resetGame()
+
+      gameState = 1
+
+      document.getElementById('menuOverlay').style.display = 'none'
+
+      playMusic()
+
+      playSound('eat')
+    }
+
+    function gameOver()
+    {
+      gameState = 2
+
+      playSound('hit')
+
+      if (typeof confetti === 'function')
+      {
+        confetti({
+          particleCount: 90,
+          spread: 100,
+          origin: { y: 0.5 },
+          colors: ['#bf616a', '#fb4934', '#fe8019']
+        })
+      }
+
+      document.getElementById('menuTitle').innerText = 'OH NO GAMEOVER'
+
+      document.getElementById('menuDesc').innerText = `Reached Size: ${Math.floor(plRadius)}`
+
+      document.getElementById('mainActionBtn').innerText = 'TRY AGAIN'
+
+      document.getElementById('menuOverlay').style.display = 'flex'
+    }
+
+    function updateHUD()
+    {
+      if (plRadius > hiSize)
+      {
+        hiSize = Math.floor(plRadius)
+
+        localStorage.setItem('blob_hi_size', hiSize)
+      }
+
+      document.getElementById('sizeDisp').innerText = `Size: ${Math.floor(plRadius)}`
+
+      document.getElementById('hiSizeDisp').innerText = `Best: ${hiSize}`
+
+      document.getElementById('menuHiSize').innerText = hiSize
+
+      checkMedals()
+    }
+
+    function normAngle(a)
+    {
+      while (a > Math.PI) a -= Math.PI * 2
+
+      while (a < -Math.PI) a += Math.PI * 2
+
+      return a
+    }
+
+    function setupControls()
+    {
+      const canvas = document.getElementById('gameCanvas')
+
+      const handleStart = (e) =>
+      {
+        if (gameState !== 1) return
+
+        const touch = e.touches ? e.touches[0] : e
+
+        stickBase = { x: touch.clientX, y: touch.clientY }
+
+        stickCurr = { x: touch.clientX, y: touch.clientY }
+
+        stickDir = { x: 0, y: 0 }
+      }
+
+      const handleMove = (e) =>
+      {
+        if (!stickBase || gameState !== 1) return
+
+        const touch = e.touches ? e.touches[0] : e
+
+        stickCurr = { x: touch.clientX, y: touch.clientY }
+
+        const dx = stickCurr.x - stickBase.x
+
+        const dy = stickCurr.y - stickBase.y
+
+        const dist = Math.hypot(dx, dy)
+
+        stickDir = dist > 5 ? { x: dx / dist, y: dy / dist } : { x: 0, y: 0 }
+      }
+
+      const handleEnd = () =>
+      {
+        stickBase = null
+
+        stickCurr = null
+
+        stickDir = { x: 0, y: 0 }
+      }
+
+      canvas.addEventListener('mousedown', handleStart)
+
+      canvas.addEventListener('mousemove', handleMove)
+
+      window.addEventListener('mouseup', handleEnd)
+
+      canvas.addEventListener('touchstart', handleStart, { passive: true })
+
+      canvas.addEventListener('touchmove', handleMove, { passive: true })
+
+      window.addEventListener('touchend', handleEnd)
+
+      window.addEventListener('keydown', (e) =>
+      {
+        const k = e.key.toLowerCase()
+
+        if (k === 'w' || k === 'arrowup') stickDir.y = -1
+
+        if (k === 's' || k === 'arrowdown') stickDir.y = 1
+
+        if (k === 'a' || k === 'arrowleft') stickDir.x = -1
+
+        if (k === 'd' || k === 'arrowright') stickDir.x = 1
+      })
+
+      window.addEventListener('keyup', (e) =>
+      {
+        const k = e.key.toLowerCase()
+
+        if (['w', 's', 'arrowup', 'arrowdown'].includes(k)) stickDir.y = 0
+
+        if (['a', 'd', 'arrowleft', 'arrowright'].includes(k)) stickDir.x = 0
+      })
+    }
+
+    function gameStep()
+    {
+      if (gameState !== 1) return
+
+      const spd = Math.max(3.2, 7.0 - plRadius * 0.015)
+
+      plVel.x = plVel.x * 0.85 + stickDir.x * spd * 0.15
+
+      plVel.y = plVel.y * 0.85 + stickDir.y * spd * 0.15
+
+      plPos.x += plVel.x * 60 * 0.016
+
+      plPos.y += plVel.y * 60 * 0.016
+
+      const maxLimit = boundSize - plRadius
+
+      plPos.x = Math.max(-maxLimit, Math.min(maxLimit, plPos.x))
+
+      plPos.y = Math.max(-maxLimit, Math.min(maxLimit, plPos.y))
+
+      if (Math.hypot(plVel.x, plVel.y) > 0.1)
+      {
+        plAngle = Math.atan2(plVel.y, plVel.x)
+      }
+
+      for (let i = foods.length - 1; i >= 0; i--)
+      {
+        const f = foods[i]
+
+        if (Math.hypot(plPos.x - f.x, plPos.y - f.y) < plRadius + f.r)
+        {
+          plRadius = Math.sqrt(plRadius * plRadius + f.r * f.r * 0.6)
+
+          playSound('eat')
+
+          foods.splice(i, 1)
+
+          updateHUD()
+        }
+      }
+
+      while (foods.length < 100)
+      {
+        foods.push(spawnFood())
+      }
+
+      blobs.forEach((b, i) =>
+      {
+        let targetX = b.x
+
+        let targetY = b.y
+
+        let minDist = 99999
+
+        if (b.aggro > 0)
+        {
+          b.aggro -= 0.016
+
+          targetX = plPos.x
+
+          targetY = plPos.y
+        }
+        else
+        {
+          blobs.forEach((o, j) =>
+          {
+            if (i !== j && o.r < b.r * 0.9)
+            {
+              const d = Math.hypot(o.x - b.x, o.y - b.y)
+
+              if (d < minDist)
+              {
+                minDist = d
+
+                targetX = o.x
+
+                targetY = o.y
+              }
+            }
+          })
+
+          if (minDist > 500 && plRadius < b.r * 0.9)
+          {
+            const dPl = Math.hypot(plPos.x - b.x, plPos.y - b.y)
+
+            if (dPl < minDist)
+            {
+              targetX = plPos.x
+
+              targetY = plPos.y
+            }
+          }
+        }
+
+        const bdx = targetX - b.x
+
+        const bdy = targetY - b.y
+
+        const bdist = Math.hypot(bdx, bdy) || 1
+
+        const targetAng = Math.atan2(bdy, bdx)
+
+        let angleDiff = normAngle(targetAng - b.ang)
+
+        const turnSpeed = (b.r > plRadius * 1.3) ? 0.025 : 0.08
+
+        b.ang += Math.max(-turnSpeed, Math.min(turnSpeed, angleDiff))
+
+        const bSpd = (b.aggro > 0 ? 4.8 : 2.8) * Math.max(0.85, 20 / b.r)
+
+        b.vx = b.vx * 0.88 + Math.cos(b.ang) * bSpd * 0.12
+
+        b.vy = b.vy * 0.88 + Math.sin(b.ang) * bSpd * 0.12
+
+        b.x += b.vx
+
+        b.y += b.vy
+
+        const bMax = boundSize - b.r
+
+        if (Math.abs(b.x) > bMax)
+        {
+          b.x = Math.sign(b.x) * bMax
+
+          b.vx *= -1
+        }
+
+        if (Math.abs(b.y) > bMax)
+        {
+          b.y = Math.sign(b.y) * bMax
+
+          b.vy *= -1
+        }
+
+        for (let j = i + 1; j < blobs.length; j++)
+        {
+          const o = blobs[j]
+
+          const dOther = Math.hypot(o.x - b.x, o.y - b.y)
+
+          if (dOther < b.r + o.r)
+          {
+            if (b.r > o.r * 1.15)
+            {
+              b.r = Math.sqrt(b.r * b.r + o.r * o.r * 0.5)
+
+              dropFoodCluster(o.x, o.y, 4)
+
+              blobs[j] = spawnEnemy()
+            }
+            else if (o.r > b.r * 1.15)
+            {
+              o.r = Math.sqrt(o.r * o.r + b.r * b.r * 0.5)
+
+              dropFoodCluster(b.x, b.y, 4)
+
+              blobs[i] = spawnEnemy()
+
+              return
+            }
+          }
+        }
+
+        const distPl = Math.hypot(plPos.x - b.x, plPos.y - b.y)
+
+        if (distPl < plRadius + b.r)
+        {
+          if (plRadius > b.r * 1.1)
+          {
+            plRadius = Math.sqrt(plRadius * plRadius + b.r * b.r * 0.5)
+
+            dropFoodCluster(b.x, b.y, 5)
+
+            playSound('eat')
+
+            blobs[i] = spawnEnemy()
+
+            updateHUD()
+          }
+          else
+          {
+            const angleToPl = Math.atan2(plPos.y - b.y, plPos.x - b.x)
+
+            const diff = Math.abs(normAngle(angleToPl - b.ang))
+
+            if (diff < Math.PI / 2.5)
+            {
+              gameOver()
+            }
+            else
+            {
+              b.r = Math.max(8, b.r - 4)
+
+              plRadius += 2
+
+              dropFoodCluster((plPos.x + b.x) / 2, (plPos.y + b.y) / 2, 3)
+
+              b.aggro = 4.0
+
+              playSound('bite')
+
+              updateHUD()
+            }
+          }
+        }
+      })
+    }
+
+    function drawEye(ctx, cx, cy, radius, angle, offsetAngle, isAngry)
+    {
+      const eyeDist = radius * 0.55
+
+      const ex = cx + Math.cos(angle + offsetAngle) * eyeDist
+
+      const ey = cy + Math.sin(angle + offsetAngle) * eyeDist
+
+      const eyeR = Math.max(3, radius * 0.22)
+
+      ctx.fillStyle = themeData[curTheme].eye
+
+      ctx.beginPath()
+
+      ctx.arc(ex, ey, eyeR, 0, Math.PI * 2)
+
+      ctx.fill()
+
+      const px = ex + Math.cos(angle) * (eyeR * 0.4)
+
+      const py = ey + Math.sin(angle) * (eyeR * 0.4)
+
+      ctx.fillStyle = themeData[curTheme].pupil
+
+      ctx.beginPath()
+
+      ctx.arc(px, py, eyeR * 0.5, 0, Math.PI * 2)
+
+      ctx.fill()
+
+      if (isAngry)
+      {
+        ctx.strokeStyle = themeData[curTheme].pupil
+
+        ctx.lineWidth = 2
+
+        ctx.beginPath()
+
+        ctx.moveTo(ex - eyeR, ey - eyeR * 0.5)
+
+        ctx.lineTo(ex + eyeR, ey + eyeR * 0.2)
+
+        ctx.stroke()
+      }
+    }
+
+    function render()
+    {
+      const canvas = document.getElementById('gameCanvas')
+
+      canvas.width = window.innerWidth
+
+      canvas.height = window.innerHeight
+
+      const ctx = canvas.getContext('2d')
+
+      const t = themeData[curTheme]
+
+      ctx.fillStyle = t.bg
+
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      const camX = canvas.width / 2 - plPos.x
+
+      const camY = canvas.height / 2 - plPos.y
+
+      ctx.save()
+
+      ctx.translate(camX, camY)
+
+      ctx.strokeStyle = t.wall
+
+      ctx.lineWidth = 10
+
+      ctx.strokeRect(-boundSize, -boundSize, boundSize * 2, boundSize * 2)
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)'
+
+      ctx.lineWidth = 2
+
+      const gridSize = 100
+
+      const startX = Math.floor((plPos.x - canvas.width) / gridSize) * gridSize
+
+      const endX = Math.floor((plPos.x + canvas.width) / gridSize) * gridSize
+
+      const startY = Math.floor((plPos.y - canvas.height) / gridSize) * gridSize
+
+      const endY = Math.floor((plPos.y + canvas.height) / gridSize) * gridSize
+
+      for (let x = startX; x <= endX; x += gridSize)
+      {
+        ctx.beginPath()
+
+        ctx.moveTo(x, startY)
+
+        ctx.lineTo(x, endY)
+
+        ctx.stroke()
+      }
+
+      for (let y = startY; y <= endY; y += gridSize)
+      {
+        ctx.beginPath()
+
+        ctx.moveTo(startX, y)
+
+        ctx.lineTo(endX, y)
+
+        ctx.stroke()
+      }
+
+      foods.forEach((f) =>
+      {
+        ctx.fillStyle = f.color
+
+        ctx.beginPath()
+
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2)
+
+        ctx.fill()
+      })
+
+      blobs.forEach((b) =>
+      {
+        ctx.fillStyle = b.color
+
+        ctx.beginPath()
+
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
+
+        ctx.fill()
+
+        drawEye(ctx, b.x, b.y, b.r, b.ang, -0.4, b.aggro > 0)
+
+        drawEye(ctx, b.x, b.y, b.r, b.ang, 0.4, b.aggro > 0)
+      })
+
+      if (gameState === 1 || gameState === 2)
+      {
+        ctx.fillStyle = t.player
+
+        ctx.beginPath()
+
+        ctx.arc(plPos.x, plPos.y, plRadius, 0, Math.PI * 2)
+
+        ctx.fill()
+
+        drawEye(ctx, plPos.x, plPos.y, plRadius, plAngle, -0.4, false)
+
+        drawEye(ctx, plPos.x, plPos.y, plRadius, plAngle, 0.4, false)
+      }
+
+      ctx.restore()
+
+      if (stickBase && stickCurr)
+      {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'
+
+        ctx.beginPath()
+
+        ctx.arc(stickBase.x, stickBase.y, 45, 0, Math.PI * 2)
+
+        ctx.fill()
+
+        ctx.fillStyle = t.accent
+
+        ctx.beginPath()
+
+        ctx.arc(stickCurr.x, stickCurr.y, 20, 0, Math.PI * 2)
+
+        ctx.fill()
+      }
+    }
+
+    function loop()
+    {
+      gameStep()
+
+      render()
+
+      requestAnimationFrame(loop)
+    }
+
+    setTheme(0)
+
+    setupControls()
+
+    loop()
+  </script>
+</body>
+</html>

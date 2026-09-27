@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+body {
+    background: #000;
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+    user-select: none;
+    touch-action: none;
+}
+.wrapper {
+    width: 95vmin;
+    height: 95vmin;
+    max-width: 512px;
+    max-height: 512px;
+    position: relative;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+}
+canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    display: block;
+}
+.crt {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.04));
+    background-size: 100% 4px, 4px 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+.crt::after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: radial-gradient(circle at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 110%);
+    pointer-events: none;
+    z-index: 3;
+}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+    <canvas id="game" width="512" height="512"></canvas>
+    <div class="crt"></div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+const THEMES = {
+    gruvbox: { bg: "#282828", hide: "#3c3836", rev: "#ebdbb2", act: "#fe8019", text: "#fbf1c7", mine: "#fb4934", num: ["#458588","#b8bb26","#fabd2f","#d3869b"] },
+    nord: { bg: "#2e3440", hide: "#434c5e", rev: "#d8dee9", act: "#88c0d0", text: "#eceff4", mine: "#bf616a", num: ["#81a1c1","#a3be8c","#ebcb8b","#b48ead"] },
+    catpuccin: { bg: "#303446", hide: "#414559", rev: "#c6d0f5", act: "#ea999c", text: "#c6d0f5", mine: "#e78284", num: ["#8ca0f3","#a6d189","#e5c890","#ca9ee6"] },
+    amoled: { bg: "#000000", hide: "#1a1a1a", rev: "#ffffff", act: "#00ff00", text: "#ffffff", mine: "#ff0000", num: ["#00ffff","#ffff00","#ff00ff","#00ff00"] },
+    monokai: { bg: "#272822", hide: "#3e3d32", rev: "#f92672", act: "#a6e22e", text: "#f8f8f2", mine: "#f92672", num: ["#66d9ef","#a6e22e","#fd971f","#ae81ff"] }
+};
+let curTheme = "gruvbox";
+
+const STATE_TITLE = 0;
+const STATE_INTRO = 1;
+const STATE_PLAY = 2;
+const STATE_GAMEOVER = 3;
+const STATE_WIN = 4;
+let gameState = STATE_TITLE;
+
+const DIFF_MODES = ["EASY", "NORMAL", "HARD"];
+const DIFF_MINES = [15, 48, 70];
+let diffIdx = 1;
+
+const COLS = 14, ROWS = 14, TILE_SIZE = 32, GRID_Y = 24;
+let totalMines = DIFF_MINES[diffIdx];
+let grid = [], cursor = { x: 7, y: 7 }, flagsCount = 0, firstMove = true;
+
+let introText = "THE WAR WAS LONG OVER.\n\nBUT SOMEONE NEEDED\n\nTO CLEAR THE MINES...";
+let introChars = 0;
+let introTicker = 0;
+
+let audioCtx = null;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(freq, dur, type = "square", vol = 0.1) {
+    if (!audioCtx) return;
+    let osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + dur);
+}
+function noise(dur, vol = 0.1) {
+    if (!audioCtx) return;
+    let bufferSize = audioCtx.sampleRate * dur, buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate), data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    let n = audioCtx.createBufferSource(); n.buffer = buffer;
+    let g = audioCtx.createGain(); g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    n.connect(g); g.connect(audioCtx.destination); n.start();
+}
+
+function initGrid() {
+    grid = []; flagsCount = 0; firstMove = true; totalMines = DIFF_MINES[diffIdx];
+    for (let r = 0; r < ROWS; r++) {
+        grid[r] = [];
+        for (let c = 0; c < COLS; c++) grid[r][c] = { mine: false, revealed: false, flagged: false, count: 0 };
+    }
+}
+
+function placeMines(ex, ey) {
+    let placed = 0;
+    while (placed < totalMines) {
+        let r = Math.floor(Math.random() * ROWS), c = Math.floor(Math.random() * COLS);
+        if (!grid[r][c].mine && (Math.abs(r - ey) > 1 || Math.abs(c - ex) > 1)) { grid[r][c].mine = true; placed++; }
+    }
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (grid[r][c].mine) continue;
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (grid[r+dr] && grid[r+dr][c+dc] && grid[r+dr][c+dc].mine) count++;
+                }
+            }
+            grid[r][c].count = count;
+        }
+    }
+}
+
+function reveal(x, y) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    let cell = grid[y][x];
+    if (cell.revealed || cell.flagged) return;
+    if (firstMove) { firstMove = false; placeMines(x, y); cell = grid[y][x]; }
+    cell.revealed = true;
+    if (cell.mine) { gameState = STATE_GAMEOVER; noise(0.8, 0.3); tone(60, 0.6, "sawtooth", 0.4); return; }
+    tone(300, 0.04, "sine", 0.05);
+    if (cell.count === 0) {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) reveal(x + dc, y + dr);
+        }
+    }
+    checkWin();
+}
+
+function toggleFlag(x, y) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    let cell = grid[y][x]; if (cell.revealed) return;
+    cell.flagged = !cell.flagged; flagsCount += cell.flagged ? 1 : -1;
+    tone(cell.flagged ? 440 : 330, 0.08, "triangle", 0.1);
+}
+
+function checkWin() {
+    let won = true;
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) { if (!grid[r][c].mine && !grid[r][c].revealed) won = false; }
+    }
+    if (won) {
+        gameState = STATE_WIN;
+        tone(440, 0.1, "square"); setTimeout(() => tone(554, 0.1, "square"), 100); setTimeout(() => tone(659, 0.2, "square"), 200);
+    }
+}
+
+function getCoords(e) {
+    let rect = canvas.getBoundingClientRect(), clientX = e.touches ? e.touches[0].clientX : e.clientX, clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: (clientX - rect.left) * (512 / rect.width), y: (clientY - rect.top) * (512 / rect.height) };
+}
+
+let touchTimer = null, isLongPress = false, touchStartX = 0, touchStartY = 0;
+function handleStart(e) {
+    initAudio();
+    let c = getCoords(e); touchStartX = c.x; touchStartY = c.y; isLongPress = false;
+    if (gameState === STATE_PLAY) {
+        let sx = (512 - (COLS * TILE_SIZE)) / 2, cx = Math.floor((c.x - sx) / TILE_SIZE), cy = Math.floor((c.y - GRID_Y) / TILE_SIZE);
+        if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
+            cursor.x = cx; cursor.y = cy;
+            touchTimer = setTimeout(() => { isLongPress = true; toggleFlag(cx, cy); }, 400);
+        }
+    }
+}
+
+function handleEnd(e) {
+    if (touchTimer) clearTimeout(touchTimer);
+    if (isLongPress) return;
+    let rect = canvas.getBoundingClientRect(), endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX, endY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+    let c = { x: (endX - rect.left) * (512 / rect.width), y: (endY - rect.top) * (512 / rect.height) };
+    if (Math.hypot(c.x - touchStartX, c.y - touchStartY) > 15) return;
+
+    if (gameState === STATE_TITLE) {
+        if (c.y >= 195 && c.y <= 225) {
+            if (c.x >= 120 && c.x <= 170) { diffIdx = (diffIdx - 1 + 3) % 3; tone(200, 0.05); }
+            if (c.x >= 340 && c.x <= 390) { diffIdx = (diffIdx + 1) % 3; tone(200, 0.05); }
+        }
+        if (c.y >= 250 && c.y <= 290 && c.x >= 156 && c.x <= 356) {
+            gameState = STATE_INTRO; introChars = 0; introTicker = 0; tone(440, 0.1);
+        }
+        if (c.y >= 350 && c.y <= 440) {
+            let keys = Object.keys(THEMES);
+            let idx = Math.floor((c.y - 350) / 18);
+            if (keys[idx]) { curTheme = keys[idx]; tone(300, 0.05, "sine"); }
+        }
+    } else if (gameState === STATE_INTRO) {
+        if (introChars < introText.length) { introChars = introText.length; }
+        else { initGrid(); gameState = STATE_PLAY; tone(440, 0.1); }
+    } else if (gameState === STATE_GAMEOVER || gameState === STATE_WIN) {
+        gameState = STATE_TITLE; tone(220, 0.1);
+    } else if (gameState === STATE_PLAY) {
+        let sx = (512 - (COLS * TILE_SIZE)) / 2, cx = Math.floor((c.x - sx) / TILE_SIZE), cy = Math.floor((c.y - GRID_Y) / TILE_SIZE);
+        if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) reveal(cx, cy);
+    }
+}
+
+window.addEventListener("mousedown", handleStart); window.addEventListener("mouseup", handleEnd);
+window.addEventListener("touchstart", handleStart, { passive: true }); window.addEventListener("touchend", handleEnd, { passive: true });
+window.addEventListener("keydown", (e) => {
+    initAudio();
+    if (gameState === STATE_TITLE) {
+        if (e.key === "ArrowLeft") { diffIdx = (diffIdx - 1 + 3) % 3; tone(200, 0.05); }
+        if (e.key === "ArrowRight") { diffIdx = (diffIdx + 1) % 3; tone(200, 0.05); }
+        if (e.key === "Enter" || e.key.toLowerCase() === "z") { gameState = STATE_INTRO; introChars = 0; introTicker = 0; tone(440, 0.1); }
+    } else if (gameState === STATE_INTRO) {
+        if (introChars < introText.length) introChars = introText.length;
+        else { initGrid(); gameState = STATE_PLAY; tone(440, 0.1); }
+    } else if (gameState === STATE_GAMEOVER || gameState === STATE_WIN) {
+        if (e.key.toLowerCase() === "z" || e.key === "Enter") { gameState = STATE_TITLE; tone(220, 0.1); }
+    } else if (gameState === STATE_PLAY) {
+        if (e.key === "ArrowUp" && cursor.y > 0) cursor.y--; if (e.key === "ArrowDown" && cursor.y < ROWS - 1) cursor.y++;
+        if (e.key === "ArrowLeft" && cursor.x > 0) cursor.x--; if (e.key === "ArrowRight" && cursor.x < COLS - 1) cursor.x++;
+        if (e.key.toLowerCase() === "z") reveal(cursor.x, cursor.y); if (e.key.toLowerCase() === "x") toggleFlag(cursor.x, cursor.y);
+    }
+});
+
+function draw() {
+    let T = THEMES[curTheme];
+    ctx.fillStyle = T.bg; ctx.fillRect(0, 0, 512, 512);
+    ctx.textAlign = "center";
+
+    if (gameState === STATE_TITLE) {
+        ctx.fillStyle = T.act; ctx.font = "24px 'Press Start 2P'"; ctx.fillText("SWEEPER OF MINES", 256, 100);
+        ctx.fillStyle = T.text; ctx.font = "12px 'Press Start 2P'"; ctx.fillText("DIFFICULTY:", 256, 170);
+        ctx.fillText("<", 140, 210); ctx.fillText(">", 372, 210);
+        ctx.fillText(DIFF_MODES[diffIdx], 256, 210);
+
+        ctx.fillStyle = T.hide; ctx.fillRect(156, 250, 200, 40);
+        ctx.fillStyle = T.text; ctx.fillText("START GAME", 256, 275);
+
+        ctx.font = "10px 'Press Start 2P'"; ctx.fillText("THEMES:", 256, 335);
+        Object.keys(THEMES).forEach((k, i) => {
+            ctx.fillStyle = curTheme === k ? T.act : T.hide;
+            ctx.fillText((curTheme === k ? "> " : "") + k.toUpperCase(), 256, 365 + i * 18);
+        });
+    } else if (gameState === STATE_INTRO) {
+        ctx.fillStyle = T.text; ctx.font = "12px 'Press Start 2P'";
+        introTicker++; if (introTicker % 2 === 0 && introChars < introText.length) { introChars++; if(introChars%3===0) tone(600,0.01,"sine",0.02); }
+        let lines = introText.substring(0, introChars).split("\n");
+        lines.forEach((l, i) => ctx.fillText(l, 256, 180 + i * 24));
+        if (introChars === introText.length) {
+            ctx.fillStyle = T.act; ctx.font = "10px 'Press Start 2P'";
+            ctx.fillText("TAP OR PRESS Z TO CONTINUE", 256, 400);
+        }
+    } else if (gameState === STATE_WIN || gameState === STATE_GAMEOVER) {
+        ctx.fillStyle = gameState === STATE_WIN ? T.act : T.mine;
+        ctx.font = "32px 'Press Start 2P'";
+        ctx.fillText(gameState === STATE_WIN ? "YOU WIN!" : "GAME OVER", 256, 220);
+        ctx.fillStyle = T.text; ctx.font = "12px 'Press Start 2P'";
+        ctx.fillText("TAP SCREEN OR Z TO TITLE", 256, 320);
+    } else {
+        let sx = (512 - (COLS * TILE_SIZE)) / 2;
+        for (let r = 0; r < ROWS; r++) {
+            for (let c = 0; c < COLS; c++) {
+                let cell = grid[r][c], x = sx + c * TILE_SIZE, y = GRID_Y + r * TILE_SIZE;
+                if (!cell.revealed) {
+                    ctx.fillStyle = T.hide; ctx.fillRect(x, y, TILE_SIZE - 2, TILE_SIZE - 2);
+                    if (cell.flagged) { ctx.fillStyle = T.mine; ctx.fillRect(x + 10, y + 10, 12, 12); }
+                } else {
+                    ctx.fillStyle = T.rev; ctx.fillRect(x, y, TILE_SIZE - 2, TILE_SIZE - 2);
+                    if (cell.mine) { ctx.fillStyle = T.mine; ctx.fillRect(x + 8, y + 8, 14, 14); }
+                    else if (cell.count > 0) {
+                        ctx.font = "14px 'Press Start 2P'"; ctx.textBaseline = "middle";
+                        ctx.fillStyle = T.num[cell.count - 1] || T.text;
+                        ctx.fillText(cell.count, x + 15, y + 16);
+                    }
+                }
+                if (gameState === STATE_PLAY && cursor.x === c && cursor.y === r) {
+                    ctx.strokeStyle = T.act; ctx.lineWidth = 2; ctx.strokeRect(x - 1, y - 1, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+        ctx.fillStyle = T.hide; ctx.fillRect(136, 465, 240, 36);
+        ctx.fillStyle = T.text; ctx.font = "10px 'Press Start 2P'"; ctx.textBaseline = "middle";
+        ctx.fillText(`MINES: ${flagsCount}/${totalMines}`, 256, 483);
+    }
+    requestAnimationFrame(draw);
+}
+initGrid(); draw();
+</script>
+</body>
+</html>

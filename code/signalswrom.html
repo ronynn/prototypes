@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>What Remains of Me</title>
+  <link rel="stylesheet" href="https://unpkg.com/98.css">
+  <style>
+    :root {
+      --win-bg: #008080;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--win-bg);
+      font-family: "Pixelated MS Sans Serif", "MS Sans Serif", Arial, sans-serif;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 4px;
+      overflow: hidden;
+    }
+
+    /* Top Navbar Window Header */
+    .title-bar {
+      flex-shrink: 0;
+    }
+
+    /* Screen Overlay Animated with 98 Style */
+    .circle-menu {
+      position: fixed;
+      inset: 0;
+      background: #c0c0c0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      clip-path: circle(0% at 20px 20px);
+      transition: clip-path 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+
+    .circle-menu.open {
+      clip-path: circle(150% at 20px 20px);
+      pointer-events: all;
+    }
+
+    .menu-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .menu-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px;
+      background: #fff;
+    }
+
+    /* Main Container Frame */
+    .main-window {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-top: 4px;
+      margin-bottom: 4px;
+      min-height: 0;
+    }
+
+    .window-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin: 3px;
+      padding: 0;
+      min-height: 0;
+      position: relative;
+    }
+
+    .aspect-21-9-container {
+      width: 100%;
+      aspect-ratio: 21 / 9;
+      background: #000;
+      display: none;
+      flex-shrink: 0;
+      border-bottom: 2px solid #808080;
+    }
+
+    .aspect-21-9-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #terminal {
+      flex: 1;
+      background: #ffffff;
+      padding: 8px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      color: #000000;
+    }
+
+    .line { color: #000000; }
+    .line.info { color: #000080; font-weight: bold; }
+    .line.alert { color: #800000; font-weight: bold; }
+
+    .cursor::after {
+      content: '█';
+      animation: blink 0.8s infinite;
+      color: #000000;
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* Target Selection Overlay */
+    .selection-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #c0c0c0;
+      border-top: 2px solid #ffffff;
+      padding: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      z-index: 5;
+    }
+
+    /* Fixed 3-Row Grid Control Panel (No horizontal scrolling) */
+    .controls-panel {
+      flex-shrink: 0;
+      padding: 4px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(3, 30px);
+      gap: 3px;
+    }
+
+    .controls-grid button {
+      min-width: 0;
+      padding: 0 2px;
+      font-size: 11px;
+      font-weight: bold;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      height: 100%;
+    }
+
+    /* Sub-pages */
+    .page {
+      position: fixed;
+      inset: 4px;
+      z-index: 150;
+      display: none;
+      flex-direction: column;
+    }
+
+    .page.active { display: flex; }
+
+    .map-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .map-node {
+      padding: 6px 2px;
+      font-size: 11px;
+      text-align: center;
+      background: #ffffff;
+    }
+
+    .map-node.active {
+      background: #000080;
+      color: #ffffff;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title-bar">
+    <div class="title-bar-controls" style="margin-right: 6px;">
+      <button aria-label="Help" id="open-menu" style="font-weight: bold;">≡</button>
+    </div>
+    <div class="title-bar-text">What Remains of Me - [Room 1]</div>
+  </div>
+
+  <div class="circle-menu window" id="menu">
+    <div class="title-bar">
+      <div class="title-bar-text">System Menu</div>
+      <div class="title-bar-controls">
+        <button aria-label="Close" id="close-menu"></button>
+      </div>
+    </div>
+    <div class="menu-content">
+      <button id="btn-map">🗺 Map View</button>
+      <button id="btn-about">ℹ About Game</button>
+      <button id="btn-walk">📖 Walkthrough</button>
+      
+      <div class="menu-item-row sunken-panel">
+        <label for="theme-select">Desktop Style:</label>
+        <select id="theme-select">
+          <option value="#008080">Teal 98</option>
+          <option value="#3a6ea5">Windows XP</option>
+          <option value="#000000">High Contrast</option>
+        </select>
+      </div>
+
+      <div class="menu-item-row sunken-panel">
+        <span>Sound Effects:</span>
+        <button id="audio-toggle" style="min-width: 80px;">ENABLED</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window main-window">
+    <div class="title-bar">
+      <div class="title-bar-text">Terminal Output</div>
+    </div>
+    <div class="window-body">
+      <div class="aspect-21-9-container" id="img-slot">
+        <img id="room-img" src="" alt="Room Scene">
+      </div>
+      <div id="terminal" class="sunken-panel"></div>
+      <div class="selection-overlay sunken-panel" id="selector" style="display: none;"></div>
+    </div>
+  </div>
+
+  <div class="window controls-panel">
+    <div class="controls-grid">
+      <button data-cmd="1">North</button>
+      <button data-cmd="2">South</button>
+      <button data-cmd="3">West</button>
+      <button data-cmd="4">East</button>
+      <button data-cmd="5">Up</button>
+      <button data-cmd="6">Down</button>
+
+      <button data-cmd="7">Inside</button>
+      <button data-cmd="8">Outside</button>
+      <button data-cmd="9">Take</button>
+      <button data-cmd="10">Drop</button>
+      <button data-cmd="11">Use</button>
+      <button data-cmd="12">Open</button>
+
+      <button data-cmd="13">Examine</button>
+      <button data-cmd="14">Inventory</button>
+      <button data-cmd="15">Wait</button>
+      <button data-cmd="16">Talk</button>
+      <button data-cmd="17">Look</button>
+      <button data-cmd="18">Push</button>
+    </div>
+  </div>
+
+  <div class="window page" id="page-map">
+    <div class="title-bar">
+      <div class="title-bar-text">Map View</div>
+      <div class="title-bar-controls">
+        <button aria-label="Close" id="close-map"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 8px;">
+      <div class="map-grid sunken-panel" id="map-nodes"></div>
+    </div>
+  </div>
+
+  <div class="window page" id="page-about">
+    <div class="title-bar">
+      <div class="title-bar-text">About</div>
+      <div class="title-bar-controls">
+        <button aria-label="Close" id="close-about"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 12px; line-height: 1.5;">
+      <h3>What Remains of Me</h3>
+      <p style="margin-top:8px;"><strong>Author:</strong> r01nx</p>
+      <p style="margin-top:8px;">An exploration of my old neighbourhood, in search for an objective in life.</p>
+    </div>
+  </div>
+
+  <div class="window page" id="page-walkthrough">
+    <div class="title-bar">
+      <div class="title-bar-text">Walkthrough</div>
+      <div class="title-bar-controls">
+        <button aria-label="Close" id="close-walk"></button>
+      </div>
+    </div>
+    <div class="window-body" style="padding: 12px; font-family: monospace; font-size: 11px; line-height: 1.8;">
+      1. Kitchen (3) -> Take Fish<br>
+      2. Corridor (8) -> Use Fish on Dog -> Get Ball<br>
+      3. Park (13) -> Use Ball on Friends -> Get Cash<br>
+      4. Ticket Counter (15) -> Use Cash -> Get Ticket<br>
+      5. Station (14) -> Use Ticket
+    </div>
+  </div>
+
+  <script type="module">
+    import { signal, effect } from 'https://cdn.jsdelivr.net/npm/@preact/signals-core@1.5.1/+esm';
+
+    // Global Reactive Signal State
+    const room = signal(1);
+    const audioActive = signal(true);
+    const bgColor = signal('#008080');
+    const turns = signal(1);
+
+    // Dynamic Game Constants
+    const INV = 0, HIDE = -1, VOID = -2;
+
+    const ROOMS = {
+      1: { s: 2, n: 3 },
+      2: { n: 1 },
+      3: { s: 1, n: 4 },
+      4: { s: 3, n: 5, e: 9, w: 6 },
+      5: { s: 4 },
+      6: { w: 8, s: 7, e: 4 },
+      7: { n: 6 },
+      8: { e: 6 },
+      9: { w: 4, d: 10 },
+      10: { s: 11, w: 14, e: 12, u: 9 },
+      11: { n: 10 },
+      12: { e: 13, w: 10 },
+      13: { w: 12 },
+      14: { e: 10, s: 15 },
+      15: { n: 14 }
+    };
+
+    const ROOM_NAMES = {
+      1: "My Room", 2: "Balcony", 3: "Kitchen", 4: "Corridor A",
+      5: "Bathroom", 6: "Corridor B", 7: "Lory's Room", 8: "Neighbour Door",
+      9: "Stairs Corridor", 10: "Street", 11: "School", 12: "Bench",
+      13: "Park", 14: "Train Station", 15: "Ticket Counter"
+    };
+
+    const OBJECTS = signal({
+      1: { n: "atlas", r: 1 },
+      2: { n: "fish", r: 3 },
+      3: { n: "soap", r: 5 },
+      4: { n: "ball", r: HIDE },
+      5: { n: "love letter", r: 7 },
+      6: { n: "cash", r: HIDE },
+      7: { n: "ticket", r: HIDE },
+      8: { n: "the train", r: HIDE },
+      9: { n: "the table", r: 1 },
+      10: { n: "Lory", r: 7 },
+      11: { n: "Bathing Man", r: 10 },
+      12: { n: "Woman on a bench", r: 12 },
+      13: { n: "My Friends", r: 13 },
+      14: { n: "Old Woman", r: 15 },
+      15: { n: "Frog", r: 11 }
+    });
+
+    const ROOM_IMAGES = {}; // Extended image storage mapping
+
+    // Audio Synth Engine
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 600, duration = 0.02) {
+      if (!audioActive.value) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // Fast Sound-Typewriter Engine
+    const terminal = document.getElementById('terminal');
+    let isTyping = false;
+    let typeQueue = [];
+
+    function print(text, type = '') {
+      typeQueue.push({ text, type });
+      if (!isTyping) processQueue();
+    }
+
+    function processQueue() {
+      if (typeQueue.length === 0) {
+        isTyping = false;
+        return;
+      }
+      isTyping = true;
+      const { text, type } = typeQueue.shift();
+      const lineDiv = document.createElement('div');
+      lineDiv.className = `line ${type} cursor`;
+      terminal.appendChild(lineDiv);
+
+      let idx = 0;
+      const interval = setInterval(() => {
+        lineDiv.textContent += text[idx];
+        playBeep(700 + Math.random() * 150, 0.01);
+        idx++;
+        terminal.scrollTop = terminal.scrollHeight;
+
+        if (idx >= text.length) {
+          clearInterval(interval);
+          lineDiv.classList.remove('cursor');
+          setTimeout(processQueue, 30);
+        }
+      }, 8);
+    }
+
+    // Reactive State Effects
+    effect(() => {
+      document.documentElement.style.setProperty('--win-bg', bgColor.value);
+    });
+
+    effect(() => {
+      const curRoom = room.value;
+      document.querySelector('.title-bar-text').textContent = `What Remains of Me - [Room ${curRoom}: ${ROOM_NAMES[curRoom]}]`;
+      
+      const imgSlot = document.getElementById('img-slot');
+      const imgElem = document.getElementById('room-img');
+      
+      if (ROOM_IMAGES[curRoom]) {
+        imgElem.src = ROOM_IMAGES[curRoom];
+        imgSlot.style.display = 'block';
+      } else {
+        imgSlot.style.display = 'none';
+      }
+      
+      describeCurrentRoom();
+    });
+
+    // World Logic
+    function describeCurrentRoom() {
+      const r = room.value;
+      const objs = OBJECTS.value;
+
+      if (r === 1) print("This is your room, dimly lit in the evening with christmas lights. You like the lights. There is an atlas on a table.");
+      else if (r === 2) print("This is your balcony. There is a tree surrounded by an apartment complex.");
+      else if (r === 3) print("This is the kitchen. There's fish in the fridge.");
+      else if (r === 4) print("This is a corridor. Your bathroom is ahead.");
+      else if (r === 5) {
+        if (objs[3].r === 5) print("This is your bathroom. There is no water running. But there's a soap you can use.");
+        else print("This is your bathroom. There is no water running.");
+      }
+      else if (r === 6) print("This is another corridor.");
+      else if (r === 7) print("Lory is sitting in his room trying to write a love letter on his table.");
+      else if (r === 8) print("Corridor ends here. A dog is playing with his ball.");
+      else if (r === 9) print("Corridor leading to stairs. You see train tracks.");
+      else if (r === 10) print("You are on the street. A person is taking a shower on a tap.");
+      else if (r === 11) print("You are at the school. A giant frog is threatening people.");
+      else if (r === 12) print("A woman is sitting on a bench, looking curious.");
+      else if (r === 13) print("This is a park. Your friends are hanging out here.");
+      else if (r === 14) print("You are at the train station. Board shows train timings.");
+      else if (r === 15) print("Ticket counter. An old lady is knitting a sweater.");
+
+      // List Room Items Dynamically
+      const visible = Object.values(objs).filter(o => o.r === r).map(o => o.n);
+      if (visible.length) print(` You see ${visible.join(', ')}.`, 'info');
+
+      // Exits
+      const ex = ROOMS[r] || {};
+      const dirs = Object.keys(ex).map(d => ({n:'north',s:'south',w:'west',e:'east',u:'up',d:'down'}[d]));
+      if (dirs.length) print(` Exits: ${dirs.join(', ')}.`, 'info');
+    }
+
+    // Command Switcher
+    function handleCommand(cmd) {
+      playBeep(250, 0.04);
+      const r = ROOMS[room.value] || {};
+
+      switch (cmd) {
+        case 1: move(r.n, "north"); break;
+        case 2: move(r.s, "south"); break;
+        case 3: move(r.w, "west"); break;
+        case 4: move(r.e, "east"); break;
+        case 5: move(r.u, "up"); break;
+        case 6: move(r.d, "down"); break;
+        case 7: move(r.i, "inside"); break;
+        case 8: move(r.o, "outside"); break;
+        case 9: targetSelector([room.value], take); break;
+        case 10: targetSelector([INV], drop); break;
+        case 11: targetSelector([room.value, INV], use); break;
+        case 12: targetSelector([room.value, INV], examine); break;
+        case 13: targetSelector([room.value, INV], examine); break;
+        case 14: showInventory(); break;
+        case 15: print("Waiting...", "info"); turns.value++; break;
+        case 16: targetSelector([room.value], talk); break;
+        case 17: describeCurrentRoom(); break;
+        case 18: targetSelector([room.value, INV], push); break;
+      }
+    }
+
+    function move(target, name) {
+      if (target) {
+        print(`You go ${name}.`, 'info');
+        room.value = target;
+        turns.value++;
+      } else {
+        print(` You can't go ${name}!`, 'alert');
+      }
+    }
+
+    function targetSelector(locations, action) {
+      const objs = OBJECTS.value;
+      const valid = Object.keys(objs).filter(k => locations.includes(objs[k].r));
+      
+      if (valid.length === 0) return print("Nothing available.", "alert");
+      if (valid.length === 1) return action(valid[0]);
+
+      const sel = document.getElementById('selector');
+      sel.innerHTML = '';
+      sel.style.display = 'flex';
+
+      valid.forEach(key => {
+        const btn = document.createElement('button');
+        btn.style.flex = '1 1 calc(50% - 4px)';
+        btn.textContent = objs[key].n;
+        btn.onclick = () => {
+          sel.style.display = 'none';
+          action(key);
+        };
+        sel.appendChild(btn);
+      });
+    }
+
+    function take(id) {
+      if (id == 9) return print("Table is too heavy.", "alert");
+      if (id >= 10) return print("They wouldn't like being carried.", "alert");
+      
+      updateObject(id, INV);
+      print(`Taken: ${OBJECTS.value[id].n}.`, "info");
+      turns.value++;
+    }
+
+    function drop(id) {
+      updateObject(id, room.value);
+      print(`Dropped: ${OBJECTS.value[id].n}.`, "info");
+      turns.value++;
+    }
+
+    function use(id) {
+      const r = room.value;
+      if (id == 2 && r == 8) {
+        print("Dog eats fish. Ball rolls to your feet.");
+        updateObject(4, INV);
+        updateObject(2, VOID);
+      } else if (id == 4 && r == 13) {
+        print("Friends start playing ball. They give you cash.");
+        updateObject(4, VOID);
+        updateObject(6, INV);
+      } else if (id == 6 && r == 15) {
+        print("Old lady gives you a train ticket.");
+        updateObject(6, VOID);
+        updateObject(7, INV);
+      } else if (id == 7 && r == 14) {
+        print("Boarded train. Game Clear!", "info");
+      } else {
+        print("Can't use that here.", "alert");
+      }
+      turns.value++;
+    }
+
+    function examine(id) {
+      print(`Examining ${OBJECTS.value[id].n}.`);
+    }
+
+    function talk(id) {
+      print(`Talking to ${OBJECTS.value[id].n}... No answer.`);
+    }
+
+    function push(id) {
+      print("Nothing happens.", "alert");
+    }
+
+    function showInventory() {
+      const items = Object.values(OBJECTS.value).filter(o => o.r === INV).map(o => o.n);
+      print(items.length ? `Carrying: ${items.join(', ')}.` : "Carrying nothing.", "info");
+    }
+
+    function updateObject(id, newRoom) {
+      OBJECTS.value = {
+        ...OBJECTS.value,
+        [id]: { ...OBJECTS.value[id], r: newRoom }
+      };
+    }
+
+    // UI Controller Event Listeners
+    document.querySelectorAll('.controls-grid button[data-cmd]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        handleCommand(parseInt(e.currentTarget.getAttribute('data-cmd')));
+      });
+    });
+
+    const menu = document.getElementById('menu');
+    document.getElementById('open-menu').onclick = () => menu.classList.add('open');
+    document.getElementById('close-menu').onclick = () => menu.classList.remove('open');
+
+    // Pages Engine
+    const bindPage = (btnId, pageId, closeId) => {
+      document.getElementById(btnId).onclick = () => {
+        menu.classList.remove('open');
+        document.getElementById(pageId).classList.add('active');
+        if (pageId === 'page-map') renderMap();
+      };
+      document.getElementById(closeId).onclick = () => {
+        document.getElementById(pageId).classList.remove('active');
+      };
+    };
+
+    bindPage('btn-map', 'page-map', 'close-map');
+    bindPage('btn-about', 'page-about', 'close-about');
+    bindPage('btn-walk', 'page-walkthrough', 'close-walk');
+
+    function renderMap() {
+      const grid = document.getElementById('map-nodes');
+      grid.innerHTML = '';
+      Object.keys(ROOMS).forEach(id => {
+        const node = document.createElement('div');
+        node.className = `map-node sunken-panel ${parseInt(id) === room.value ? 'active' : ''}`;
+        node.textContent = `${id}. ${ROOM_NAMES[id]}`;
+        grid.appendChild(node);
+      });
+    }
+
+    document.getElementById('theme-select').onchange = (e) => bgColor.value = e.target.value;
+    document.getElementById('audio-toggle').onclick = (e) => {
+      audioActive.value = !audioActive.value;
+      e.target.textContent = audioActive.value ? 'ENABLED' : 'MUTED';
+    };
+  </script>
+</body>
+</html>

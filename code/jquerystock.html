@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock Market Simulator</title>
+    <link rel="stylesheet" href="lib/uplot.min.css">
+    <style>
+        body { font-family: monospace; margin: 0; padding: 8px; background: #fff; color: #000; line-height: 1.4; }
+        .container { max-width: 700px; margin: 0 auto; }
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px dotted #ccc; }
+        .chart-box { height: 250px; margin: 8px 0; border: 1px solid #ccc; }
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #000; padding: 10px; z-index: 100; display: none; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+        .modal.active { display: block; }
+        .modal.shifted { top: 30%; transform: translate(-50%, -50%); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 90; display: none; }
+        .overlay.active { display: block; }
+        button { font-family: monospace; background: none; border: 1px solid #000; padding: 4px 8px; cursor: pointer; }
+        input { font-family: monospace; border: 1px solid #000; padding: 2px; width: 70px; }
+        .qty-btn { padding: 2px 6px; cursor: pointer; border: 1px solid #000; background: #f0f0f0; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .small { font-size: 0.8em; }
+        .green { color: green; }
+        .red { color: red; }
+        .section-title { font-weight: bold; margin-top: 12px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+        #tooltip { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 6px 16px; border-radius: 4px; font-size: 0.8em; z-index: 200; display: none; }
+        .rank-box { margin: 10px 0; padding: 6px; border: 1px solid #000; }
+        .footer { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; font-size: 0.8em; }
+        .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+        .buy-sell-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+        .buy-sell-row button { min-width: 40px; }
+        .buy-sell-row input { text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Top metrics bar -->
+    <div class="row">
+        <span>CASH: <span id="header-cash">$10,000.00</span></span>
+        <span>NET WORTH: <span id="header-networth">$10,000.00</span></span>
+        <span id="nw-change" class="small"></span>
+        <span id="timer-display" class="small"></span>
+        <button id="btn-portfolio">Portfolio</button>
+    </div>
+
+    <!-- Stock market index chart -->
+    <div class="section-title">Stock Market Index</div>
+    <div class="chart-box" id="market-chart"></div>
+    <div id="company-list"></div>
+
+    <!-- Assets section -->
+    <div class="section-title">Assets (Jewelry, Paintings, etc.)</div>
+    <div class="chart-box" id="asset-market-chart"></div>
+    <div id="asset-list"></div>
+
+    <!-- Net worth chart and ranking -->
+    <h4>Net Worth Over Time</h4>
+    <div class="chart-box" id="networth-chart"></div>
+    <div id="ranking-box" class="rank-box"></div>
+
+    <!-- Bottom buttons -->
+    <div class="btn-row">
+        <button id="btn-history">History</button>
+        <button id="btn-reset">Reset Game</button>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="container footer">
+    <p><strong>Loan Shark Story:</strong> You owe a dangerous loan shark $15,000. He has given you exactly 15 minutes to raise the money by trading stocks and assets. If you succeed, he takes his $15k and leaves you alone. If you fail, he takes everything you own and sends you to an old-age home. Good luck.</p>
+    <p>© 2026 Made by Ronynn (bunch of math bugs still persist)</p>
+</div>
+
+<!-- Company/Asset Modal -->
+<div class="overlay" id="company-overlay"></div>
+<div class="modal" id="company-modal">
+    <div><strong id="cm-ticker"></strong> <span id="cm-name"></span> <span id="cm-sector"></span> <span id="cm-category"></span></div>
+    <div>Price: <span id="cm-price"></span> <span id="cm-change"></span></div>
+    <div class="chart-box" id="cm-chart"></div>
+    <div id="cm-holdings"></div>
+    <div class="buy-sell-row">
+        <span>Buy:</span>
+        <button class="qty-btn" id="buy-minus">-</button>
+        <input type="number" id="buy-qty" min="0.001" step="0.001" value="1">
+        <button class="qty-btn" id="buy-plus">+</button>
+        <button id="btn-buy">Buy</button>
+    </div>
+    <div class="buy-sell-row">
+        <span>Sell:</span>
+        <button class="qty-btn" id="sell-minus">-</button>
+        <input type="number" id="sell-qty" min="0.001" step="0.001" value="1">
+        <button class="qty-btn" id="sell-plus">+</button>
+        <button id="btn-sell">Sell</button>
+    </div>
+    <button id="cm-close">Close</button>
+</div>
+
+<!-- Event Modal (New Company / Bankruptcy) -->
+<div class="overlay" id="event-overlay"></div>
+<div class="modal" id="event-modal">
+    <div id="event-icon"></div>
+    <h3 id="event-title"></h3>
+    <div id="event-body"></div>
+    <button id="event-close">Dismiss</button>
+</div>
+
+<!-- Portfolio Modal -->
+<div class="overlay" id="portfolio-overlay"></div>
+<div class="modal" id="portfolio-modal">
+    <h3>Portfolio</h3>
+    <div id="portfolio-summary"></div>
+    <div id="portfolio-list"></div>
+    <button id="portfolio-close">Close</button>
+</div>
+
+<!-- History Modal -->
+<div class="overlay" id="history-overlay"></div>
+<div class="modal" id="history-modal">
+    <h3>Transaction History</h3>
+    <div id="history-stats"></div>
+    <div id="history-list"></div>
+    <button id="history-close">Close</button>
+</div>
+
+<!-- Game Over / Win Modal -->
+<div class="overlay" id="game-over-overlay"></div>
+<div class="modal" id="game-over-modal">
+    <h3 id="game-over-title"></h3>
+    <div id="game-over-body"></div>
+    <button id="game-over-close">Reset Game</button>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip"></div>
+
+<script src="lib/jquery.slim.min.js"></script>
+<script src="lib/uplot.iife.min.js"></script>
+<script type="module">
+import { signal, computed, effect, batch } from './lib/signals-core.module.js';
+
+// ========== CONFIGURATION ==========
+const STARTING_CASH = 10000;
+const PRICE_UPDATE_MS = 2000;
+const NET_WORTH_RECORD_MS = 8000;
+const NEW_ITEM_CHECK_MS = 30000;
+const BANKRUPTCY_CHECK_MS = 4000;
+const HISTORY_LENGTH = 150;
+const NET_WORTH_HIST_LENGTH = 400;
+const BANKRUPTCY_PRICE_RATIO = 0.15;
+const BANKRUPTCY_CHANCE = 0.05;
+const LOAN_SHARK_DEADLINE_SEC = 15 * 60;
+const LOAN_SHARK_TARGET = 15000;
+const LOAN_SHARK_TAKE = 15000;
+const SAVE_INTERVAL_MS = 10000;
+
+// ========== DATA ==========
+const INITIAL_COMPANIES = [
+    { name: 'Apple Inc.', ticker: 'AAPL', price: 187.52, volatility: 0.012, trend: 0.00025, sector: 'Technology' },
+    { name: 'Microsoft Corp.', ticker: 'MSFT', price: 425.38, volatility: 0.010, trend: 0.00030, sector: 'Technology' },
+    { name: 'Alphabet Inc.', ticker: 'GOOGL', price: 151.24, volatility: 0.013, trend: 0.00022, sector: 'Technology' },
+    { name: 'Amazon.com Inc.', ticker: 'AMZN', price: 182.60, volatility: 0.015, trend: 0.00018, sector: 'E-commerce' },
+    { name: 'Tesla Inc.', ticker: 'TSLA', price: 248.75, volatility: 0.025, trend: -0.00015, sector: 'Automotive' },
+    { name: 'NVIDIA Corp.', ticker: 'NVDA', price: 135.92, volatility: 0.020, trend: 0.00045, sector: 'Technology' },
+    { name: 'Meta Platforms', ticker: 'META', price: 510.35, volatility: 0.018, trend: 0.00020, sector: 'Technology' },
+    { name: 'Netflix Inc.', ticker: 'NFLX', price: 635.40, volatility: 0.016, trend: 0.00012, sector: 'Entertainment' },
+    { name: 'Walmart Inc.', ticker: 'WMT', price: 72.35, volatility: 0.008, trend: 0.00008, sector: 'Retail' },
+    { name: 'Coca-Cola Co.', ticker: 'KO', price: 63.10, volatility: 0.006, trend: 0.00005, sector: 'Beverages' },
+    { name: "McDonald's Corp.", ticker: 'MCD', price: 295.70, volatility: 0.009, trend: 0.00010, sector: 'Restaurants' },
+    { name: 'Disney Co.', ticker: 'DIS', price: 94.32, volatility: 0.014, trend: -0.00010, sector: 'Entertainment' },
+    { name: 'JPMorgan Chase', ticker: 'JPM', price: 215.40, volatility: 0.011, trend: 0.00015, sector: 'Banking' },
+    { name: 'Visa Inc.', ticker: 'V', price: 278.90, volatility: 0.009, trend: 0.00020, sector: 'Financial' },
+    { name: 'Bitcoin', ticker: 'BTC', price: 67450, volatility: 0.032, trend: 0.00035, sector: 'Crypto' },
+    { name: 'Ethereum', ticker: 'ETH', price: 3520, volatility: 0.028, trend: 0.00028, sector: 'Crypto' },
+    { name: 'Solana', ticker: 'SOL', price: 152.30, volatility: 0.038, trend: 0.00020, sector: 'Crypto' },
+    { name: 'Cardano', ticker: 'ADA', price: 0.462, volatility: 0.035, trend: -0.00008, sector: 'Crypto' },
+    { name: 'PayPal Holdings', ticker: 'PYPL', price: 66.80, volatility: 0.017, trend: -0.00020, sector: 'Financial' },
+    { name: 'Mastercard Inc.', ticker: 'MA', price: 468.20, volatility: 0.009, trend: 0.00022, sector: 'Financial' }
+];
+
+const INITIAL_ASSETS = [
+    { name: 'Golden Pocket Watch', ticker: 'GOLDW', price: 4500, volatility: 0.02, trend: 0.0001, sector: 'Jewelry', history: 'Victorian era, belonged to a nobleman' },
+    { name: 'Diamond Necklace', ticker: 'DIANE', price: 12000, volatility: 0.025, trend: 0.00005, sector: 'Jewelry', history: 'Once worn by a Hollywood star' },
+    { name: 'Renaissance Painting', ticker: 'RENPA', price: 85000, volatility: 0.015, trend: 0.0002, sector: 'Art', history: 'Attributed to a master' },
+    { name: 'Ancient Coin Collection', ticker: 'ANCI', price: 2200, volatility: 0.03, trend: -0.0001, sector: 'Collectibles', history: 'Roman era, well preserved' },
+    { name: 'Vintage Rolex', ticker: 'ROLEX', price: 7800, volatility: 0.018, trend: 0.00015, sector: 'Luxury', history: '1950s model, rare' },
+    { name: 'Chinese Porcelain Vase', ticker: 'PORCE', price: 15000, volatility: 0.022, trend: 0.00008, sector: 'Art', history: 'Qing dynasty, imperial' },
+    { name: 'First Edition Book', ticker: 'FIRED', price: 9500, volatility: 0.02, trend: 0.00012, sector: 'Collectibles', history: 'Signed by author' },
+    { name: 'Emerald Ring', ticker: 'EMRIN', price: 6200, volatility: 0.028, trend: 0.00005, sector: 'Jewelry', history: 'Colombian emerald' },
+    { name: 'Picasso Sketch', ticker: 'PICSK', price: 55000, volatility: 0.017, trend: 0.00018, sector: 'Art', history: 'Original sketch' }
+];
+
+// ========== SIGNALS ==========
+const cash = signal(STARTING_CASH);
+const holdings = signal({});            // { itemId: { shares, avgCost } }
+const transactions = signal([]);
+const netWorthHistory = signal([]);
+const marketIndexHistory = signal([]);
+const assetMarketIndexHistory = signal([]);
+const companies = signal([]);
+const assets = signal([]);
+const eventQueue = signal([]);
+const selectedItemId = signal(null);
+const gameState = signal({
+    status: 'active',       // 'active', 'won', 'lost'
+    elapsedSeconds: 0
+});
+
+// Computed values
+const currentNetWorth = computed(() => {
+    let total = cash.value;
+    for (const id in holdings.value) {
+        const item = getItemById(id);
+        if (item && item.active) total += holdings.value[id].shares * item.price;
+    }
+    return total;
+});
+
+const ranking = computed(() => {
+    const nw = currentNetWorth.value;
+    if (nw < 5000) return 'Level 1: Novice';
+    if (nw < 20000) return 'Level 2: Trader';
+    if (nw < 100000) return 'Level 3: Investor';
+    return 'Level 4: Mogul';
+});
+
+const timerDisplay = computed(() => {
+    const elapsed = gameState.value.elapsedSeconds;
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    return `Timer: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+});
+
+// ========== UTILITY ==========
+function fmt(n) { if (Math.abs(n) >= 10000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 }); if (Math.abs(n) >= 100) return '$' + n.toFixed(2); if (Math.abs(n) >= 1) return '$' + n.toFixed(2); if (Math.abs(n) >= 0.01) return '$' + n.toFixed(4); if (Math.abs(n) >= 0.0001) return '$' + n.toFixed(6); return '$' + n.toFixed(8); }
+function fmtNum(n, digits) { if (digits === undefined) digits = 2; if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 }); return n.toFixed(digits); }
+function pctChange(initial, current) { if (initial === 0) return 0; return ((current - initial) / initial) * 100; }
+function gaussianRandom() { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
+function uniqueId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 4); }
+function getItemById(id) { return companies.value.find(c => c.id === id) || assets.value.find(a => a.id === id); }
+function showTooltip(msg) { const $tooltip = $('#tooltip'); $tooltip.text(msg).show(); setTimeout(() => $tooltip.hide(), 1500); }
+
+// ========== LIQUIDATION ==========
+function liquidateAll() {
+    batch(() => {
+        for (const id of Object.keys(holdings.value)) {
+            const item = getItemById(id);
+            if (!item || !item.active) continue;
+            const held = holdings.value[id];
+            const proceeds = held.shares * item.price;
+            cash.value += proceeds;
+            // record transaction
+            transactions.value = [...transactions.value, {
+                id: uniqueId(),
+                type: 'LIQUIDATE',
+                companyId: id,
+                ticker: item.ticker,
+                shares: held.shares,
+                price: item.price,
+                total: proceeds,
+                profit: held.shares * (item.price - held.avgCost),
+                timestamp: Date.now()
+            }];
+        }
+        holdings.value = {};
+    });
+}
+
+// ========== INITIALIZATION FUNCTIONS ==========
+function initCompanies() {
+    const now = Date.now() / 1000;
+    companies.value = INITIAL_COMPANIES.map((c, i) => {
+        let times = [], prices = [];
+        for (let j = 0; j < 50; j++) {
+            times.push(now - (50 - j) * 3);
+            let noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
+            prices.push(Math.max(0.000001, c.price + noise * (j / 50)));
+        }
+        times.push(now); prices.push(c.price);
+        return { id: 'comp_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker, price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price, volatility: c.volatility, trend: c.trend, sector: c.sector, active: true, isNew: false, category: 'stock', historyTimes: times, historyPrices: prices };
+    });
+}
+
+function initAssets() {
+    const now = Date.now() / 1000;
+    assets.value = INITIAL_ASSETS.map((c, i) => {
+        let times = [], prices = [];
+        for (let j = 0; j < 40; j++) {
+            times.push(now - (40 - j) * 3);
+            let noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
+            prices.push(Math.max(0.000001, c.price + noise * (j / 40)));
+        }
+        times.push(now); prices.push(c.price);
+        return { id: 'asset_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker, price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price, volatility: c.volatility, trend: c.trend, sector: c.sector, active: true, isNew: false, category: 'asset', history: c.history, historyTimes: times, historyPrices: prices };
+    });
+}
+
+function initNetWorthHistory() {
+    const now = Date.now() / 1000;
+    netWorthHistory.value = Array.from({ length: 30 }, (_, i) => ({ time: now - (30 - i) * 10, value: STARTING_CASH }));
+}
+
+function initMarketIndexHistory() {
+    const now = Date.now() / 1000;
+    marketIndexHistory.value = Array.from({ length: 50 }, (_, i) => ({ time: now - (50 - i) * 3, value: 100 }));
+    assetMarketIndexHistory.value = Array.from({ length: 50 }, (_, i) => ({ time: now - (50 - i) * 3, value: 100 }));
+}
+
+function autoGenerateCompanyName() {
+    const prefix = ['Quantum','Nova','Apex','Zenith','Orion','Vortex','Silver','Golden','Prime','Cyber'];
+    const suffix = ['Tech','Dynamics','Industries','Systems','Corp','Labs','Enterprises','Holdings','Group','Partners'];
+    return prefix[Math.floor(Math.random()*prefix.length)] + suffix[Math.floor(Math.random()*suffix.length)] + ' Inc.';
+}
+
+function autoGenerateAssetName() {
+    const types = ['Painting', 'Sculpture', 'Watch', 'Ring', 'Vase', 'Coin', 'Book', 'Manuscript', 'Jewelry', 'Artifact'];
+    const descriptors = ['Ancient', 'Rare', 'Vintage', 'Imperial', 'Golden', 'Royal', 'Mysterious', 'Colonial', 'Antique', 'Famous'];
+    return descriptors[Math.floor(Math.random()*descriptors.length)] + ' ' + types[Math.floor(Math.random()*types.length)];
+}
+
+// ========== PRICE SIMULATION ==========
+function updatePrices() {
+    const now = Date.now() / 1000;
+    companies.value = companies.value.map(comp => {
+        if (!comp.active) return comp;
+        const drift = comp.trend * comp.price;
+        const shock = comp.volatility * comp.price * gaussianRandom();
+        let newPrice = comp.price + drift + shock;
+        if (newPrice < 0.0000001) newPrice = 0.0000001;
+        const historyTimes = [...comp.historyTimes, now];
+        const historyPrices = [...comp.historyPrices, newPrice];
+        if (historyTimes.length > HISTORY_LENGTH) { historyTimes.shift(); historyPrices.shift(); }
+        return { ...comp, price: newPrice, highPrice: Math.max(comp.highPrice, newPrice), lowPrice: Math.min(comp.lowPrice, newPrice), historyTimes, historyPrices };
+    });
+    assets.value = assets.value.map(asset => {
+        if (!asset.active) return asset;
+        const drift = asset.trend * asset.price;
+        const shock = asset.volatility * asset.price * gaussianRandom();
+        let newPrice = asset.price + drift + shock;
+        if (newPrice < 0.0000001) newPrice = 0.0000001;
+        const historyTimes = [...asset.historyTimes, now];
+        const historyPrices = [...asset.historyPrices, newPrice];
+        if (historyTimes.length > HISTORY_LENGTH) { historyTimes.shift(); historyPrices.shift(); }
+        return { ...asset, price: newPrice, highPrice: Math.max(asset.highPrice, newPrice), lowPrice: Math.min(asset.lowPrice, newPrice), historyTimes, historyPrices };
+    });
+    const stockActive = companies.value.filter(c => c.active);
+    if (stockActive.length > 0) {
+        const sum = stockActive.reduce((acc, comp) => acc + comp.price / comp.initialPrice, 0);
+        marketIndexHistory.value = [...marketIndexHistory.value, { time: now, value: 100 * sum / stockActive.length }];
+        if (marketIndexHistory.value.length > HISTORY_LENGTH) marketIndexHistory.value.shift();
+    }
+    const assetActive = assets.value.filter(a => a.active);
+    if (assetActive.length > 0) {
+        const sum = assetActive.reduce((acc, a) => acc + a.price / a.initialPrice, 0);
+        assetMarketIndexHistory.value = [...assetMarketIndexHistory.value, { time: now, value: 100 * sum / assetActive.length }];
+        if (assetMarketIndexHistory.value.length > HISTORY_LENGTH) assetMarketIndexHistory.value.shift();
+    }
+}
+
+function checkBankruptcies() {
+    let newCompanies = [...companies.value];
+    let newAssets = [...assets.value];
+    let removed = false;
+    newCompanies = newCompanies.filter(comp => {
+        if (!comp.active) return false;
+        if (comp.price / comp.initialPrice < BANKRUPTCY_PRICE_RATIO && Math.random() < BANKRUPTCY_CHANCE) {
+            removed = true;
+            const held = holdings.value[comp.id];
+            if (held) {
+                const loss = held.shares * held.avgCost;
+                const newHoldings = { ...holdings.value };
+                delete newHoldings[comp.id];
+                holdings.value = newHoldings;
+                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: comp.id, ticker: comp.ticker, shares: held.shares, price: comp.price, total: 0, profit: -loss, timestamp: Date.now() }];
+                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: comp, lossAmount: loss, shareCount: held.shares, avgCost: held.avgCost }];
+            } else {
+                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: comp, lossAmount: 0, shareCount: 0, avgCost: 0 }];
+            }
+            return false;
+        }
+        return true;
+    });
+    newAssets = newAssets.filter(asset => {
+        if (!asset.active) return false;
+        if (asset.price / asset.initialPrice < BANKRUPTCY_PRICE_RATIO && Math.random() < BANKRUPTCY_CHANCE) {
+            removed = true;
+            const held = holdings.value[asset.id];
+            if (held) {
+                const loss = held.shares * held.avgCost;
+                const newHoldings = { ...holdings.value };
+                delete newHoldings[asset.id];
+                holdings.value = newHoldings;
+                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: asset.id, ticker: asset.ticker, shares: held.shares, price: asset.price, total: 0, profit: -loss, timestamp: Date.now() }];
+                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: asset, lossAmount: loss, shareCount: held.shares, avgCost: held.avgCost }];
+            } else {
+                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: asset, lossAmount: 0, shareCount: 0, avgCost: 0 }];
+            }
+            return false;
+        }
+        return true;
+    });
+    if (removed) {
+        companies.value = newCompanies;
+        assets.value = newAssets;
+    }
+}
+
+function checkNewItems() {
+    if (Math.random() > 0.35) return;
+    const isStock = Math.random() < 0.6;
+    if (isStock) {
+        const name = autoGenerateCompanyName();
+        const ticker = name.split(' ')[0].substring(0, 4).toUpperCase();
+        const price = Math.random() * 100 + 10;
+        const comp = { id: 'comp_new_' + uniqueId(), name, ticker, price, initialPrice: price, highPrice: price, lowPrice: price, volatility: 0.02 + Math.random() * 0.03, trend: (Math.random() - 0.5) * 0.001, sector: 'Technology', active: true, isNew: true, category: 'stock', historyTimes: [], historyPrices: [] };
+        const now = Date.now() / 1000;
+        for (let j = 0; j < 30; j++) { comp.historyTimes.push(now - (30 - j) * 3); comp.historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * comp.volatility * price * 1.5)); }
+        comp.historyTimes.push(now); comp.historyPrices.push(price);
+        companies.value = [...companies.value, comp];
+        eventQueue.value = [...eventQueue.value, { type: 'new_company', item: comp }];
+    } else {
+        const name = autoGenerateAssetName();
+        const ticker = name.split(' ').map(w => w[0]).join('').substring(0, 4).toUpperCase();
+        const price = Math.random() * 5000 + 500;
+        const asset = { id: 'asset_new_' + uniqueId(), name, ticker, price, initialPrice: price, highPrice: price, lowPrice: price, volatility: 0.015 + Math.random() * 0.02, trend: (Math.random() - 0.5) * 0.0005, sector: 'Collectibles', active: true, isNew: true, category: 'asset', history: 'Recently discovered', historyTimes: [], historyPrices: [] };
+        const now = Date.now() / 1000;
+        for (let j = 0; j < 30; j++) { asset.historyTimes.push(now - (30 - j) * 3); asset.historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * asset.volatility * price)); }
+        asset.historyTimes.push(now); asset.historyPrices.push(price);
+        assets.value = [...assets.value, asset];
+        eventQueue.value = [...eventQueue.value, { type: 'new_company', item: asset }];
+    }
+}
+
+// ========== TRADING ==========
+function buyStock(itemId, qty) {
+    const item = getItemById(itemId);
+    if (!item || !item.active || qty <= 0) return false;
+    const totalCost = qty * item.price;
+    if (totalCost > cash.value) return false;
+    const current = holdings.value[itemId] || { shares: 0, avgCost: 0 };
+    const newShares = current.shares + qty;
+    const newAvg = (current.shares * current.avgCost + qty * item.price) / newShares;
+    holdings.value = { ...holdings.value, [itemId]: { shares: newShares, avgCost: newAvg } };
+    cash.value -= totalCost;
+    transactions.value = [...transactions.value, { id: uniqueId(), type: 'BUY', companyId: itemId, ticker: item.ticker, shares: qty, price: item.price, total: totalCost, profit: null, timestamp: Date.now() }];
+    return true;
+}
+
+function sellStock(itemId, qty) {
+    const item = getItemById(itemId);
+    if (!item || !item.active || qty <= 0) return false;
+    const held = holdings.value[itemId];
+    if (!held || held.shares < qty) return false;
+    const proceeds = qty * item.price;
+    const profit = qty * (item.price - held.avgCost);
+    cash.value += proceeds;
+    const newShares = held.shares - qty;
+    if (newShares <= 0.0000001) {
+        const newH = { ...holdings.value };
+        delete newH[itemId];
+        holdings.value = newH;
+    } else {
+        holdings.value = { ...holdings.value, [itemId]: { shares: newShares, avgCost: held.avgCost } };
+    }
+    transactions.value = [...transactions.value, { id: uniqueId(), type: 'SELL', companyId: itemId, ticker: item.ticker, shares: qty, price: item.price, total: proceeds, profit, timestamp: Date.now() }];
+    return true;
+}
+
+// ========== SAVE / LOAD ==========
+function saveGame() {
+    const state = {
+        cash: cash.value,
+        holdings: holdings.value,
+        transactions: transactions.value,
+        netWorthHistory: netWorthHistory.value,
+        marketIndexHistory: marketIndexHistory.value,
+        assetMarketIndexHistory: assetMarketIndexHistory.value,
+        companies: companies.value,
+        assets: assets.value,
+        eventQueue: eventQueue.value,
+        gameState: gameState.value,
+        selectedItemId: selectedItemId.value
+    };
+    localStorage.setItem('stockSimSave', JSON.stringify(state));
+}
+
+function loadGame() {
+    const saved = localStorage.getItem('stockSimSave');
+    if (!saved) return false;
+    try {
+        const s = JSON.parse(saved);
+        cash.value = s.cash;
+        holdings.value = s.holdings;
+        transactions.value = s.transactions;
+        netWorthHistory.value = s.netWorthHistory;
+        marketIndexHistory.value = s.marketIndexHistory;
+        assetMarketIndexHistory.value = s.assetMarketIndexHistory;
+        companies.value = s.companies;
+        assets.value = s.assets;
+        eventQueue.value = s.eventQueue;
+        gameState.value = s.gameState;
+        selectedItemId.value = s.selectedItemId;
+        return true;
+    } catch (e) {
+        console.log('load error', e);
+        return false;
+    }
+}
+
+function resetGame() {
+    batch(() => {
+        cash.value = STARTING_CASH;
+        holdings.value = {};
+        transactions.value = [];
+        netWorthHistory.value = [];
+        marketIndexHistory.value = [];
+        assetMarketIndexHistory.value = [];
+        eventQueue.value = [];
+        selectedItemId.value = null;
+        gameState.value = { status: 'active', elapsedSeconds: 0 };
+        initCompanies();
+        initAssets();
+        initNetWorthHistory();
+        initMarketIndexHistory();
+        hideAllModals();
+    });
+    localStorage.removeItem('stockSimSave');
+}
+
+// ========== MODAL CONTROL ==========
+function hideAllModals() {
+    $('.modal').removeClass('active').removeClass('shifted');
+    $('.overlay').removeClass('active');
+}
+
+function showItemModal(itemId) {
+    $('#portfolio-overlay').removeClass('active');
+    $('#portfolio-modal').removeClass('active');
+    selectedItemId.value = itemId;
+    const item = getItemById(itemId);
+    if (!item) return;
+    $('#cm-ticker').text(item.ticker);
+    $('#cm-name').text(item.name);
+    $('#cm-sector').text(item.sector);
+    $('#cm-category').text('(' + (item.category === 'asset' ? 'Asset' : 'Stock') + ')');
+    $('#cm-price').text(fmt(item.price));
+    const pct = pctChange(item.initialPrice, item.price);
+    $('#cm-change').text((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%').css('color', pct >= 0 ? 'green' : 'red');
+    updateHoldingsDisplay();
+    $('#buy-qty').val(1);
+    $('#sell-qty').val(1);
+    // Set sell max
+    const held = holdings.value[itemId];
+    if (held) {
+        $('#sell-qty').attr('max', held.shares);
+    } else {
+        $('#sell-qty').attr('max', 0);
+    }
+    $('#company-overlay').addClass('active');
+    $('#company-modal').addClass('active');
+    // Render chart after modal visible
+    setTimeout(() => { if (selectedItemId.value === itemId) renderItemChart(itemId); }, 150);
+}
+
+function updateHoldingsDisplay() {
+    const itemId = selectedItemId.value;
+    if (!itemId) return;
+    const item = getItemById(itemId);
+    if (!item) return;
+    const held = holdings.value[itemId];
+    if (held) {
+        $('#cm-holdings').text(`You own ${fmtNum(held.shares, 3)} shares · Avg cost ${fmt(held.avgCost)} · Value ${fmt(held.shares * item.price)}`);
+        $('#sell-qty').attr('max', held.shares);
+    } else {
+        $('#cm-holdings').text('You own no shares.');
+        $('#sell-qty').attr('max', 0);
+    }
+}
+
+function hideItemModal() {
+    selectedItemId.value = null;
+    if (window.itemChartInstance) { window.itemChartInstance.destroy(); window.itemChartInstance = null; }
+    $('#company-overlay').removeClass('active');
+    $('#company-modal').removeClass('active').removeClass('shifted');
+    processEventQueue();
+}
+
+function showEventModal(event) {
+    let title, icon, body;
+    if (event.type === 'new_company') {
+        const item = event.item;
+        title = 'New Item Listed!';
+        icon = '🎉';
+        body = `<div>${item.ticker} - ${item.name}</div><div>Initial Price: ${fmt(item.price)}</div><div>Sector: ${item.sector || 'Collectibles'}</div>`;
+    } else {
+        const item = event.item;
+        title = 'Bankruptcy!';
+        icon = '⚠️';
+        body = `<div>${item.ticker} - ${item.name}</div><div>Shares held: ${fmtNum(event.shareCount, 3)}</div><div>Avg cost/share: ${fmt(event.avgCost)}</div><div>Final price: ${fmt(item.price)}</div><div>Total Loss: -${fmt(event.lossAmount)}</div>`;
+    }
+    $('#event-title').text(title);
+    $('#event-icon').text(icon);
+    $('#event-body').html(body);
+    $('#event-overlay').addClass('active');
+    $('#event-modal').addClass('active');
+}
+
+function hideEventModal() {
+    $('#event-overlay').removeClass('active');
+    $('#event-modal').removeClass('active');
+    processEventQueue();
+}
+
+function processEventQueue() {
+    if (eventQueue.value.length > 0 && !$('.modal.active').length) {
+        const ev = eventQueue.value[0];
+        eventQueue.value = eventQueue.value.slice(1);
+        showEventModal(ev);
+    }
+}
+
+function showPortfolioModal() {
+    let summaryHtml = `<div>Cash: ${fmt(cash.value)}</div>`;
+    let listHtml = '';
+    let totalVal = 0;
+    for (const id in holdings.value) {
+        const item = getItemById(id);
+        if (!item || !item.active) continue;
+        const val = holdings.value[id].shares * item.price;
+        const pnl = holdings.value[id].shares * (item.price - holdings.value[id].avgCost);
+        totalVal += val;
+        const pnlClass = pnl >= 0 ? 'green' : 'red';
+        listHtml += `<div class="row portfolio-item" data-id="${id}" style="cursor:pointer;"><span>${item.ticker} (${item.category})</span><span class="text-right">${fmtNum(holdings.value[id].shares, 3)} shares · ${fmt(val)} <span class="${pnlClass}">(${pnl >= 0 ? '+' : ''}${fmt(pnl)})</span></span></div>`;
+    }
+    summaryHtml += `<div>Portfolio Value: ${fmt(totalVal)}</div><div>Total Net Worth: ${fmt(cash.value + totalVal)}</div>`;
+    $('#portfolio-summary').html(summaryHtml);
+    $('#portfolio-list').html(listHtml || '<div>No holdings.</div>');
+    $('#portfolio-overlay').addClass('active');
+    $('#portfolio-modal').addClass('active');
+}
+
+function hidePortfolioModal() {
+    $('#portfolio-overlay').removeClass('active');
+    $('#portfolio-modal').removeClass('active');
+    processEventQueue();
+}
+
+function showHistoryModal() {
+    let totalProfit = 0;
+    let buys = 0, sells = 0, bankrupts = 0;
+    for (const tx of transactions.value) {
+        if (tx.profit !== null && tx.profit !== undefined) totalProfit += tx.profit;
+        if (tx.type === 'BUY') buys++;
+        else if (tx.type === 'SELL') sells++;
+        else if (tx.type === 'BANKRUPT') bankrupts++;
+    }
+    $('#history-stats').text(`${transactions.value.length} tx · ${buys} buys · ${sells} sells · ${bankrupts} bankruptcies · P/L: ${totalProfit >= 0 ? '+' : ''}${fmt(totalProfit)}`);
+    let listHtml = '';
+    const sorted = [...transactions.value].reverse();
+    for (const tx of sorted) {
+        const timeStr = new Date(tx.timestamp).toLocaleString();
+        const profitStr = tx.profit !== null && tx.profit !== undefined ? (tx.profit >= 0 ? '+' : '') + fmt(tx.profit) : fmt(tx.total);
+        const cls = tx.profit !== null && tx.profit !== undefined ? (tx.profit >= 0 ? 'green' : 'red') : '';
+        listHtml += `<div class="row"><span>${tx.type} ${tx.ticker} ${fmtNum(tx.shares, 3)} @ ${fmt(tx.price)}</span><span class="${cls}">${profitStr}</span><span class="small">${timeStr}</span></div>`;
+    }
+    $('#history-list').html(listHtml || '<div>No transactions.</div>');
+    $('#history-overlay').addClass('active');
+    $('#history-modal').addClass('active');
+}
+
+function hideHistoryModal() {
+    $('#history-overlay').removeClass('active');
+    $('#history-modal').removeClass('active');
+    processEventQueue();
+}
+
+function evaluateLoanShark() {
+    if (gameState.value.status !== 'active') return;
+    const nw = currentNetWorth.value;
+    if (nw >= LOAN_SHARK_TARGET) {
+        // liquidate all assets first
+        liquidateAll();
+        if (cash.value >= LOAN_SHARK_TAKE) {
+            cash.value -= LOAN_SHARK_TAKE;
+            gameState.value = { ...gameState.value, status: 'won' };
+            showWinModal();
+        } else {
+            gameState.value = { ...gameState.value, status: 'lost' };
+            showGameOver('Loan shark cannot be paid!', 'You failed to pay the full amount. He takes everything.');
+        }
+    } else {
+        gameState.value = { ...gameState.value, status: 'lost' };
+        showGameOver('Game Over', 'You failed to reach $15,000. The loan shark takes all your possessions and sends you to an old-age home.');
+    }
+}
+
+function showWinModal() {
+    $('#game-over-title').text('Loan Shark Paid!');
+    $('#game-over-body').html('You reached $15,000 and paid him off. All assets were liquidated to cash. You continue playing with your remaining cash.');
+    $('#game-over-modal').addClass('active');
+    $('#game-over-overlay').addClass('active');
+}
+
+function showGameOver(title, body) {
+    $('#game-over-title').text(title);
+    $('#game-over-body').text(body);
+    $('#game-over-modal').addClass('active');
+    $('#game-over-overlay').addClass('active');
+}
+
+function hideGameOverModal() {
+    $('#game-over-overlay').removeClass('active');
+    $('#game-over-modal').removeClass('active');
+    if (gameState.value.status === 'lost') {
+        resetGame();
+    }
+}
+
+// ========== CHART INSTANCES ==========
+let marketChartInstance = null;
+let assetMarketChartInstance = null;
+let netWorthChartInstance = null;
+let itemChartInstance = null;
+
+function renderMarketChart() {
+    if (marketIndexHistory.value.length < 2) return;
+    const $container = $('#market-chart');
+    const times = marketIndexHistory.value.map(d => d.time);
+    const values = marketIndexHistory.value.map(d => d.value);
+    if (window.uPlot) {
+        if (marketChartInstance) marketChartInstance.setData([times, values]);
+        else {
+            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Stocks Index', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
+            marketChartInstance = new uPlot(opts, [times, values], $container[0]);
+        }
+    }
+}
+
+function renderAssetMarketChart() {
+    if (assetMarketIndexHistory.value.length < 2) return;
+    const $container = $('#asset-market-chart');
+    const times = assetMarketIndexHistory.value.map(d => d.time);
+    const values = assetMarketIndexHistory.value.map(d => d.value);
+    if (window.uPlot) {
+        if (assetMarketChartInstance) assetMarketChartInstance.setData([times, values]);
+        else {
+            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Assets Index', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
+            assetMarketChartInstance = new uPlot(opts, [times, values], $container[0]);
+        }
+    }
+}
+
+function renderNetWorthChart() {
+    if (netWorthHistory.value.length < 2) return;
+    const $container = $('#networth-chart');
+    const times = netWorthHistory.value.map(d => d.time);
+    const values = netWorthHistory.value.map(d => d.value);
+    if (window.uPlot) {
+        if (netWorthChartInstance) netWorthChartInstance.setData([times, values]);
+        else {
+            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Net Worth', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
+            netWorthChartInstance = new uPlot(opts, [times, values], $container[0]);
+        }
+    }
+}
+
+function renderItemChart(itemId) {
+    const item = getItemById(itemId);
+    if (!item) return;
+    const $container = $('#cm-chart');
+    // Ensure container has dimensions
+    if ($container.width() === 0 || $container.height() === 0) {
+        setTimeout(() => renderItemChart(itemId), 100);
+        return;
+    }
+    const times = item.historyTimes, prices = item.historyPrices;
+    if (times.length < 2) return;
+    if (window.uPlot) {
+        if (itemChartInstance) itemChartInstance.setData([times, prices]);
+        else {
+            const opts = { width: $container.width(), height: 180, series: [{}, { stroke: '#000', width: 2, label: item.ticker, fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
+            itemChartInstance = new uPlot(opts, [times, prices], $container[0]);
+        }
+    }
+}
+
+// ========== REACTIVE EFFECTS ==========
+effect(() => {
+    $('#header-cash').text(fmt(cash.value));
+    $('#header-networth').text(fmt(currentNetWorth.value));
+    $('#timer-display').text(timerDisplay.value);
+    $('#ranking-box').text(`Ranking: ${ranking.value} | Net Worth: ${fmt(currentNetWorth.value)}`);
+    const hist = netWorthHistory.value;
+    if (hist.length > 1) {
+        const diff = currentNetWorth.value - hist[0].value;
+        const pct = hist[0].value !== 0 ? (diff / hist[0].value) * 100 : 0;
+        $('#nw-change').text((diff >= 0 ? '+' : '') + fmt(diff) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%)').css('color', diff >= 0 ? 'green' : 'red');
+    }
+});
+
+effect(() => {
+    const $container = $('#company-list');
+    $container.empty();
+    for (const comp of companies.value) {
+        if (!comp.active) continue;
+        const pct = pctChange(comp.initialPrice, comp.price);
+        const cls = pct >= 0 ? 'green' : 'red';
+        $container.append(`<div class="row item-row" data-id="${comp.id}" style="cursor:pointer;"><span>${comp.ticker} <span class="small">${comp.name}</span></span><span class="text-right">${fmt(comp.price)} <span class="${cls}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></span></div>`);
+    }
+});
+
+effect(() => {
+    const $container = $('#asset-list');
+    $container.empty();
+    for (const asset of assets.value) {
+        if (!asset.active) continue;
+        const pct = pctChange(asset.initialPrice, asset.price);
+        const cls = pct >= 0 ? 'green' : 'red';
+        $container.append(`<div class="row item-row" data-id="${asset.id}" style="cursor:pointer;"><span>${asset.ticker} <span class="small">${asset.name}</span> <span class="small">(${asset.history})</span></span><span class="text-right">${fmt(asset.price)} <span class="${cls}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</span></span></div>`);
+    }
+});
+
+effect(() => { renderMarketChart(); });
+effect(() => { renderAssetMarketChart(); });
+effect(() => { renderNetWorthChart(); });
+
+// Auto-update holdings display and sell max when holdings change or selected item changes
+effect(() => {
+    if (selectedItemId.value) {
+        updateHoldingsDisplay();
+        // Also enforce sell max
+        const held = holdings.value[selectedItemId.value];
+        const sellInput = $('#sell-qty');
+        if (held) {
+            sellInput.attr('max', held.shares);
+            let currentVal = parseFloat(sellInput.val());
+            if (currentVal > held.shares) sellInput.val(held.shares);
+        } else {
+            sellInput.attr('max', 0);
+            sellInput.val(0.001);
+        }
+    }
+});
+
+// ========== EVENT HANDLERS ==========
+$(document).on('click', '.item-row', function() { showItemModal($(this).data('id')); });
+$(document).on('click', '.portfolio-item', function() { showItemModal($(this).data('id')); });
+$('#cm-close').on('click', hideItemModal);
+$('#company-overlay').on('click', hideItemModal);
+$('#btn-buy').on('click', function() {
+    if (!selectedItemId.value) return;
+    const qty = parseFloat($('#buy-qty').val()) || 0;
+    if (buyStock(selectedItemId.value, qty)) {
+        showTooltip(`Bought ${qty} shares`);
+    } else {
+        showTooltip('Buy failed');
+    }
+});
+$('#btn-sell').on('click', function() {
+    if (!selectedItemId.value) return;
+    const qty = parseFloat($('#sell-qty').val()) || 0;
+    if (sellStock(selectedItemId.value, qty)) {
+        showTooltip(`Sold ${qty} shares`);
+    } else {
+        showTooltip('Sell failed');
+    }
+});
+$('#buy-plus').on('click', function() { $('#buy-qty').val(parseFloat($('#buy-qty').val() || 1) + 1); });
+$('#buy-minus').on('click', function() {
+    const v = parseFloat($('#buy-qty').val() || 1);
+    const newVal = Math.max(0.001, Math.round((v - 1) * 1000) / 1000);
+    $('#buy-qty').val(newVal);
+});
+$('#sell-plus').on('click', function() {
+    const max = parseFloat($('#sell-qty').attr('max')) || 0;
+    const current = parseFloat($('#sell-qty').val()) || 0;
+    const newVal = Math.min(max, current + 1);
+    $('#sell-qty').val(newVal);
+});
+$('#sell-minus').on('click', function() {
+    const v = parseFloat($('#sell-qty').val() || 1);
+    const newVal = Math.max(0.001, Math.round((v - 1) * 1000) / 1000);
+    $('#sell-qty').val(newVal);
+});
+// Input focus: shift modal up
+$('#buy-qty, #sell-qty').on('focus', function() {
+    $('#company-modal').addClass('shifted');
+}).on('blur', function() {
+    $('#company-modal').removeClass('shifted');
+});
+$('#event-close').on('click', hideEventModal);
+$('#event-overlay').on('click', hideEventModal);
+$('#btn-portfolio').on('click', showPortfolioModal);
+$('#portfolio-close').on('click', hidePortfolioModal);
+$('#portfolio-overlay').on('click', hidePortfolioModal);
+$('#btn-history').on('click', showHistoryModal);
+$('#history-close').on('click', hideHistoryModal);
+$('#history-overlay').on('click', hideHistoryModal);
+$('#btn-reset').on('click', resetGame);
+$('#game-over-close').on('click', hideGameOverModal);
+
+// ========== INITIALIZATION ==========
+function initializeGame() {
+    const loaded = loadGame();
+    if (!loaded) {
+        initCompanies();
+        initAssets();
+        initNetWorthHistory();
+        initMarketIndexHistory();
+        gameState.value = { status: 'active', elapsedSeconds: 0 };
+    }
+    if (!assets.value || assets.value.length === 0) initAssets();
+    if (!assetMarketIndexHistory.value || assetMarketIndexHistory.value.length === 0) initMarketIndexHistory();
+}
+
+initializeGame();
+
+// ========== MAIN LOOPS ==========
+setInterval(() => {
+    updatePrices();
+    checkBankruptcies();
+    processEventQueue();
+}, PRICE_UPDATE_MS);
+
+setInterval(() => {
+    const now = Date.now() / 1000;
+    netWorthHistory.value = [...netWorthHistory.value, { time: now, value: currentNetWorth.value }];
+    if (netWorthHistory.value.length > NET_WORTH_HIST_LENGTH) netWorthHistory.value.shift();
+}, NET_WORTH_RECORD_MS);
+
+setInterval(() => {
+    checkNewItems();
+    processEventQueue();
+}, NEW_ITEM_CHECK_MS);
+
+setInterval(() => {
+    gameState.value = { ...gameState.value, elapsedSeconds: gameState.value.elapsedSeconds + 1 };
+    if (gameState.value.elapsedSeconds >= LOAN_SHARK_DEADLINE_SEC && gameState.value.status === 'active') {
+        evaluateLoanShark();
+    }
+    saveGame();
+}, 1000);
+
+setInterval(saveGame, SAVE_INTERVAL_MS);
+
+$(window).on('resize', function() {
+    if (marketChartInstance) marketChartInstance.setSize({ width: $('#market-chart').width(), height: 220 });
+    if (assetMarketChartInstance) assetMarketChartInstance.setSize({ width: $('#asset-market-chart').width(), height: 220 });
+    if (netWorthChartInstance) netWorthChartInstance.setSize({ width: $('#networth-chart').width(), height: 220 });
+    if (itemChartInstance && selectedItemId.value) itemChartInstance.setSize({ width: $('#cm-chart').width(), height: 180 });
+});
+
+$(window).on('beforeunload', saveGame);
+
+</script>
+</body>
+</html>

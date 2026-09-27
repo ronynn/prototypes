@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zdog Cat</title>
+    <script src="lib/zdog.dist.min.js"></script>
+    <style>
+        body { margin: 0; background-color: #FDB; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: move; }
+    </style>
+</head>
+<body>
+    <canvas class="zdog-canvas"></canvas>
+    <script>
+        // Colors
+        const black = '#333';
+        const white = '#FFF';
+        const pink = '#F9B';
+
+        // create illo
+        let illo = new Zdog.Illustration({
+            element: '.zdog-canvas',
+            dragRotate: true,
+            // rotate illo to starting position
+            rotate: { y: -Zdog.TAU/8 },
+        });
+
+        // -- Head --
+        let head = new Zdog.Shape({
+            addTo: illo,
+            translate: { y: -20 },
+            stroke: 40,
+            color: black,
+        });
+
+        // -- Ears --
+        let ear = new Zdog.Cone({
+            addTo: head,
+            diameter: 12,
+            length: 12,
+            translate: { x: -15, y: -22, z: 2 },
+            rotate: { x: Zdog.TAU/4, z: Zdog.TAU/16 },
+            color: black,
+            stroke: 4,
+        });
+        ear.copy({
+            translate: { x: 15, y: -22, z: 2 },
+            rotate: { x: Zdog.TAU/4, z: -Zdog.TAU/16 },
+        });
+
+        // -- Face Details --
+        // Eyes
+        let eye = new Zdog.Ellipse({
+            addTo: head,
+            diameter: 4,
+            translate: { x: -10, y: -2, z: 18 },
+            stroke: 2,
+            color: white,
+            fill: true,
+        });
+        eye.copy({
+            translate: { x: 10, y: -2, z: 18 },
+        });
+
+        // Nose
+        new Zdog.Rect({
+            addTo: head,
+            width: 6,
+            height: 4,
+            translate: { y: 6, z: 18 },
+            cornerRadius: 2,
+            color: pink,
+            fill: true,
+            stroke: 2,
+        });
+
+        // Whiskers
+        let whisker = new Zdog.Shape({
+            addTo: head,
+            path: [
+                { x: 15, y: 8 },
+                { x: 35, y: 12 },
+            ],
+            translate: { z: 16 },
+            stroke: 1,
+            color: white,
+        });
+        whisker.copy({ path: [{ x: 15, y: 12 }, { x: 35, y: 14 }] });
+        whisker.copy({ translate: { x: -15, z: 16 }, path: [{ x: 0, y: 8 }, { x: -20, y: 12 }] });
+        whisker.copy({ translate: { x: -15, z: 16 }, path: [{ x: 0, y: 12 }, { x: -20, y: 14 }] });
+
+        // -- Body --
+        let body = new Zdog.Cylinder({
+            addTo: illo,
+            diameter: 30,
+            length: 45,
+            translate: { y: 25 },
+            rotate: { x: Zdog.TAU/4 },
+            color: black,
+            stroke: 6,
+        });
+
+
+        // -- Tail --
+        new Zdog.Shape({
+            addTo: body,
+            path: [
+                { y: 0, z: 0 },
+                { y: 0, z: 30 },
+                { y: -10, z: 40 },
+            ],
+            translate: { y: -15, z: -5 },
+            closed: false,
+            stroke: 8,
+            color: black,
+        });
+
+
+        // animation loop
+        function animate() {
+            illo.updateRenderGraph();
+            requestAnimationFrame(animate);
+        }
+        animate();
+    </script>
+</body>
+</html>

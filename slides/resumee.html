@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Resume</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.3;
+      color: #1a202c;
+      background: #fff;
+    }
+
+    .container {
+      width: 100%;
+    }
+
+    /* Header Styling */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #1e3a8a;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .header-text {
+      flex: 1;
+    }
+
+    .header-text h1 {
+      font-size: 22pt;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #1e3a8a;
+      margin-bottom: 4px;
+    }
+
+    .contact-info {
+      font-size: 9pt;
+      color: #475569;
+    }
+
+    .photo-container {
+      width: 85px;
+      height: 100px;
+      margin-left: 15px;
+      flex-shrink: 0;
+      background-color: #f1f5f9;
+      border: 1px solid #cbd5e1;
+    }
+
+    .photo-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Section Headers */
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 10pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #1e3a8a;
+      background: #f1f5f9;
+      padding: 3px 6px;
+      border-left: 3px solid #1e3a8a;
+      margin-bottom: 6px;
+    }
+
+    /* Content Styling */
+    .item {
+      margin-bottom: 6px;
+    }
+
+    .item-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5pt;
+      color: #0f172a;
+    }
+
+    .item-header strong {
+      color: #1e3a8a;
+    }
+
+    ul {
+      padding-left: 16px;
+    }
+
+    li {
+      margin-bottom: 2px;
+      font-size: 9pt;
+      color: #334155;
+    }
+
+    /* Compact Horizontal Education Rows */
+    .edu-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 9pt;
+    }
+
+    .edu-row:last-child {
+      border-bottom: none;
+    }
+
+    .publication {
+      font-size: 8.5pt;
+      color: #334155;
+      margin-bottom: 4px;
+      padding-left: 4px;
+    }
+
+    .skills-block {
+      font-size: 9pt;
+      color: #334155;
+      line-height: 1.4;
+    }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+      font-size: 8.5pt;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="header-text">
+      <h1>Your Full Name</h1>
+      <div class="contact-info">
+        Email: your.email@example.com | Phone: +91 0000000000 | Location: City, Country
+      </div>
+    </div>
+    <div class="photo-container">
+      <img src="your-photo.jpg" alt="Profile Picture">
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Work Experience</div>
+    
+    <div class="item">
+      <div class="item-header">
+        <span><strong>Role / Job Title</strong> — Primary Workplace</span>
+        <span>MM/YYYY – Present</span>
+      </div>
+      <ul>
+        <li>Spearheaded key initiatives driving performance and program efficiency across cross-functional teams.</li>
+        <li>Designed and executed streamlined workflows, enhancing project completion rates by 25%.</li>
+        <li>Managed operations, stakeholder communications, and digital resource creation end-to-end.</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="item-header">
+        <span><strong>Role / Job Title</strong> — Secondary Workplace</span>
+        <span>MM/YYYY – MM/YYYY</span>
+      </div>
+      <ul>
+        <li>Delivered operational support, curriculum development, and coordinated deliverables under tight timelines.</li>
+        <li>Implemented interactive methods to boost participant engagement and overall satisfaction.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Education</div>
+    <div class="edu-row">
+      <span><strong>Master of Arts (M.A.)</strong> — University Name</span>
+      <span>2022 – 2024 | First Class</span>
+    </div>
+    <div class="edu-row">
+      <span><strong>Bachelor of Education (B.Ed.)</strong> — Institution Name</span>
+      <span>2020 – 2022 | Passed</span>
+    </div>
+    <div class="edu-row">
+      <span><strong>Bachelor of Arts (B.A.)</strong> — University Name</span>
+      <span>2017 – 2020 | First Class</span>
+    </div>
+    <div class="edu-row">
+      <span><strong>Class XII & Class X</strong> — Board Name</span>
+      <span>2017 / 2015 | XX% / XX%</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Research & Publications</div>
+    <div class="publication">
+      1. <strong>Author Name(s)</strong>, "Title of First Research Paper," <i>Journal / Conference Name</i>, Presented at Location, Published YYYY.
+    </div>
+    <div class="publication">
+      2. <strong>Author Name(s)</strong>, "Title of Second Research Paper," <i>Journal / Conference Name</i>, Presented at Location, Published YYYY.
+    </div>
+    <div class="publication">
+      3. <strong>Author Name(s)</strong>, "Title of Third Research Paper," <i>Journal / Conference Name</i>, Presented at Location, Published YYYY.
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Skills & Certifications</div>
+    <div class="skills-block">
+      <p><strong>Technical Skills:</strong> JavaScript (ES6+), Interactive Web Experiences, HTML5/CSS3, DOM Manipulation</p>
+      <p><strong>Certifications:</strong> freeCodeCamp Certified — JavaScript Algorithms & Data Structures</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Extracurricular Activities</div>
+    <div class="grid-2col">
+      <div>• Organized annual departmental seminar for 200+ delegates.</div>
+      <div>• Member of cultural and campus outreach committees.</div>
+      <div>• Led workshops on digital learning tools.</div>
+      <div>• Organized community education drives.</div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

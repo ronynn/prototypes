@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indie Psychedelic Synth Groover</title>
+  <style>
+    body
+    {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f0f13;
+      color: #eee;
+      font-family: system-ui, sans-serif;
+    }
+
+    button
+    {
+      padding: 1.2rem 2.4rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background: #ff2a6d;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 4px 15px rgba(255, 42, 109, 0.4);
+    }
+
+    button:disabled
+    {
+      background: #333;
+      color: #777;
+      box-shadow: none;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <button id="play-btn">Play Song</button>
+
+  <script>
+    // Audio Engine
+
+    const zzfxR = 44100
+
+    const zzfxG = (q=1, k=.05, c=220, e=0, g=0, t=.1, q_=.1, r=1, c_=0, o=0, v=0, w=0, x=0, y=0, a=0, z=0, B=0, A=1, b=0, C=0) =>
+    {
+      let b_ = 2 * Math.PI, f = c * (1 + e * (Math.random() * 2 - 1)) * b_ / zzfxR,
+          d = (c_ * (1 + o * (Math.random() * 2 - 1)) * b_ / zzfxR - f) / (t * zzfxR),
+          i = 0, n = 0, l = 0, p = 0, m = 0, j = 0, h = (k + e + t + q_ + r) * zzfxR | 0,
+          s = new Float32Array(h)
+      for (; j < h; s[j++] = i * q * A)
+      {
+        if (++p > v * zzfxR)
+        {
+          p = 0
+          f += w * b_ / zzfxR
+        }
+        f += d
+        l += f
+        i = Math.sin(l + a)
+        if (g) i = g > 1 ? g > 2 ? Math.sin(l % b_) : Math.max(-1, Math.min(1, Math.sin(l) * 1e3)) : Math.sign(Math.sin(l))
+        if (x) i += (Math.random() * 2 - 1) * x
+        if (y) i = (i + (Math.random() * 2 - 1) * y) / 2
+        if (j < k * zzfxR) m = j / (k * zzfxR)
+        else if (j < (k + e) * zzfxR) m = 1
+        else if (j < (k + e + t) * zzfxR) m = 1 - (j - (k + e) * zzfxR) / (t * zzfxR)
+        else m = 0
+        i *= m
+      }
+      return s
+    }
+
+    const zzfxM = (instruments, patterns, sequence, bpm = 118) =>
+    {
+      const rowSamples = Math.floor((zzfxR / bpm) * (60 / 4))
+      let totalRows = 0
+
+      sequence.forEach(patternIdx =>
+      {
+        const pattern = patterns[patternIdx]
+        if (pattern && pattern[0])
+        {
+          totalRows += pattern[0].length
+        }
+      })
+
+      const totalSamples = totalRows * rowSamples + zzfxR * 2
+      const left = new Float32Array(totalSamples)
+      const right = new Float32Array(totalSamples)
+
+      let currentSample = 0
+      const noteCache = {}
+
+      sequence.forEach(patternIdx =>
+      {
+        const pattern = patterns[patternIdx]
+        if (!pattern || !pattern[0]) return
+
+        const numRows = pattern[0].length
+
+        for (let r = 0; r < numRows; r++)
+        {
+          pattern.forEach(channel =>
+          {
+            const note = channel[r]
+            if (note && note[1] > 0)
+            {
+              const instIdx = note[0]
+              const pitch = note[1]
+              const pan = note[2] !== undefined ? note[2] : 0
+
+              const cacheKey = `${instIdx}_${pitch}`
+              if (!noteCache[cacheKey])
+              {
+                const params = [...instruments[instIdx]]
+                params[2] = (params[2] || 220) * Math.pow(2, (pitch - 12) / 12)
+                noteCache[cacheKey] = zzfxG(...params)
+              }
+
+              const samples = noteCache[cacheKey]
+              const leftVol = (1 - pan) / 2
+              const rightVol = (1 + pan) / 2
+
+              for (let s = 0; s < samples.length; s++)
+              {
+                const targetIdx = currentSample + s
+                if (targetIdx < totalSamples)
+                {
+                  left[targetIdx] += samples[s] * leftVol
+                  right[targetIdx] += samples[s] * rightVol
+                }
+              }
+            }
+          })
+
+          currentSample += rowSamples
+        }
+      })
+
+      return [left, right]
+    }
+
+    // Instruments
+
+    const fuzzyBass = [1.1, .01, 130, .02, .18, .22, 1, 1.2, 0, 0, 0, 0, 0, 0, 0, 0, .05]
+    const discoKick = [1.3, .01, 90, .01, .08, .12, 0, 1.2, -12, 8]
+    const indieSnare = [.8, .01, 220, .01, .06, .1, 3, 0, 0, 0, 0, 0, 0, 2.5]
+    const hihat = [.25, .01, 1200, .001, .02, .03, 3, 0, 0, 0, 0, 0, 0, 6]
+    const leadHook = [.6, .01, 440, .02, .18, .25, 1, .6, 0, 0, 0, 0, 0, 0, .1]
+    const warmPad = [.35, .01, 220, .05, .3, .4, 2, .8]
+
+    const instruments = [fuzzyBass, discoKick, indieSnare, hihat, leadHook, warmPad]
+
+    // Composition
+
+    const patternIntro = [
+      [
+        [0, 13, 0], [0, 0, 0], [0, 13, 0], [0, 16, 0],
+        [0, 18, 0], [0, 0, 0], [0, 20, 0], [0, 18, 0],
+        [0, 16, 0], [0, 0, 0], [0, 13, 0], [0, 11, 0],
+        [0, 13, 0], [0, 0, 0], [0, 16, 0], [0, 18, 0]
+      ],
+      [
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [3, 12, .3]
+      ],
+      [
+        [5, 25, -.5], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [5, 28, .5],  [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [5, 23, -.5], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [5, 25, .5],  [0, 0, 0], [0, 0, 0], [0, 0, 0]
+      ]
+    ]
+
+    const patternMainGroove = [
+      [
+        [0, 13, 0], [0, 0, 0], [0, 13, 0], [0, 16, 0],
+        [0, 18, 0], [0, 0, 0], [0, 20, 0], [0, 18, 0],
+        [0, 16, 0], [0, 0, 0], [0, 13, 0], [0, 11, 0],
+        [0, 13, 0], [0, 0, 0], [0, 16, 0], [0, 18, 0]
+      ],
+      [
+        [1, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [1, 12, 0], [0, 0, 0]
+      ],
+      [
+        [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [2, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [2, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]
+      ],
+      [
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [0, 0, 0],
+        [3, 12, -.3], [0, 0, 0], [3, 12, .3], [3, 12, .3]
+      ],
+      [
+        [4, 25, -.4], [0, 0, 0], [4, 28, .4], [4, 25, -.4],
+        [4, 30, .4],  [0, 0, 0], [4, 28, -.4], [0, 0, 0],
+        [4, 25, .4],  [0, 0, 0], [4, 23, -.4], [0, 0, 0],
+        [4, 25, .4],  [0, 0, 0], [4, 28, -.4], [4, 30, .4]
+      ]
+    ]
+
+    const patternChorus = [
+      [
+        [0, 16, 0], [0, 16, 0], [0, 18, 0], [0, 18, 0],
+        [0, 20, 0], [0, 20, 0], [0, 18, 0], [0, 16, 0],
+        [0, 13, 0], [0, 13, 0], [0, 16, 0], [0, 16, 0],
+        [0, 18, 0], [0, 18, 0], [0, 16, 0], [0, 13, 0]
+      ],
+      [
+        [1, 12, 0], [0, 0, 0], [1, 12, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [1, 12, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [1, 12, 0], [0, 0, 0],
+        [1, 12, 0], [0, 0, 0], [1, 12, 0], [1, 12, 0]
+      ],
+      [
+        [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [2, 12, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0],
+        [2, 12, 0], [0, 0, 0], [2, 12, 0], [2, 12, 0]
+      ],
+      [
+        [3, 12, -.3], [3, 12, .3], [3, 12, -.3], [3, 12, .3],
+        [3, 12, -.3], [3, 12, .3], [3, 12, -.3], [3, 12, .3],
+        [3, 12, -.3], [3, 12, .3], [3, 12, -.3], [3, 12, .3],
+        [3, 12, -.3], [3, 12, .3], [3, 12, -.3], [3, 12, .3]
+      ],
+      [
+        [4, 28, -.5], [4, 30, .5], [4, 32, -.5], [4, 30, .5],
+        [4, 32, -.5], [4, 35, .5], [4, 37, -.5], [4, 35, .5],
+        [4, 32, -.5], [4, 30, .5], [4, 28, -.5], [4, 25, .5],
+        [4, 28, -.5], [4, 30, .5], [4, 28, -.5], [4, 25, .5]
+      ]
+    ]
+
+    const patternOutro = [
+      [
+        [0, 13, 0], [0, 0, 0], [0, 13, 0], [0, 0, 0],
+        [0, 16, 0], [0, 0, 0], [0, 0, 0],  [0, 0, 0],
+        [0, 13, 0], [0, 0, 0], [0, 0, 0],  [0, 0, 0],
+        [0, 13, 0], [0, 0, 0], [0, 0, 0],  [0, 0, 0]
+      ],
+      [
+        [4, 25, 0], [0, 0, 0], [0, 0, 0],  [0, 0, 0],
+        [0, 0, 0],  [0, 0, 0], [0, 0, 0],  [0, 0, 0],
+        [0, 0, 0],  [0, 0, 0], [0, 0, 0],  [0, 0, 0],
+        [0, 0, 0],  [0, 0, 0], [0, 0, 0],  [0, 0, 0]
+      ]
+    ]
+
+    const patterns = [patternIntro, patternMainGroove, patternChorus, patternOutro]
+    const sequence = [0, 1, 1, 2, 2, 1, 3]
+    const bpm = 118
+
+    // Audio Playback
+
+    const playSong = () =>
+    {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+      const songData = zzfxM(instruments, patterns, sequence, bpm)
+      const buffer = audioCtx.createBuffer(2, songData[0].length, audioCtx.sampleRate)
+
+      buffer.getChannelData(0).set(songData[0])
+      buffer.getChannelData(1).set(songData[1])
+
+      const source = audioCtx.createBufferSource()
+      source.buffer = buffer
+      source.connect(audioCtx.destination)
+      source.loop = true
+      source.start()
+    }
+
+    document.querySelector('#play-btn').addEventListener('click', (e) =>
+    {
+      playSong()
+      e.target.disabled = true
+      e.target.innerText = 'Playing Psychedelic Groove...'
+    })
+  </script>
+</body>
+</html>

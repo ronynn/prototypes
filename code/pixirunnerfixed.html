@@ -1,0 +1,2692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>夜駆け (Yogake) / Night Runner</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; cursor: pointer; touch-action: none; }
+  canvas { display: block; }
+  #startScreen.show ~ canvas, #aboutPage.show ~ canvas { display: none; }
+
+  #hud { position: fixed; top: 22px; left: 26px; z-index: 10; color: #8a7a9e; font-size: 13px; letter-spacing: 3px; pointer-events: none; text-shadow: 0 0 12px #000, 0 0 4px #000; }
+  #hud .dist { color: #f4eaff; font-size: 32px; letter-spacing: 1px; font-weight: bold; line-height: 1; text-shadow: 0 0 20px rgba(200,160,255,0.5), 0 0 8px #000; }
+  #hud .spd { margin-top: 5px; font-size: 11px; color: #6f6086; letter-spacing: 2px; }
+  #hud .nm { margin-top: 3px; font-size: 11px; color: #ffb060; letter-spacing: 2px; }
+  #hud .wind { margin-top: 3px; font-size: 11px; color: #80d0ff; letter-spacing: 2px; opacity: 0; transition: opacity 0.2s; }
+  #hud .wind.on { opacity: 1; }
+  #hud-right { position: fixed; top: 22px; right: 26px; z-index: 10; text-align: right; pointer-events: none; text-shadow: 0 0 12px #000, 0 0 4px #000; }
+  #hud-right .label { font-size: 10px; color: #6f6086; letter-spacing: 5px; margin-bottom: 4px; }
+  #hud-right .value { font-size: 24px; color: #ff8ab0; letter-spacing: 1px; font-weight: bold; line-height: 1; text-shadow: 0 0 22px rgba(255,138,176,0.55), 0 0 8px #000; }
+  #hud-right .value.today { font-size: 18px; color: #90c8ff; text-shadow: 0 0 18px rgba(144,200,255,0.5), 0 0 8px #000; margin-top: 6px; }
+  #brand { position: fixed; bottom: 14px; left: 26px; z-index: 10; color: #4a3a5e; font-size: 13px; letter-spacing: 3px; pointer-events: none; text-shadow: 0 0 8px #000; }
+  #brand .en { font-size: 9px; letter-spacing: 5px; color: #3a2e4a; margin-left: 8px; }
+
+  .screen { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; background: radial-gradient(ellipse at center, rgba(20,10,30,0.25) 0%, rgba(0,0,0,0.88) 100%); opacity: 0; pointer-events: none; transition: opacity 0.35s ease; text-align: center; overflow: hidden; }
+  .screen.show { opacity: 1; pointer-events: auto; }
+  .screen > * { max-width: 100%; }
+
+  .screen h1 { font-size: clamp(36px, 9vw, 64px); letter-spacing: clamp(6px, 1.6vw, 20px); text-indent: clamp(6px, 1.6vw, 20px); font-weight: 200; color: #f4eaff; margin-bottom: 4px; text-shadow: 0 0 40px rgba(255,107,157,0.6), 0 0 90px rgba(255,107,157,0.25); }
+  .screen .jp { font-size: clamp(12px, 3vw, 22px); letter-spacing: clamp(3px, 1vw, 8px); text-indent: clamp(3px, 1vw, 8px); color: #b09ac8; margin-bottom: 4px; text-shadow: 0 0 12px #000; }
+  .screen .tagline { font-size: clamp(10px, 2.4vw, 12px); letter-spacing: clamp(2px, 0.8vw, 6px); text-indent: clamp(2px, 0.8vw, 6px); color: #6f6086; margin-bottom: 26px; }
+  .screen .label { color: #8a7a9e; font-size: clamp(9px, 2vw, 11px); letter-spacing: clamp(2px, 0.8vw, 6px); text-indent: clamp(2px, 0.8vw, 6px); }
+  .screen .final { color: #ff8ab0; font-size: clamp(28px, 7vw, 46px); letter-spacing: 2px; text-indent: 2px; font-weight: bold; line-height: 1; text-shadow: 0 0 30px rgba(255,138,176,0.6); }
+  .screen .hint { margin-top: 22px; color: #6f6086; font-size: clamp(8px, 2vw, 11px); letter-spacing: clamp(1px, 0.6vw, 4px); text-indent: clamp(1px, 0.6vw, 4px); animation: bl 1.4s ease-in-out infinite; }
+  @keyframes bl { 0%,100% { opacity: 1 } 50% { opacity: 0.25 } }
+
+  .btnPrimary { position: relative; min-width: 200px; padding: 14px 50px; border-radius: 0; border: 2px solid rgba(255,140,190,0.75); background: rgba(255,120,180,0.18); color: #ffd0e6; font-family: inherit; font-size: 14px; font-weight: bold; letter-spacing: 6px; text-indent: 6px; cursor: pointer; margin-top: 10px; transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s; }
+  .btnPrimary:hover { background: rgba(255,140,190,0.32); color: #fff; box-shadow: 0 0 28px rgba(255,140,190,0.45); }
+  .btnPrimary .btnLabel { transition: opacity 0.15s; }
+  .btnPrimary .spinner { display: none; position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid rgba(255,255,255,0.25); border-top-color: #ffd0e6; border-radius: 50%; animation: spin 0.75s linear infinite; }
+  .btnPrimary.loading { pointer-events: none; }
+  .btnPrimary.loading .btnLabel { opacity: 0; }
+  .btnPrimary.loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btnSecondary { padding: 9px 28px; border-radius: 0; border: 2px solid rgba(140,110,180,0.45); background: rgba(20,14,32,0.92); color: #b09ac8; font-family: inherit; font-size: 11px; font-weight: bold; letter-spacing: 4px; text-indent: 4px; cursor: pointer; margin-top: 4px; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+  .btnSecondary:hover { background: rgba(40,24,60,0.95); color: #f4eaff; border-color: rgba(180,140,220,0.7); }
+
+  #fxrow { margin-top: 24px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+  .fxt { padding: 9px 14px; border-radius: 0; border: 2px solid rgba(140,110,180,0.45); background: rgba(20,14,32,0.92); color: #b09ac8; font-family: inherit; font-size: 10px; font-weight: bold; letter-spacing: 2px; text-indent: 2px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+  .fxt:hover { background: rgba(40,24,60,0.95); color: #f4eaff; border-color: rgba(180,140,220,0.7); }
+  .fxt.on { background: rgba(255,120,180,0.22); border-color: rgba(255,140,190,0.85); color: #ffd0e6; }
+  .fxt:disabled { opacity: 0.28; cursor: not-allowed; }
+
+  #aboutPage { position: fixed; inset: 0; z-index: 25; background: radial-gradient(ellipse at center, rgba(20,10,30,0.6) 0%, rgba(0,0,0,0.96) 100%); opacity: 0; pointer-events: none; transition: opacity 0.25s ease; display: flex; flex-direction: column; }
+  #aboutPage.show { opacity: 1; pointer-events: auto; }
+  #aboutPage .aboutHeader { padding: 24px 20px 8px; text-align: center; }
+  #aboutPage .aboutHeader h2 { color: #f4eaff; font-size: clamp(22px, 6vw, 32px); letter-spacing: clamp(6px, 2vw, 14px); text-indent: clamp(6px, 2vw, 14px); font-weight: 300; text-shadow: 0 0 30px rgba(255,107,157,0.4); }
+  #aboutPage .aboutBody { flex: 1; overflow-y: auto; padding: 24px 32px 32px; max-width: 640px; width: 100%; margin: 0 auto; color: #b09ac8; font-size: 14px; line-height: 1.8; letter-spacing: 1px; -webkit-overflow-scrolling: touch; }
+  #aboutPage .aboutBody p { margin-bottom: 16px; }
+  #aboutPage .aboutBody b { color: #f4eaff; letter-spacing: 3px; }
+  #aboutPage .aboutBody kbd { background: rgba(255,140,190,0.15); border: 1px solid rgba(255,140,190,0.4); padding: 1px 8px; color: #ffd0e6; font-family: inherit; font-size: 12px; }
+  #aboutPage .aboutFooter { padding: 12px 0 28px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="dist"><span id="dist">0</span> m</div>
+  <div class="spd" id="spd">SPEED 0</div>
+  <div class="nm" id="nm">NEAR MISS 0</div>
+  <div class="wind" id="wind">WIND GUST</div>
+</div>
+
+<div id="hud-right">
+  <div class="label">BEST</div>
+  <div class="value" id="best">0 m</div>
+  <div class="value today" id="today">0 m</div>
+</div>
+
+<div id="startScreen" class="screen show">
+  <h1>夜駆け</h1>
+  <div class="jp">NIGHT RUNNER</div>
+  <div class="tagline">RUN. JUMP. SURVIVE THE NIGHT.</div>
+  <button class="btnPrimary" id="btnStart"><span class="btnLabel">START</span><span class="spinner"></span></button>
+  <button class="btnSecondary" id="btnAbout">ABOUT</button>
+  <div id="fxrow">
+    <button class="fxt toggle-bloom">BLOOM</button>
+    <button class="fxt toggle-glitch">GLITCH</button>
+    <button class="fxt toggle-crt">CRT</button>
+    <button class="fxt toggle-music on">MUSIC</button>
+  </div>
+</div>
+
+<div id="overlay" class="screen">
+  <h1>GAME OVER</h1>
+  <div class="jp">NIGHT RUNNER</div>
+  <div class="label">DISTANCE</div>
+  <div class="final" id="finalDist">0 m</div>
+  <div class="hint">PRESS SPACE OR TAP TO RUN AGAIN</div>
+  <div id="fxrow">
+    <button class="fxt toggle-bloom">BLOOM</button>
+    <button class="fxt toggle-glitch">GLITCH</button>
+    <button class="fxt toggle-crt">CRT</button>
+    <button class="fxt toggle-music on">MUSIC</button>
+  </div>
+</div>
+
+<div id="aboutPage">
+  <div class="aboutHeader"><h2>ABOUT</h2></div>
+  <div class="aboutBody">
+    <p><b>夜駆け / NIGHT RUNNER</b> is an endless rooftop runner. Jump the gaps, dodge the shadow, ride the day.</p>
+    <p><b>CONTROLS</b> — Tap the screen, or press <kbd>SPACE</kbd> / <kbd>↑</kbd> / <kbd>W</kbd> to jump. Hold longer for a higher jump.</p>
+    <p><b>SCORING</b> — Distance is measured in metres. Land within 34 pixels of a rooftop edge for a near-miss bonus. Every 450 m the shadow wakes up and tries to shove you off balance.</p>
+    <p><b>WORLD</b> — Day cycles every 700 m. Wind gusts hit every 400 m. Rain falls constantly.</p>
+    <p><b>RECORDS</b> — Best and daily best are saved locally.</p>
+  </div>
+  <div class="aboutFooter">
+    <button class="btnSecondary" id="btnBackFromAbout">← BACK</button>
+  </div>
+</div>
+
+<div id="brand">夜駆け (Yogake) <span class="en">NIGHT RUNNER</span></div>
+
+<script src="lib/pixi.js"></script>
+<script src="lib/pixi-filters.js"></script>
+<script>
+"use strict"
+
+const W = 1024, H = 576
+const PLAYER_X = 320, PW = 22, PH = 42
+const GRAVITY = 2600, JUMP_V = -900, JUMP_CUT = -300
+const COYOTE = 0.10, BUFFER = 0.12
+const BASE_SPEED = 380, MAX_SPEED = 1100, ACCEL = 13
+const TOP_MIN = 230, TOP_MAX = 450
+const GEN_MARGIN = 260, CULL_MARGIN = 340
+const SHADOW_SPAWN_X = -220, SHADOW_LIFETIME = 8.0, SHADOW_WARN_TIME = 1.8
+const SHADOW_PERIOD = 450, SHADOW_PUSH_X = 140
+const SHADOW_SLOW_FACTOR = 0.30, SHADOW_SLOW_RADIUS = 200
+const WIND_PERIOD = 400, WIND_DURATION = 3.2, WIND_FORCE = 220
+const NEAR_MISS_EDGE = 34, DAY_PERIOD = 700, WARMUP_MS = 100
+
+const COL =
+{
+  far: 0x251838, farEdge: 0x382a4e,
+  mid: 0x140d20, midEdge: 0x241736,
+  near: 0x060310, nearEdge: 0x4a3a5e, nearSide: 0x4a3a5e,
+  windowLit: 0xffb347, windowDark: 0x0a0612,
+  player: 0xffffff, dust: 0xc8b4dc,
+  splash: 0xa8c8ff, puddle: 0x2a3050, puddleEdge: 0x6a80c0,
+  antenna: 0x8a8aa0, tank: 0x50586a, tankTop: 0x7a8294,
+  billboardFrame: 0x08080c, billboardEdge: 0x403850,
+  ledge: 0x8a6a50, ledgeEdge: 0xb08868
+}
+
+const SKY_PALETTES = [
+  { stops: ["#05051a","#14092a","#31173d","#4a1f42"], sun: "#ff8ab0", sun2: "#ffe0ec", sun3: "#fff0f8", sunGlow: "rgba(255,138,176,0.45)" },
+  { stops: ["#1a1a3a","#4a2554","#8a4a5e","#d0906a"], sun: "#ffd0a0", sun2: "#fff0d0", sun3: "#ffffff", sunGlow: "rgba(255,200,140,0.45)" },
+  { stops: ["#5a90c0","#7aa8d0","#a8c8e0","#d0e0e8"], sun: "#fff0d0", sun2: "#ffffff", sun3: "#ffffff", sunGlow: "rgba(255,240,200,0.40)" },
+  { stops: ["#1a0a2a","#3a1535","#7a2535","#c05828"], sun: "#ff7840", sun2: "#ffb080", sun3: "#ffe0c0", sunGlow: "rgba(255,120,60,0.45)" }
+]
+
+function rnd(a, b)
+{
+  return a + Math.random() * (b - a)
+}
+
+function clamp(v, a, b)
+{
+  return v < a ? a : (v > b ? b : v)
+}
+
+const toneReady = (() =>
+{
+  if (typeof Tone !== "undefined")
+  {
+    return Promise.resolve(true)
+  }
+  return new Promise(resolve =>
+  {
+    const s = document.createElement("script")
+    s.src = "lib/tone.js"
+    s.onload = () => resolve(true)
+    s.onerror = () => resolve(false)
+    document.head.appendChild(s)
+  })
+})()
+
+/* Audio System */
+
+const Music =
+{
+  ready: false,
+  built: false,
+  started: false,
+  enabled: true,
+  wantPlaying: false,
+  player: null,
+
+  init()
+  {
+    this.ready = true
+    this.build()
+  },
+
+  async build()
+  {
+    if (this.built || !this.ready)
+    {
+      return
+    }
+    try
+    {
+      const buffer = await Tone.Offline(({ transport }) =>
+      {
+        transport.bpm.value = 96
+
+        const leadFx = new Tone.FeedbackDelay({ delayTime: "8n", feedback: 0.32, wet: 0.30 }).toDestination()
+
+        const bass = new Tone.MonoSynth({
+          oscillator: { type: "sawtooth" },
+          envelope: { attack: 0.005, decay: 0.16, sustain: 0.55, release: 0.10 },
+          filterEnvelope: { attack: 0.005, decay: 0.16, sustain: 0.45, release: 0.10, baseFrequency: 220, octaves: 2.5 },
+          filter: { Q: 2 }
+        }).toDestination()
+        bass.volume.value = -6
+
+        const lead = new Tone.Synth({
+          oscillator: { type: "triangle" },
+          envelope: { attack: 0.01, decay: 0.20, sustain: 0.25, release: 0.30 }
+        }).connect(leadFx)
+        lead.volume.value = -10
+
+        const pad = new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "sine" },
+          envelope: { attack: 0.80, decay: 0.30, sustain: 0.60, release: 1.50 },
+          maxPolyphony: 4
+        }).toDestination()
+        pad.volume.value = -20
+
+        const kick = new Tone.MembraneSynth({
+          pitchDecay: 0.05, octaves: 6,
+          envelope: { attack: 0.001, decay: 0.30, sustain: 0, release: 0.10 }
+        }).toDestination()
+        kick.volume.value = -4
+
+        const snare = new Tone.NoiseSynth({
+          noise: { type: "pink" },
+          envelope: { attack: 0.001, decay: 0.14, sustain: 0 }
+        }).toDestination()
+        snare.volume.value = -14
+
+        const hat = new Tone.MetalSynth({
+          frequency: 400,
+          envelope: { attack: 0.001, decay: 0.05, release: 0.01 },
+          harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5
+        }).toDestination()
+        hat.volume.value = -26
+
+        const bassNotes = ["A2","A2","E3","A2","F2","F2","C3","F2","C3","C3","G3","C3","G2","G2","D3","G2"]
+        const leadNotes = [
+          "E4","A4","C5","B4","A4","G4","E4","D4",
+          "C4","F4","A4","G4","F4","E4","D4","C4",
+          "E4","G4","C5","B4","G4","E4","G4","C5",
+          "D4","G4","B4","A4","G4","D4","B3","G3"
+        ]
+        const padChords = [["A3","C4","E4"],["F3","A3","C4"],["C4","E4","G4"],["G3","B3","D4"]]
+        const kickPattern = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0]
+        const snarePattern = [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]
+        const hatPattern = []
+        for (let i = 0; i < 32; i++)
+        {
+          hatPattern.push(i % 2)
+        }
+
+        new Tone.Sequence((t, n) => bass.triggerAttackRelease(n, "8n", t), bassNotes, "4n").start(0)
+        new Tone.Sequence((t, n) => lead.triggerAttackRelease(n, "16n", t), leadNotes, "8n").start(0)
+        new Tone.Sequence((t, c) => pad.triggerAttackRelease(c, "1n", t), padChords, "1n").start(0)
+        new Tone.Sequence((t, v) =>
+        {
+          if (v)
+          {
+            kick.triggerAttackRelease("C1", "8n", t)
+          }
+        }, kickPattern, "4n").start(0)
+        new Tone.Sequence((t, v) =>
+        {
+          if (v)
+          {
+            snare.triggerAttackRelease("16n", t)
+          }
+        }, snarePattern, "4n").start(0)
+        new Tone.Sequence((t, v) =>
+        {
+          if (v)
+          {
+            hat.triggerAttackRelease("16n", t)
+          }
+        }, hatPattern, "8n").start(0)
+
+        transport.start(0)
+      }, 10)
+
+      this.player = new Tone.Player(buffer).toDestination()
+      this.player.loop = true
+      this.built = true
+      if (this.wantPlaying && this.enabled)
+      {
+        this.start()
+      }
+    }
+    catch (e)
+    {
+      console.warn("Music build failed:", e)
+      this.built = false
+    }
+  },
+
+  async start()
+  {
+    if (this.started || !this.enabled)
+    {
+      return
+    }
+    try
+    {
+      await Tone.start()
+      if (Tone.context.state !== "running")
+      {
+        await Tone.context.resume()
+      }
+      Tone.getDestination().mute = false
+      if (this.player && this.built)
+      {
+        this.player.start()
+        this.started = true
+      }
+    }
+    catch (e)
+    {
+      console.warn("Music start failed:", e)
+    }
+  },
+
+  stop()
+  {
+    if (!this.started)
+    {
+      return
+    }
+    try
+    {
+      if (this.player)
+      {
+        this.player.stop()
+      }
+    }
+    catch (e)
+    {
+    }
+    this.started = false
+  },
+
+  pause()
+  {
+    if (!this.started)
+    {
+      return
+    }
+    try
+    {
+      Tone.getDestination().mute = true
+    }
+    catch (e)
+    {
+    }
+  },
+
+  resume()
+  {
+    if (!this.started)
+    {
+      return
+    }
+    try
+    {
+      if (Tone.context.state !== "running")
+      {
+        Tone.context.resume()
+      }
+      Tone.getDestination().mute = false
+    }
+    catch (e)
+    {
+    }
+  },
+
+  setPlaying(bool)
+  {
+    this.wantPlaying = bool
+    if (bool && this.enabled)
+    {
+      this.start()
+    }
+    else if (!bool)
+    {
+      this.stop()
+    }
+  },
+
+  toggle()
+  {
+    this.enabled = !this.enabled
+    if (this.enabled && this.wantPlaying)
+    {
+      this.start()
+    }
+    else if (!this.enabled)
+    {
+      this.stop()
+    }
+    return this.enabled
+  }
+}
+
+toneReady.then(ok =>
+{
+  if (ok)
+  {
+    Music.init()
+  }
+})
+
+const Sfx =
+{
+  ctx: null, master: null, drone: null,
+
+  ensure()
+  {
+    if (this.ctx)
+    {
+      return true
+    }
+    try
+    {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC)
+      {
+        return false
+      }
+      this.ctx = new AC({ latencyHint: "interactive" })
+      this.master = this.ctx.createGain()
+      this.master.gain.value = 0.34
+      const comp = this.ctx.createDynamicsCompressor()
+      comp.threshold.value = -18
+      comp.knee.value = 24
+      comp.ratio.value = 6
+      this.master.connect(comp).connect(this.ctx.destination)
+      return true
+    }
+    catch (e)
+    {
+      return false
+    }
+  },
+
+  resume()
+  {
+    if (this.ctx && this.ctx.state === "suspended")
+    {
+      this.ctx.resume()
+    }
+  },
+
+  noiseBuffer(dur)
+  {
+    const len = Math.floor(this.ctx.sampleRate * dur)
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < len; i++)
+    {
+      d[i] = Math.random() * 2 - 1
+    }
+    return buf
+  },
+
+  tone(o)
+  {
+    const t = this.ctx.currentTime + (o.delay || 0)
+    const dur = o.dur || 0.2
+    const osc = this.ctx.createOscillator()
+    const g = this.ctx.createGain()
+    osc.type = o.type || "sine"
+    osc.frequency.setValueAtTime(o.f0, t)
+    if (o.f1)
+    {
+      osc.frequency.exponentialRampToValueAtTime(o.f1, t + dur)
+    }
+    let tail = osc
+    if (o.filter)
+    {
+      const f = this.ctx.createBiquadFilter()
+      f.type = o.filter
+      f.frequency.setValueAtTime(o.filterF0 || 1000, t)
+      if (o.filterF1)
+      {
+        f.frequency.exponentialRampToValueAtTime(o.filterF1, t + dur)
+      }
+      if (o.filterQ)
+      {
+        f.Q.value = o.filterQ
+      }
+      tail.connect(f)
+      tail = f
+    }
+    const attack = o.attack || 0.006
+    const gain = o.gain || 0.2
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(gain, t + attack)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    tail.connect(g).connect(this.master)
+    osc.start(t)
+    osc.stop(t + dur + 0.05)
+  },
+
+  noise(o)
+  {
+    const t = this.ctx.currentTime
+    const dur = o.dur || 0.08
+    const src = this.ctx.createBufferSource()
+    src.buffer = this.noiseBuffer(dur)
+    const g = this.ctx.createGain()
+    g.gain.setValueAtTime(o.gain || 0.1, t)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
+    let tail = src
+    if (o.filter)
+    {
+      const f = this.ctx.createBiquadFilter()
+      f.type = o.filter
+      f.frequency.value = o.filterFreq || 1000
+      if (o.filterQ)
+      {
+        f.Q.value = o.filterQ
+      }
+      tail.connect(f)
+      tail = f
+    }
+    tail.connect(g).connect(this.master)
+    src.start(t)
+    src.stop(t + dur + 0.05)
+  },
+
+  jump()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.resume()
+    this.tone({ type: "sawtooth", f0: 200, f1: 520, dur: 0.20, gain: 0.20, filter: "lowpass", filterF0: 900, filterF1: 2400, filterQ: 2 })
+    this.tone({ type: "square", f0: 380, f1: 780, dur: 0.16, gain: 0.13 })
+    this.tone({ type: "sine", f0: 110, f1: 70, dur: 0.18, gain: 0.16 })
+    this.noise({ dur: 0.08, gain: 0.09, filter: "bandpass", filterFreq: 1800, filterQ: 1.2 })
+  },
+
+  death()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.tone({ type: "sawtooth", f0: 420, f1: 55, dur: 0.80, gain: 0.20, attack: 0.02, filter: "lowpass", filterF0: 1800, filterF1: 300 })
+  },
+
+  shadowWarn()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.resume()
+    this.tone({ type: "triangle", f0: 990, f1: 620, dur: 0.17, gain: 0.16 })
+    this.tone({ type: "triangle", f0: 740, f1: 460, dur: 0.17, gain: 0.16, delay: 0.20 })
+  },
+
+  shadowImpact()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.tone({ type: "sawtooth", f0: 120, f1: 40, dur: 0.30, gain: 0.14, attack: 0.01 })
+  },
+
+  wind()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.resume()
+    this.noise({ dur: 1.6, gain: 0.10, filter: "bandpass", filterFreq: 400, filterQ: 0.8 })
+  },
+
+  nearMiss()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.tone({ type: "sine", f0: 1200, f1: 1800, dur: 0.08, gain: 0.10 })
+    this.tone({ type: "sine", f0: 1800, f1: 2400, dur: 0.06, gain: 0.07, delay: 0.05 })
+  },
+
+  ledge()
+  {
+    if (!this.ensure())
+    {
+      return
+    }
+    this.noise({ dur: 0.30, gain: 0.10, filter: "lowpass", filterFreq: 800 })
+    this.tone({ type: "sine", f0: 120, f1: 50, dur: 0.30, gain: 0.10 })
+  },
+
+  shadowStart()
+  {
+    if (!this.ensure() || this.drone)
+    {
+      return
+    }
+    const t = this.ctx.currentTime
+    const o1 = this.ctx.createOscillator()
+    const o2 = this.ctx.createOscillator()
+    const g = this.ctx.createGain()
+    const f = this.ctx.createBiquadFilter()
+    o1.type = "sawtooth"
+    o1.frequency.value = 55
+    o2.type = "sine"
+    o2.frequency.value = 82.5
+    f.type = "lowpass"
+    f.frequency.value = 320
+    f.Q.value = 3
+    o1.connect(f)
+    o2.connect(f)
+    f.connect(g).connect(this.master)
+    o1.start()
+    o2.start()
+    g.gain.setValueAtTime(0.0001, t)
+    g.gain.linearRampToValueAtTime(0.13, t + 0.5)
+    this.drone = [o1, o2, g]
+  },
+
+  shadowStop()
+  {
+    if (!this.drone)
+    {
+      return
+    }
+    const t = this.ctx.currentTime
+    const o1 = this.drone[0], o2 = this.drone[1], g = this.drone[2]
+    g.gain.cancelScheduledValues(t)
+    g.gain.setValueAtTime(g.gain.value, t)
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55)
+    o1.stop(t + 0.6)
+    o2.stop(t + 0.6)
+    this.drone = null
+  }
+}
+
+/* Post-Processing Shaders */
+
+const Shaders =
+{
+  target: null, bloom: null, glitch: null, crt: null, bloomOn: false,
+
+  attach(c)
+  {
+    this.target = c
+    this.apply()
+  },
+
+  toggleBloom()
+  {
+    const F = (typeof PIXI !== "undefined" && PIXI.filters) ? PIXI.filters : {}
+    if (!F.AdvancedBloomFilter)
+    {
+      return false
+    }
+    if (this.bloomOn)
+    {
+      this.bloomOn = false
+    }
+    else
+    {
+      if (!this.bloom)
+      {
+        try
+        {
+          this.bloom = new F.AdvancedBloomFilter({ threshold: 0.70, bloomScale: 0.85, brightness: 1.0, blur: 6, quality: 4, resolution: 1 })
+        }
+        catch (e)
+        {
+          this.bloom = null
+          return false
+        }
+      }
+      this.bloomOn = true
+    }
+    this.apply()
+    return true
+  },
+
+  toggleGlitch()
+  {
+    const F = (typeof PIXI !== "undefined" && PIXI.filters) ? PIXI.filters : {}
+    if (!F.RGBSplitFilter)
+    {
+      return false
+    }
+    try
+    {
+      if (this.glitch)
+      {
+        this.glitch = null
+      }
+      else
+      {
+        this.glitch = new F.RGBSplitFilter({ red: [3, 0], green: [-1, 0], blue: [2, 0], resolution: 1 })
+      }
+    }
+    catch (e)
+    {
+      this.glitch = null
+      return false
+    }
+    this.apply()
+    return true
+  },
+
+  toggleCRT()
+  {
+    const F = (typeof PIXI !== "undefined" && PIXI.filters) ? PIXI.filters : {}
+    if (!F.CRTFilter)
+    {
+      return false
+    }
+    try
+    {
+      if (this.crt)
+      {
+        this.crt = null
+      }
+      else
+      {
+        this.crt = new F.CRTFilter({ curvature: 1, lineWidth: 1, lineContrast: 0.12, verticalLine: false, noise: 0.10, noiseSize: 1, vignetting: 0.30, resolution: 1 })
+      }
+    }
+    catch (e)
+    {
+      this.crt = null
+      return false
+    }
+    this.apply()
+    return true
+  },
+
+  apply()
+  {
+    if (!this.target)
+    {
+      return
+    }
+    const list = []
+    if (this.bloomOn && this.bloom)
+    {
+      list.push(this.bloom)
+    }
+    if (this.glitch)
+    {
+      list.push(this.glitch)
+    }
+    if (this.crt)
+    {
+      list.push(this.crt)
+    }
+    this.target.filters = list.length ? list : null
+  },
+
+  isOn(n)
+  {
+    return n === "bloom" ? this.bloomOn : n === "glitch" ? !!this.glitch : n === "crt" ? !!this.crt : false
+  },
+
+  available(n)
+  {
+    const F = (typeof PIXI !== "undefined" && PIXI.filters) ? PIXI.filters : {}
+    return n === "bloom" ? !!F.AdvancedBloomFilter : n === "glitch" ? !!F.RGBSplitFilter : n === "crt" ? !!F.CRTFilter : false
+  }
+}
+
+let _whiteTex = null
+function getWhiteTex()
+{
+  if (_whiteTex)
+  {
+    return _whiteTex
+  }
+  const c = document.createElement("canvas")
+  c.width = c.height = 1
+  const g = c.getContext("2d")
+  g.fillStyle = "#fff"
+  g.fillRect(0, 0, 1, 1)
+  _whiteTex = PIXI.Texture.from(c)
+  return _whiteTex
+}
+
+function makeRadialTexture(size, inner, mid, outer)
+{
+  const c = document.createElement("canvas")
+  c.width = c.height = size
+  const g = c.getContext("2d")
+  const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2)
+  grad.addColorStop(0, inner)
+  grad.addColorStop(0.42, mid)
+  grad.addColorStop(1, outer)
+  g.fillStyle = grad
+  g.fillRect(0, 0, size, size)
+  return PIXI.Texture.from(c)
+}
+
+function makeSkyTexture(p)
+{
+  const c = document.createElement("canvas")
+  c.width = W
+  c.height = H
+  const g = c.getContext("2d")
+  const grad = g.createLinearGradient(0, 0, 0, H)
+  grad.addColorStop(0.00, p.stops[0])
+  grad.addColorStop(0.42, p.stops[1])
+  grad.addColorStop(0.78, p.stops[2])
+  grad.addColorStop(1.00, p.stops[3])
+  g.fillStyle = grad
+  g.fillRect(0, 0, W, H)
+
+  const cx = 700, cy = 400, r = 110
+  const sg = g.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 4.5)
+  sg.addColorStop(0.00, p.sunGlow)
+  sg.addColorStop(0.35, p.sunGlow.replace(/[\d.]+\)$/, "0.14)"))
+  sg.addColorStop(1.00, p.sunGlow.replace(/[\d.]+\)$/, "0)"))
+  g.fillStyle = sg
+  g.fillRect(cx - r * 5, cy - r * 5, r * 10, r * 10)
+
+  g.beginPath()
+  g.arc(cx, cy, r, 0, Math.PI * 2)
+  g.fillStyle = p.sun
+  g.fill()
+
+  g.beginPath()
+  g.arc(cx - r * 0.18, cy - r * 0.18, r * 0.72, 0, Math.PI * 2)
+  g.fillStyle = p.sun2
+  g.globalAlpha = 0.55
+  g.fill()
+  g.globalAlpha = 1
+
+  g.beginPath()
+  g.arc(cx - r * 0.28, cy - r * 0.28, r * 0.42, 0, Math.PI * 2)
+  g.fillStyle = p.sun3
+  g.globalAlpha = 0.75
+  g.fill()
+  g.globalAlpha = 1
+
+  return PIXI.Texture.from(c)
+}
+
+/* Entities */
+
+class Shadow
+{
+  constructor(game)
+  {
+    this.game = game
+    this.x = SHADOW_SPAWN_X
+    this.y = 300
+    this.w = 26
+    this.h = 52
+    this.life = SHADOW_LIFETIME
+    this.pulse = 0
+    this.eyePhase = 0
+    this.targetX = SHADOW_SPAWN_X
+    this.targetY = 300
+    this.fadeIn = 0
+    this.hitCooldown = 0
+  }
+
+  alpha()
+  {
+    return this.fadeIn * clamp(this.life / 0.8, 0, 1)
+  }
+
+  eyesOpen()
+  {
+    return Math.sin(this.eyePhase) > -0.85
+  }
+
+  findRoof()
+  {
+    const p = this.game.player
+    let best = null, bestD = Infinity
+    for (const b of this.game.buildings)
+    {
+      if (b.x + b.w < this.x || b.x > p.x + 300)
+      {
+        continue
+      }
+      const d = Math.abs((b.x + b.w * 0.5) - p.x)
+      if (d < bestD)
+      {
+        bestD = d
+        best = b
+      }
+    }
+    return best
+  }
+
+  update(dt)
+  {
+    this.life -= dt
+    this.pulse += dt * 7
+    this.eyePhase += dt * 2.3
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt)
+    this.fadeIn = Math.min(1, this.fadeIn + dt * 3)
+    if (this.life <= 0)
+    {
+      return false
+    }
+
+    const roof = this.findRoof()
+    if (roof)
+    {
+      this.targetX = roof.x + roof.w * 0.5 - this.w * 0.5
+      this.targetY = roof.top - this.h
+    }
+    else
+    {
+      const p = this.game.player
+      this.targetX = p.x - 80
+      this.targetY = p.y
+    }
+
+    const dx = this.targetX - this.x
+    const hs = clamp(Math.abs(dx) * 4.5, 120, 1300)
+    this.x += Math.sign(dx) * Math.min(hs * dt, Math.abs(dx))
+    this.y += (this.targetY - this.y) * Math.min(1, dt * 6)
+
+    const p = this.game.player
+    const cdx = (p.x + p.w * 0.5) - (this.x + this.w * 0.5)
+    const cdy = (p.y + p.h * 0.5) - (this.y + this.h * 0.5)
+    const dist = Math.sqrt(cdx * cdx + cdy * cdy)
+    if (dist < SHADOW_SLOW_RADIUS)
+    {
+      this.game.shadowSlow = Math.max(this.game.shadowSlow, (1 - dist / SHADOW_SLOW_RADIUS) * SHADOW_SLOW_FACTOR)
+    }
+
+    if (this.hitCooldown <= 0 &&
+        this.x + this.w > p.x && this.x < p.x + p.w &&
+        this.y + this.h > p.y && this.y < p.y + p.h)
+    {
+      const dir = (p.x + p.w * 0.5) < (this.x + this.w * 0.5) ? -1 : 1
+      p.vx += dir * SHADOW_PUSH_X
+      p.bounce = 1
+      this.hitCooldown = 0.8
+      this.game.shake = Math.max(this.game.shake, 7)
+      this.game.flash = 0.20
+      this.game.flashCol = 0x8050a0
+      Sfx.shadowImpact()
+    }
+    return true
+  }
+
+  pushBack(px)
+  {
+    this.x -= px
+  }
+}
+
+class Rain
+{
+  constructor(container)
+  {
+    this.gfx = new PIXI.Graphics()
+    container.addChild(this.gfx)
+    this.drops = []
+    for (let i = 0; i < 110; i++)
+    {
+      this.drops.push(this.spawn(true))
+    }
+  }
+
+  spawn(initial)
+  {
+    return {
+      x: Math.random() * (W + 360) - 200,
+      y: initial ? Math.random() * H : -30 - Math.random() * 60,
+      len: 10 + Math.random() * 18,
+      speed: 620 + Math.random() * 420,
+      drift: -180 - Math.random() * 140
+    }
+  }
+
+  update(dt)
+  {
+    for (let i = 0; i < this.drops.length; i++)
+    {
+      const d = this.drops[i]
+      d.y += d.speed * dt
+      d.x += d.drift * dt
+      if (d.y > H + 30 || d.x < -220)
+      {
+        this.drops[i] = this.spawn(false)
+      }
+    }
+  }
+
+  draw()
+  {
+    const g = this.gfx
+    g.clear()
+    for (const d of this.drops)
+    {
+      const dx = (d.drift / d.speed) * d.len
+      g.moveTo(d.x, d.y).lineTo(d.x + dx, d.y + d.len)
+    }
+    g.stroke({ width: 1, color: 0xaaccff, alpha: 0.22 })
+  }
+}
+
+/* Core Engine */
+
+class Game
+{
+  constructor()
+  {
+    this.buildings = []
+    this.farLayer = []
+    this.midLayer = []
+    this.particles = []
+    this.stars = []
+    this.speedLines = []
+    this.billboards = []
+    this.obstacles = []
+    this.ledges = []
+
+    this.player = { x: PLAYER_X, y: 0, vx: 0, w: PW, h: PH, vy: 0, grounded: true, coyote: 0, bounce: 0 }
+
+    this.best = this.load("nightrunner.best")
+    this.todayBest = this.load(this.todayKey())
+    this.speed = BASE_SPEED
+    this.distance = 0
+    this.nearMiss = 0
+    this.alive = true
+    this.running = false
+    this.paused = false
+    this.warmingUp = false
+    this.warmupStart = 0
+    this.runPhase = 0
+    this.shake = 0
+    this.deathTimer = 0
+    this.elapsed = 0
+    this.flash = 0
+    this.flashCol = 0xffffff
+
+    this.jumpHeld = false
+    this.jumpBuffer = 0
+
+    this.shadow = null
+    this.shadowWarnTimer = 0
+    this.shadowSlow = 0
+    this.lastShadowTrigger = -1
+
+    this.windTimer = 0
+    this.windActive = false
+    this.windDir = 1
+    this.lastWindTrigger = -1
+
+    this.dayPhase = 0
+    this.dayBlend = 0
+    this.lastDistM = -1
+    this.lastSpeedVal = -1
+    this.lastNmVal = -1
+
+    this.lastTime = performance.now()
+    this.acc = 0
+    this.step = 1 / 60
+
+    this.init()
+  }
+
+  todayKey()
+  {
+    const d = new Date()
+    return "nightrunner.daily." + d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate()
+  }
+
+  load(key)
+  {
+    try
+    {
+      return parseInt(localStorage.getItem(key) || "0", 10) || 0
+    }
+    catch (e)
+    {
+      return 0
+    }
+  }
+
+  save(key, v)
+  {
+    try
+    {
+      localStorage.setItem(key, String(v))
+    }
+    catch (e)
+    {
+    }
+  }
+
+  async init()
+  {
+    if (typeof PIXI === "undefined")
+    {
+      document.body.innerHTML = "<div style='color:#fff;padding:40px;font-family:system-ui'>PIXI failed to load</div>"
+      return
+    }
+
+    this.app = new PIXI.Application()
+    await this.app.init({
+      width: W, height: H,
+      background: 0x000000,
+      antialias: false,
+      resolution: Math.min(window.devicePixelRatio || 1, 1.5),
+      autoDensity: true,
+      preference: "webgl",
+      powerPreference: "high-performance"
+    })
+
+    document.body.appendChild(this.app.canvas)
+    this.app.canvas.style.width = "100%"
+    this.app.canvas.style.height = "100%"
+    this.app.canvas.style.objectFit = "contain"
+
+    this.cacheDom()
+
+    this.world = new PIXI.Container()
+    this.app.stage.addChild(this.world)
+
+    this.bgLayer = new PIXI.Container()
+    this.world.addChild(this.bgLayer)
+
+    this.farContainer = new PIXI.Container()
+    this.midContainer = new PIXI.Container()
+    this.nearContainer = new PIXI.Container()
+    this.ledgeContainer = new PIXI.Container()
+    this.world.addChild(this.farContainer, this.midContainer, this.nearContainer, this.ledgeContainer)
+
+    this.particleContainer = new PIXI.Container()
+    this.world.addChild(this.particleContainer)
+    this.particleGfx = new PIXI.Graphics()
+    this.particleContainer.addChild(this.particleGfx)
+
+    this.shadowContainer = new PIXI.Container()
+    this.world.addChild(this.shadowContainer)
+
+    this.playerContainer = new PIXI.Container()
+    this.world.addChild(this.playerContainer)
+
+    this.rainLayer = new PIXI.Container()
+    this.world.addChild(this.rainLayer)
+
+    this.foreContainer = new PIXI.Container()
+    this.world.addChild(this.foreContainer)
+
+    this.fxContainer = new PIXI.Container()
+    this.world.addChild(this.fxContainer)
+    this.fxGfx = new PIXI.Graphics()
+    this.fxContainer.addChild(this.fxGfx)
+
+    this.playerAuraTex = makeRadialTexture(256, "rgba(190,210,255,0.42)", "rgba(160,180,255,0.14)", "rgba(120,150,255,0)")
+    this.shadowAuraTex = makeRadialTexture(256, "rgba(160,60,220,0.55)", "rgba(90,20,140,0.22)", "rgba(40,10,70,0)")
+
+    this.skyTextures = SKY_PALETTES.map(makeSkyTexture)
+    this.skySpriteA = new PIXI.Sprite(this.skyTextures[0])
+    this.skySpriteB = new PIXI.Sprite(this.skyTextures[1])
+    this.skySpriteB.alpha = 0
+    this.bgLayer.addChild(this.skySpriteA, this.skySpriteB)
+
+    this.buildStars()
+    this.buildPlayer()
+    this.rain = new Rain(this.rainLayer)
+
+    this.bindInput()
+    this.bindMenu()
+    this.buildToggles()
+
+    try
+    {
+      Shaders.attach(this.world)
+    }
+    catch (e)
+    {
+      console.warn("Shaders.attach failed:", e)
+    }
+
+    this.reset()
+    this.refreshBest()
+    requestAnimationFrame(t => this.loop(t))
+  }
+
+  cacheDom()
+  {
+    this.$dist = document.getElementById("dist")
+    this.$spd = document.getElementById("spd")
+    this.$nm = document.getElementById("nm")
+    this.$wind = document.getElementById("wind")
+    this.$best = document.getElementById("best")
+    this.$today = document.getElementById("today")
+    this.$overlay = document.getElementById("overlay")
+    this.$finalDist = document.getElementById("finalDist")
+    this.$startScreen = document.getElementById("startScreen")
+    this.$aboutPage = document.getElementById("aboutPage")
+    this.$btnStart = document.getElementById("btnStart")
+  }
+
+  refreshBest()
+  {
+    this.$best.textContent = this.best + " m"
+    this.$today.textContent = this.todayBest + " m"
+  }
+
+  bindMenu()
+  {
+    const stop = e => e.stopPropagation()
+    const aboutBtn = document.getElementById("btnAbout")
+    const backBtn = document.getElementById("btnBackFromAbout")
+    for (const el of [this.$btnStart, aboutBtn, backBtn])
+    {
+      el.addEventListener("mousedown", stop)
+      el.addEventListener("mouseup", stop)
+      el.addEventListener("touchstart", stop, { passive: false })
+      el.addEventListener("touchend", stop, { passive: false })
+    }
+    this.$btnStart.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      this.startGame()
+    })
+    aboutBtn.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      this.$startScreen.classList.remove("show")
+      this.$aboutPage.classList.add("show")
+    })
+    backBtn.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      this.$aboutPage.classList.remove("show")
+      this.$startScreen.classList.add("show")
+    })
+
+    document.addEventListener("visibilitychange", () =>
+    {
+      if (document.hidden)
+      {
+        this.paused = true
+        Music.pause()
+      }
+      else
+      {
+        this.paused = false
+        if (this.running)
+        {
+          Music.resume()
+        }
+      }
+    })
+    window.addEventListener("blur", () =>
+    {
+      this.paused = true
+      Music.pause()
+    })
+    window.addEventListener("focus", () =>
+    {
+      if (!document.hidden)
+      {
+        this.paused = false
+        if (this.running)
+        {
+          Music.resume()
+        }
+      }
+    })
+  }
+
+  startGame()
+  {
+    if (this.running)
+    {
+      return
+    }
+    this.running = true
+    this.warmingUp = true
+    this.warmupStart = performance.now()
+    this.$btnStart.classList.add("loading")
+    Sfx.ensure()
+    Sfx.resume()
+    Music.setPlaying(true)
+  }
+
+  buildToggles()
+  {
+    const hasS = typeof Shaders !== "undefined"
+    for (const name of ["bloom", "glitch", "crt"])
+    {
+      if (!hasS || !Shaders.available(name))
+      {
+        document.querySelectorAll(".toggle-" + name).forEach(el => el.disabled = true)
+      }
+    }
+
+    const stop = e => e.stopPropagation()
+    document.querySelectorAll(".toggle-bloom, .toggle-glitch, .toggle-crt, .toggle-music").forEach(el =>
+    {
+      el.addEventListener("mousedown", stop)
+      el.addEventListener("mouseup", stop)
+      el.addEventListener("touchstart", stop, { passive: false })
+      el.addEventListener("touchend", stop, { passive: false })
+    })
+    document.querySelectorAll(".toggle-bloom").forEach(el => el.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      if (hasS)
+      {
+        Shaders.toggleBloom()
+      }
+      this.syncToggles()
+    }))
+    document.querySelectorAll(".toggle-glitch").forEach(el => el.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      if (hasS)
+      {
+        Shaders.toggleGlitch()
+      }
+      this.syncToggles()
+    }))
+    document.querySelectorAll(".toggle-crt").forEach(el => el.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      if (hasS)
+      {
+        Shaders.toggleCRT()
+      }
+      this.syncToggles()
+    }))
+    document.querySelectorAll(".toggle-music").forEach(el => el.addEventListener("click", e =>
+    {
+      e.stopPropagation()
+      Music.toggle()
+      this.syncToggles()
+    }))
+    this.syncToggles()
+  }
+
+  syncToggles()
+  {
+    const hasS = typeof Shaders !== "undefined"
+    document.querySelectorAll(".toggle-bloom").forEach(el => el.classList.toggle("on", hasS && Shaders.isOn("bloom")))
+    document.querySelectorAll(".toggle-glitch").forEach(el => el.classList.toggle("on", hasS && Shaders.isOn("glitch")))
+    document.querySelectorAll(".toggle-crt").forEach(el => el.classList.toggle("on", hasS && Shaders.isOn("crt")))
+    document.querySelectorAll(".toggle-music").forEach(el => el.classList.toggle("on", Music.enabled))
+  }
+
+  buildStars()
+  {
+    this.starGraphics = new PIXI.Graphics()
+    this.bgLayer.addChild(this.starGraphics)
+    for (let i = 0; i < 70; i++)
+    {
+      this.stars.push({
+        x: Math.random() * W, y: Math.random() * 300,
+        s: Math.random() < 0.15 ? 2 : 1,
+        a: 0.25 + Math.random() * 0.65,
+        tw: Math.random() * Math.PI * 2
+      })
+    }
+  }
+
+  buildPlayer()
+  {
+    this.playerAura = new PIXI.Sprite(this.playerAuraTex)
+    this.playerAura.anchor.set(0.5)
+    this.playerAura.width = 100
+    this.playerAura.height = 100
+    this.playerAura.x = PW * 0.5
+    this.playerAura.y = PH * 0.5
+    this.playerContainer.addChild(this.playerAura)
+
+    this.playerGfx = new PIXI.Graphics()
+    this.playerContainer.addChild(this.playerGfx)
+    this.playerBand = new PIXI.Graphics()
+    this.playerContainer.addChild(this.playerBand)
+  }
+
+  drawPlayer()
+  {
+    this.playerGfx.clear()
+    this.playerGfx.rect(0, 0, PW, PH).fill(this.alive ? COL.player : 0xffb0c0)
+    this.playerBand.clear()
+    this.playerBand.rect(3, 8, PW - 6, 6).fill({ color: 0x3c1450, alpha: 0.55 })
+  }
+
+  reset()
+  {
+    Sfx.shadowStop()
+    this.speed = BASE_SPEED
+    this.distance = 0
+    this.nearMiss = 0
+    this.alive = true
+    this.runPhase = 0
+    this.shake = 0
+    this.deathTimer = 0
+    this.elapsed = 0
+    this.flash = 0
+    this.jumpBuffer = 0
+    this.particles.length = 0
+    this.buildings.length = 0
+    this.farLayer.length = 0
+    this.midLayer.length = 0
+    this.billboards.length = 0
+    this.obstacles.length = 0
+    this.ledges.length = 0
+
+    this.farContainer.removeChildren()
+    this.midContainer.removeChildren()
+    this.nearContainer.removeChildren()
+    this.ledgeContainer.removeChildren()
+    this.particleContainer.removeChildren()
+    this.particleContainer.addChild(this.particleGfx)
+    this.shadowContainer.removeChildren()
+    this.foreContainer.removeChildren()
+
+    this.shadow = null
+    this.shadowWarnTimer = 0
+    this.shadowSlow = 0
+    this.lastShadowTrigger = -1
+    this.windTimer = 0
+    this.windActive = false
+    this.windDir = Math.random() < 0.5 ? -1 : 1
+    this.lastWindTrigger = -1
+
+    this.dayPhase = 0
+    this.dayBlend = 0
+    this.applyDay()
+    this.lastDistM = -1
+    this.lastSpeedVal = -1
+    this.lastNmVal = -1
+
+    this.addBuilding(-200, 1400, 400, true, "flat")
+    this.generateAhead()
+    this.makeLayer(this.farLayer, this.farContainer, 80, { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 })
+    this.makeLayer(this.midLayer, this.midContainer, 80, { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 })
+
+    const p = this.player
+    p.x = PLAYER_X
+    p.y = 400 - PH
+    p.vy = 0
+    p.vx = 0
+    p.grounded = true
+    p.coyote = 0
+    p.bounce = 0
+    this.playerContainer.scale.set(1, 1)
+
+    this.buildSpeedLines()
+    this.drawPlayer()
+
+    this.$overlay.classList.remove("show")
+    this.$dist.textContent = "0"
+    this.$spd.textContent = "SPEED 0"
+    this.$nm.textContent = "NEAR MISS 0"
+    this.$wind.classList.remove("on")
+  }
+
+  buildSpeedLines()
+  {
+    this.speedLines.length = 0
+    for (let i = 0; i < 20; i++)
+    {
+      const seed = i * 7.3141
+      this.speedLines.push({
+        y: 220 + ((seed * 0.137) % 1) * 300,
+        speedFactor: 0.7 + (i % 3) * 0.35,
+        phaseOffset: seed * 53,
+        baseLen: 40 + (i % 4) * 22
+      })
+    }
+  }
+
+  applyDay()
+  {
+    const idx = Math.floor(this.dayPhase) % 4
+    const next = (idx + 1) % 4
+    this.skySpriteA.texture = this.skyTextures[idx]
+    this.skySpriteB.texture = this.skyTextures[next]
+    this.skySpriteB.alpha = this.dayBlend
+  }
+
+  makeWindows(w, top, dense)
+  {
+    const wins = []
+    if (dense)
+    {
+      const cols = Math.max(1, Math.floor((w - 36) / 34))
+      const rows = Math.max(1, Math.floor((H - top - 70) / 42))
+      for (let c = 0; c < cols; c++)
+      {
+        for (let r = 0; r < rows; r++)
+        {
+          if (Math.random() < 0.40)
+          {
+            wins.push({ x: 18 + c * 34, y: 30 + r * 42, w: 12, h: 16, lit: Math.random() < 0.55 })
+          }
+        }
+      }
+    }
+    else
+    {
+      const n = Math.floor(Math.random() * 5) + 1
+      const maxY = Math.max(1, H - top - 70)
+      for (let i = 0; i < n; i++)
+      {
+        wins.push({
+          x: 10 + Math.random() * Math.max(1, w - 24),
+          y: 20 + Math.random() * maxY,
+          w: 5 + Math.floor(Math.random() * 4),
+          h: 6 + Math.floor(Math.random() * 4),
+          lit: Math.random() < 0.55
+        })
+      }
+    }
+    return wins
+  }
+
+  addBuilding(x, w, top, dense, roofType)
+  {
+    const b = { x, w, top, windows: this.makeWindows(w, top, dense !== false), roofType: roofType || "flat", puddles: [], ledge: null }
+    if (roofType === "wide")
+    {
+      b.w = Math.max(b.w, 420)
+    }
+    if (Math.random() < 0.30)
+    {
+      const n = 1 + Math.floor(Math.random() * 2)
+      for (let i = 0; i < n; i++)
+      {
+        b.puddles.push({ x: 30 + Math.random() * (b.w - 100), w: 40 + Math.random() * 70 })
+      }
+    }
+    this.buildings.push(b)
+    this.renderBuilding(b, this.nearContainer, true)
+    if (b.roofType === "wide" && Math.random() < 0.40)
+    {
+      this.spawnObstacle(b)
+    }
+    if (b.roofType !== "wide" && Math.random() < 0.18)
+    {
+      this.spawnLedge(b)
+    }
+    if (Math.random() < 0.015)
+    {
+      this.spawnBillboard(b)
+    }
+    return b
+  }
+
+  spawnObstacle(b)
+  {
+    const type = Math.random() < 0.5 ? "antenna" : "tank"
+    const offsetX = 80 + Math.random() * (b.w - 180)
+    const g = new PIXI.Graphics()
+    if (type === "antenna")
+    {
+      g.rect(0, -46, 3, 46).fill(COL.antenna)
+      g.rect(-9, -34, 21, 2).fill(COL.antenna)
+      g.rect(-6, -24, 15, 2).fill(COL.antenna)
+      g.x = b.x + offsetX
+      g.y = b.top
+      this.nearContainer.addChild(g)
+      this.obstacles.push({ building: b, offsetX, x: g.x, y: b.top - 46, w: 20, h: 46, gfx: g, wobble: 0 })
+    }
+    else
+    {
+      g.rect(0, -28, 34, 28).fill(COL.tank)
+      g.rect(0, -32, 34, 4).fill(COL.tankTop)
+      g.x = b.x + offsetX
+      g.y = b.top
+      this.nearContainer.addChild(g)
+      this.obstacles.push({ building: b, offsetX, x: g.x, y: b.top - 32, w: 34, h: 32, gfx: g, wobble: 0 })
+    }
+  }
+
+  spawnLedge(b)
+  {
+    const side = Math.random() < 0.5 ? "left" : "right"
+    const w = 40
+    const offsetX = side === "left" ? 0 : b.w - w
+    const g = new PIXI.Graphics()
+    g.rect(0, 0, w, 8).fill(COL.ledge)
+    g.rect(0, 0, w, 2).fill(COL.ledgeEdge)
+    g.x = b.x + offsetX
+    g.y = b.top
+    this.ledgeContainer.addChild(g)
+    const l = { x: g.x, y: b.top, w, h: 8, side, building: b, offsetX, falling: false, vy: 0, rot: 0, gfx: g, triggered: false }
+    b.ledge = l
+    this.ledges.push(l)
+  }
+
+  spawnBillboard(b)
+  {
+    const bh = Math.random() < 0.5 ? 100 : 120
+    const bw = Math.min(180, Math.max(100, b.w * 0.55))
+    const offsetX = 20 + Math.random() * Math.max(10, b.w - bw - 40)
+    const by = b.top - bh + 4
+    const g = new PIXI.Graphics()
+    g.rect(0, 0, bw, 4).fill(COL.billboardEdge)
+    g.rect(0, bh - 4, bw, 4).fill(COL.billboardEdge)
+
+    const gapCount = 2 + Math.floor(Math.random() * 3)
+    const gapWidth = 18 + Math.random() * 20
+    const gaps = []
+    for (let i = 0; i < gapCount; i++)
+    {
+      gaps.push(20 + (i + 0.3) * ((bw - 40) / gapCount) + Math.random() * 20)
+    }
+    gaps.sort((a, c) => a - c)
+    let cursor = 0
+    for (const gp of gaps)
+    {
+      if (gp > cursor)
+      {
+        g.rect(cursor, 4, gp - cursor, bh - 8).fill(COL.billboardFrame)
+      }
+      cursor = Math.max(cursor, gp + gapWidth)
+    }
+    if (cursor < bw)
+    {
+      g.rect(cursor, 4, bw - cursor, bh - 8).fill(COL.billboardFrame)
+    }
+
+    g.x = b.x + offsetX
+    g.y = by
+    this.foreContainer.addChild(g)
+    this.billboards.push({ building: b, offsetX, x: g.x, y: by, w: bw, h: bh, gfx: g })
+  }
+
+  syncAttached()
+  {
+    for (const o of this.obstacles)
+    {
+      o.x = o.building.x + o.offsetX
+      o.gfx.x = o.x
+    }
+    for (const bb of this.billboards)
+    {
+      bb.x = bb.building.x + bb.offsetX
+      bb.gfx.x = bb.x
+    }
+    for (const l of this.ledges)
+    {
+      if (!l.falling)
+      {
+        l.x = l.building.x + l.offsetX
+        l.gfx.x = l.x
+      }
+    }
+  }
+
+  renderBuilding(b, container, isNear)
+  {
+    if (!b.gfx)
+    {
+      b.gfx = new PIXI.Graphics()
+      container.addChild(b.gfx)
+    }
+    const g = b.gfx
+    g.clear()
+    g.x = b.x
+
+    g.rect(0, b.top, b.w, H - b.top + 8).fill(isNear ? COL.near : COL.mid)
+
+    if (isNear)
+    {
+      g.rect(0, b.top, b.w, 2).fill(COL.nearEdge)
+      g.rect(0, b.top, 2, H - b.top).fill({ color: COL.nearSide, alpha: 0.35 })
+      if (b.roofType === "wide")
+      {
+        g.rect(0, b.top, b.w, 4).fill({ color: 0x8a5a3a, alpha: 0.6 })
+      }
+    }
+    else
+    {
+      g.rect(0, b.top, b.w, 3).fill(COL.midEdge)
+    }
+
+    if (isNear && b.puddles.length)
+    {
+      for (const p of b.puddles)
+      {
+        g.rect(p.x, b.top + 1, p.w, 3).fill({ color: COL.puddle, alpha: 0.85 })
+        g.rect(p.x, b.top + 1, p.w, 1).fill({ color: COL.puddleEdge, alpha: 0.5 })
+      }
+    }
+
+    const pad = isNear ? 3 : 2
+    for (const w of b.windows)
+    {
+      const wy = b.top + w.y
+      if (w.lit)
+      {
+        g.rect(w.x - pad, wy - pad, w.w + pad * 2, w.h + pad * 2).fill({ color: COL.windowLit, alpha: 0.18 })
+        g.rect(w.x, wy, w.w, w.h).fill(COL.windowLit)
+      }
+      else
+      {
+        g.rect(w.x, wy, w.w, w.h).fill(COL.windowDark)
+      }
+    }
+  }
+
+  generateAhead()
+  {
+    let last = this.buildings[this.buildings.length - 1]
+    if (!last)
+    {
+      return
+    }
+    const horizon = W + GEN_MARGIN
+    let guard = 0
+    while (last.x + last.w < horizon && guard++ < 60)
+    {
+      const reach = this.speed * (2 * Math.abs(JUMP_V) / GRAVITY)
+      const gap = reach * rnd(0.25, 0.68)
+      const t = gap / this.speed
+      let maxRise = Math.abs(JUMP_V) * t - 0.5 * GRAVITY * t * t
+      if (maxRise < 0)
+      {
+        maxRise = 0
+      }
+      maxRise *= 0.85
+      const top = clamp(last.top + rnd(-95, maxRise), TOP_MIN, TOP_MAX)
+      const w = rnd(220, 520)
+      const roofType = Math.random() < 0.03 ? "wide" : "flat"
+      last = this.addBuilding(last.x + last.w + gap, w, top, true, roofType)
+    }
+  }
+
+  makeLayer(layer, container, count, cfg)
+  {
+    let x = -GEN_MARGIN - 400
+    for (let i = 0; i < count; i++)
+    {
+      const w = rnd(cfg.minW, cfg.maxW)
+      const top = rnd(cfg.minTop, cfg.maxTop)
+      const b = { x, w, top, windows: this.makeWindows(w, top, false), roofType: "flat", puddles: [] }
+      layer.push(b)
+      this.renderBuilding(b, container, false)
+      x += w + rnd(cfg.gapMin, cfg.gapMax)
+    }
+  }
+
+  scrollLayer(layer, container, dx, cfg)
+  {
+    const cullLeft = -CULL_MARGIN - 500
+    let maxR = -Infinity
+    for (const b of layer)
+    {
+      if (b.x + b.w > maxR)
+      {
+        maxR = b.x + b.w
+      }
+    }
+    for (const b of layer)
+    {
+      b.x -= dx
+      if (b.x + b.w < cullLeft)
+      {
+        const w = rnd(cfg.minW, cfg.maxW)
+        const top = rnd(cfg.minTop, cfg.maxTop)
+        b.x = maxR + rnd(cfg.gapMin, cfg.gapMax)
+        b.w = w
+        b.top = top
+        b.windows = this.makeWindows(w, top, false)
+        this.renderBuilding(b, container, false)
+        maxR = b.x + b.w
+      }
+      else if (b.gfx)
+      {
+        b.gfx.x = b.x
+      }
+    }
+  }
+
+  die()
+  {
+    if (!this.alive)
+    {
+      return
+    }
+    this.alive = false
+    this.deathTimer = 0
+    this.shake = 16
+    this.flash = 0.6
+    this.flashCol = 0xffffff
+    this.drawPlayer()
+    Sfx.death()
+    if (navigator.vibrate)
+    {
+      try
+      {
+        navigator.vibrate(60)
+      }
+      catch (e)
+      {
+      }
+    }
+  }
+
+  spawnDust(count, scale)
+  {
+    const p = this.player
+    for (let i = 0; i < count; i++)
+    {
+      const size = rnd(1.5, 3.2)
+      this.particles.push({
+        x: p.x + Math.random() * p.w,
+        y: p.y + p.h - Math.random() * 4,
+        vx: -rnd(40, 160) * scale,
+        vy: -rnd(20, 130) * scale,
+        life: rnd(0.30, 0.75), max: 0.75,
+        size, col: COL.dust
+      })
+    }
+  }
+
+  spawnSplash(x, y, count, col)
+  {
+    for (let i = 0; i < count; i++)
+    {
+      this.particles.push({
+        x, y,
+        vx: rnd(-80, 80),
+        vy: -rnd(40, 140),
+        life: rnd(0.15, 0.35), max: 0.35,
+        size: rnd(1.0, 2.2), col
+      })
+    }
+  }
+
+  spawnChunk(x, y, w, h, col)
+  {
+    const sprite = new PIXI.Sprite(getWhiteTex())
+    sprite.anchor.set(0.5)
+    sprite.width = w
+    sprite.height = h
+    sprite.tint = col
+    sprite.x = x + w * 0.5
+    sprite.y = y + h * 0.5
+    this.particleContainer.addChild(sprite)
+    this.particles.push({
+      gfx: sprite, isSprite: true,
+      x: x + w * 0.5, y: y + h * 0.5,
+      vx: -rnd(20, 60),
+      vy: -rnd(60, 160),
+      life: 1.8, max: 1.8,
+      rot: 0, rotVel: rnd(-4, 4)
+    })
+  }
+
+  updateParticles(dt, dx)
+  {
+    const parts = this.particles
+    const g = this.particleGfx
+    g.clear()
+
+    for (let i = parts.length - 1; i >= 0; i--)
+    {
+      const pt = parts[i]
+      pt.life -= dt
+      if (pt.life <= 0)
+      {
+        if (pt.isSprite)
+        {
+          this.particleContainer.removeChild(pt.gfx)
+          pt.gfx.destroy()
+        }
+        parts[i] = parts[parts.length - 1]
+        parts.pop()
+        continue
+      }
+      pt.vy += 500 * dt
+      pt.x += (pt.vx - dx) * dt
+      pt.y += pt.vy * dt
+      const a = Math.min(1, pt.life / (pt.max * 0.6))
+      if (pt.isSprite)
+      {
+        pt.gfx.x = pt.x
+        pt.gfx.y = pt.y
+        pt.rot += pt.rotVel * dt
+        pt.gfx.rotation = pt.rot
+        pt.gfx.alpha = a
+      }
+      else
+      {
+        g.rect(pt.x, pt.y, pt.size, pt.size).fill({ color: pt.col, alpha: a })
+      }
+    }
+  }
+
+  checkObstacleHit()
+  {
+    const p = this.player
+    if (!p.grounded)
+    {
+      return
+    }
+    for (const o of this.obstacles)
+    {
+      if (o.building.x > p.x + p.w)
+      {
+        continue
+      }
+      if (o.building.x + o.building.w < p.x)
+      {
+        continue
+      }
+      if (Math.abs((p.y + p.h) - o.y) > o.h)
+      {
+        continue
+      }
+      if (p.x + p.w > o.x && p.x < o.x + o.w)
+      {
+        if (p.x < o.x + o.w * 0.5)
+        {
+          p.x = o.x - p.w
+        }
+        else
+        {
+          p.x = o.x + o.w
+        }
+        p.vx -= 120
+        p.bounce = 1
+        o.wobble = 0.4
+        Sfx.ledge()
+      }
+    }
+  }
+
+  updateLedges(dt)
+  {
+    for (const l of this.ledges)
+    {
+      if (l.falling)
+      {
+        l.vy += 1800 * dt
+        l.y += l.vy * dt
+        l.rot += dt * 3
+        l.gfx.y = l.y
+        l.gfx.rotation = l.rot
+        if (l.y > H + 40)
+        {
+          l.gfx.visible = false
+        }
+      }
+    }
+  }
+
+  checkLedgeBreak()
+  {
+    const p = this.player
+    if (!p.grounded)
+    {
+      return
+    }
+    for (const l of this.ledges)
+    {
+      if (l.triggered)
+      {
+        continue
+      }
+      if (Math.abs((p.y + p.h) - l.y) > 4)
+      {
+        continue
+      }
+      if (p.x + p.w > l.x && p.x < l.x + l.w)
+      {
+        l.triggered = true
+        l.falling = true
+        l.vy = -100
+        p.grounded = false
+        p.vy = 40
+        Sfx.ledge()
+        this.spawnChunk(l.x + 8, l.y, 12, 6, COL.ledge)
+        this.spawnChunk(l.x + 20, l.y, 14, 6, COL.ledge)
+        this.spawnChunk(l.x + 4, l.y - 4, 10, 5, COL.ledgeEdge)
+      }
+    }
+  }
+
+  updateWind(dt)
+  {
+    const bucket = Math.floor((this.distance / 40) / WIND_PERIOD)
+    if (!this.windActive && bucket > 0 && bucket !== this.lastWindTrigger)
+    {
+      this.lastWindTrigger = bucket
+      this.windActive = true
+      this.windTimer = WIND_DURATION
+      this.windDir = Math.random() < 0.5 ? -1 : 1
+      Sfx.wind()
+      this.$wind.classList.add("on")
+    }
+    if (this.windActive)
+    {
+      this.windTimer -= dt
+      if (this.windTimer <= 0)
+      {
+        this.windActive = false
+        this.$wind.classList.remove("on")
+      }
+    }
+  }
+
+  checkNearMiss(edgeDist)
+  {
+    if (edgeDist < NEAR_MISS_EDGE && this.player.vy > 500)
+    {
+      this.nearMiss++
+      Sfx.nearMiss()
+    }
+  }
+
+  updateDay()
+  {
+    const phase = (this.distance / 40 / DAY_PERIOD) % 4
+    this.dayPhase = phase
+    this.dayBlend = phase - Math.floor(phase)
+    this.applyDay()
+  }
+
+  update(dt)
+  {
+    if (!this.running || this.paused)
+    {
+      return
+    }
+
+    if (this.warmingUp)
+    {
+      this.elapsed += dt
+      this.rain.update(dt)
+      if (performance.now() - this.warmupStart > WARMUP_MS)
+      {
+        this.warmingUp = false
+        this.$btnStart.classList.remove("loading")
+        this.$startScreen.classList.remove("show")
+        this.reset()
+      }
+      return
+    }
+
+    this.elapsed += dt
+    this.shake = Math.max(0, this.shake - dt * 45)
+    this.flash = Math.max(0, this.flash - dt * 2.6)
+    const p = this.player
+
+    this.rain.update(dt)
+    this.updateLedges(dt)
+
+    if (p.bounce > 0)
+    {
+      p.bounce = Math.max(0, p.bounce - dt * 4)
+      const s = p.bounce
+      this.playerContainer.scale.set(1 + s * 0.28, 1 - s * 0.22)
+    }
+    else if (this.playerContainer.scale.x !== 1)
+    {
+      this.playerContainer.scale.set(1, 1)
+    }
+
+    if (!this.alive)
+    {
+      this.deathTimer += dt
+      const slowFactor = Math.max(0, 1 - this.deathTimer * 2.2)
+      const slowDx = this.speed * dt * slowFactor
+      for (const b of this.buildings)
+      {
+        b.x -= slowDx
+        if (b.gfx)
+        {
+          b.gfx.x = b.x
+        }
+      }
+      this.scrollLayer(this.farLayer, this.farContainer, slowDx * 0.10, { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 })
+      this.scrollLayer(this.midLayer, this.midContainer, slowDx * 0.30, { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 })
+      this.syncAttached()
+
+      p.vy += GRAVITY * dt
+      p.y += p.vy * dt
+      p.x += 60 * dt
+      this.updateParticles(dt, slowDx)
+      this.playerContainer.x = p.x
+      this.playerContainer.y = p.y
+
+      if (this.deathTimer > 0.7 && !this.$overlay.classList.contains("show"))
+      {
+        const metres = Math.floor(this.distance / 40)
+        this.$finalDist.textContent = metres + " m"
+        if (metres > this.best)
+        {
+          this.best = metres
+          this.save("nightrunner.best", metres)
+        }
+        if (metres > this.todayBest)
+        {
+          this.todayBest = metres
+          this.save(this.todayKey(), metres)
+        }
+        this.refreshBest()
+        this.$overlay.classList.add("show")
+      }
+      return
+    }
+
+    this.updateWind(dt)
+    this.updateDay()
+
+    this.shadowSlow = 0
+    this.speed = Math.min(MAX_SPEED, this.speed + ACCEL * (1 - this.shadowSlow) * dt)
+    this.distance += this.speed * dt
+    const dx = this.speed * dt
+
+    this.scrollLayer(this.farLayer, this.farContainer, dx * 0.10, { minW: 90, maxW: 210, minTop: 140, maxTop: 290, gapMin: 14, gapMax: 70 })
+    this.scrollLayer(this.midLayer, this.midContainer, dx * 0.30, { minW: 80, maxW: 200, minTop: 200, maxTop: 360, gapMin: 10, gapMax: 55 })
+
+    for (const b of this.buildings)
+    {
+      b.x -= dx
+      if (b.gfx)
+      {
+        b.gfx.x = b.x
+      }
+    }
+    this.syncAttached()
+
+    for (const o of this.obstacles)
+    {
+      if (o.wobble > 0)
+      {
+        o.wobble = Math.max(0, o.wobble - dt * 3)
+        o.gfx.rotation = Math.sin(o.wobble * 30) * o.wobble * 0.15
+      }
+    }
+
+    for (let i = this.obstacles.length - 1; i >= 0; i--)
+    {
+      const o = this.obstacles[i]
+      if (o.x + o.w < -CULL_MARGIN - 600)
+      {
+        if (o.gfx.parent)
+        {
+          o.gfx.parent.removeChild(o.gfx)
+        }
+        o.gfx.destroy()
+        this.obstacles.splice(i, 1)
+      }
+    }
+    for (let i = this.billboards.length - 1; i >= 0; i--)
+    {
+      const bb = this.billboards[i]
+      if (bb.x + bb.w < -CULL_MARGIN - 600)
+      {
+        if (bb.gfx.parent)
+        {
+          bb.gfx.parent.removeChild(bb.gfx)
+        }
+        bb.gfx.destroy()
+        this.billboards.splice(i, 1)
+      }
+    }
+    for (let i = this.ledges.length - 1; i >= 0; i--)
+    {
+      const l = this.ledges[i]
+      if (l.x + l.w < -CULL_MARGIN - 600)
+      {
+        if (l.gfx.parent)
+        {
+          l.gfx.parent.removeChild(l.gfx)
+        }
+        l.gfx.destroy()
+        this.ledges.splice(i, 1)
+      }
+    }
+
+    while (this.buildings.length && this.buildings[0].x + this.buildings[0].w < -CULL_MARGIN - 700)
+    {
+      const removed = this.buildings.shift()
+      if (removed.gfx)
+      {
+        this.nearContainer.removeChild(removed.gfx)
+        removed.gfx.destroy()
+      }
+    }
+    this.generateAhead()
+
+    if (this.windActive)
+    {
+      p.vx += this.windDir * WIND_FORCE * dt
+    }
+
+    if (p.vx !== 0)
+    {
+      const decay = Math.min(1, (p.grounded ? 6 : 1.6) * dt)
+      if (Math.abs(p.vx) < 4)
+      {
+        p.vx = 0
+      }
+      else
+      {
+        p.vx *= (1 - decay)
+      }
+    }
+    p.x += p.vx * dt
+    p.x = clamp(p.x, PLAYER_X - 220, PLAYER_X + 140)
+
+    if (this.jumpBuffer > 0)
+    {
+      this.jumpBuffer -= dt
+    }
+    if (this.jumpBuffer > 0 && (p.grounded || p.coyote > 0))
+    {
+      p.vy = JUMP_V
+      p.grounded = false
+      p.coyote = 0
+      this.jumpBuffer = 0
+      this.spawnDust(9, 1.2)
+      Sfx.jump()
+      if (navigator.vibrate)
+      {
+        try
+        {
+          navigator.vibrate(10)
+        }
+        catch (e)
+        {
+        }
+      }
+      if (this.shadow)
+      {
+        this.shadow.pushBack(110)
+      }
+    }
+    if (!this.jumpHeld && p.vy < JUMP_CUT)
+    {
+      p.vy = JUMP_CUT
+    }
+
+    if (p.grounded)
+    {
+      p.vy = 0
+      p.coyote = COYOTE
+      let supported = false
+      for (const b of this.buildings)
+      {
+        if (p.x + p.w <= b.x || p.x >= b.x + b.w)
+        {
+          continue
+        }
+        if (Math.abs((p.y + p.h) - b.top) < 3)
+        {
+          supported = true
+          break
+        }
+      }
+      if (!supported)
+      {
+        for (const l of this.ledges)
+        {
+          if (l.falling || l.triggered)
+          {
+            continue
+          }
+          if (p.x + p.w <= l.x || p.x >= l.x + l.w)
+          {
+            continue
+          }
+          if (Math.abs((p.y + p.h) - l.y) < 3)
+          {
+            supported = true
+            break
+          }
+        }
+      }
+      if (!supported)
+      {
+        p.grounded = false
+        p.vy = 0
+      }
+      else
+      {
+        this.checkLedgeBreak()
+        this.checkObstacleHit()
+        for (const b of this.buildings)
+        {
+          if (p.x + p.w <= b.x || p.x >= b.x + b.w)
+          {
+            continue
+          }
+          if (Math.abs((p.y + p.h) - b.top) > 3)
+          {
+            continue
+          }
+          if (b.puddles.length)
+          {
+            for (const pd of b.puddles)
+            {
+              if (p.x + p.w * 0.5 > b.x + pd.x && p.x + p.w * 0.5 < b.x + pd.x + pd.w)
+              {
+                this.spawnSplash(p.x + p.w * 0.5, b.top, 2, COL.splash)
+                p.vx -= 60 * dt * 60
+                break
+              }
+            }
+          }
+          const edgeDist = Math.min(p.x - b.x, b.x + b.w - (p.x + p.w))
+          if (edgeDist < NEAR_MISS_EDGE)
+          {
+            this.checkNearMiss(edgeDist)
+          }
+        }
+      }
+    }
+
+    if (!p.grounded)
+    {
+      p.coyote -= dt
+      p.vy += GRAVITY * dt
+      const prevFeet = p.y + p.h
+      p.y += p.vy * dt
+      const feet = p.y + p.h
+      for (const b of this.buildings)
+      {
+        if (p.x + p.w <= b.x || p.x >= b.x + b.w)
+        {
+          continue
+        }
+        if (feet <= b.top)
+        {
+          continue
+        }
+        if (p.vy >= 0 && prevFeet <= b.top + 4)
+        {
+          p.y = b.top - p.h
+          p.vy = 0
+          p.grounded = true
+          this.spawnDust(10, clamp(Math.abs(p.vy) / 800, 0.6, 1.8))
+          break
+        }
+        else
+        {
+          this.die()
+          break
+        }
+      }
+    }
+
+    if (p.y > H + 120 && this.alive)
+    {
+      this.die()
+    }
+
+    if (p.grounded)
+    {
+      this.runPhase += dt * this.speed * 0.032
+      if (Math.sin(this.runPhase) > 0.95)
+      {
+        this.spawnDust(1, 0.55)
+      }
+    }
+
+    this.updateParticles(dt, dx)
+    this.updateShadow(dt)
+
+    if (Math.random() < dt * 8)
+    {
+      for (const b of this.buildings)
+      {
+        if (b.x < -100 || b.x > W + 100)
+        {
+          continue
+        }
+        if (Math.random() < 0.4)
+        {
+          this.spawnSplash(b.x + Math.random() * b.w, b.top, 1, COL.splash)
+        }
+      }
+    }
+
+    this.playerContainer.x = p.x
+    this.playerContainer.y = p.y
+
+    const m = Math.floor(this.distance / 40)
+    if (m !== this.lastDistM)
+    {
+      this.$dist.textContent = m
+      this.lastDistM = m
+    }
+    const s = Math.round(this.speed)
+    if (s !== this.lastSpeedVal)
+    {
+      this.$spd.textContent = "SPEED " + s
+      this.lastSpeedVal = s
+    }
+    if (this.nearMiss !== this.lastNmVal)
+    {
+      this.$nm.textContent = "NEAR MISS " + this.nearMiss
+      this.lastNmVal = this.nearMiss
+    }
+  }
+
+  updateShadow(dt)
+  {
+    if (this.shadow)
+    {
+      if (!this.shadow.update(dt))
+      {
+        this.shadow = null
+        Sfx.shadowStop()
+      }
+      else
+      {
+        this.shadowContainer.x = this.shadow.x
+        this.shadowContainer.y = this.shadow.y
+        this.shadowContainer.alpha = this.shadow.alpha()
+        const s = 1 + Math.sin(this.shadow.pulse) * 0.12
+        this.shadowAura.scale.set(s)
+        this.shadowEyes.visible = this.shadow.eyesOpen()
+      }
+      return
+    }
+
+    if (this.shadowWarnTimer > 0)
+    {
+      this.shadowWarnTimer -= dt
+      if (this.shadowWarnTimer <= 0)
+      {
+        this.shadow = new Shadow(this)
+        this.buildShadowGfx()
+        Sfx.shadowStart()
+      }
+      return
+    }
+
+    const bucket = Math.floor((this.distance / 40) / SHADOW_PERIOD)
+    if (bucket > 0 && bucket !== this.lastShadowTrigger)
+    {
+      this.lastShadowTrigger = bucket
+      this.shadowWarnTimer = SHADOW_WARN_TIME
+      Sfx.shadowWarn()
+    }
+  }
+
+  buildShadowGfx()
+  {
+    this.shadowContainer.removeChildren()
+
+    this.shadowAura = new PIXI.Sprite(this.shadowAuraTex)
+    this.shadowAura.anchor.set(0.5)
+    this.shadowAura.width = 150
+    this.shadowAura.height = 150
+    this.shadowAura.x = 13
+    this.shadowAura.y = 26
+    this.shadowContainer.addChild(this.shadowAura)
+
+    const g = new PIXI.Graphics()
+    g.rect(0, 0, 26, 52).fill(0x000000)
+    g.rect(0.5, 0.5, 25, 51).stroke({ width: 1.5, color: 0xa040d0 })
+    this.shadowContainer.addChild(g)
+
+    this.shadowEyes = new PIXI.Graphics()
+    this.shadowEyes.rect(5, 14, 4, 3).fill(0xff2030)
+    this.shadowEyes.rect(17, 14, 4, 3).fill(0xff2030)
+    this.shadowContainer.addChild(this.shadowEyes)
+  }
+
+  render()
+  {
+    this.starGraphics.clear()
+    const t = this.elapsed * 1.6
+    const fade = Math.max(0, 1 - this.dayBlend * 0.8)
+    for (const st of this.stars)
+    {
+      const tw = 0.6 + 0.4 * Math.sin(t + st.tw)
+      this.starGraphics.rect(st.x, st.y, st.s, st.s).fill({ color: 0xc8d7ff, alpha: st.a * tw * fade })
+    }
+
+    this.rain.draw()
+
+    const fx = this.fxGfx
+    fx.clear()
+
+    if (this.alive && this.speed > 520 && this.running && !this.warmingUp)
+    {
+      const intensity = (this.speed - 520) / (MAX_SPEED - 520)
+      if (intensity > 0.02)
+      {
+        const n = Math.floor(intensity * 12)
+        const period = W + 320
+        const tt = this.elapsed * this.speed
+        for (let i = 0; i < n; i++)
+        {
+          const sl = this.speedLines[i]
+          const phase = (tt * sl.speedFactor + sl.phaseOffset) % period
+          const x = W + 160 - phase
+          fx.rect(x, sl.y, sl.baseLen + intensity * 110, 1).fill({ color: 0xffffff, alpha: intensity * 0.14 })
+        }
+      }
+    }
+
+    if (this.shadow || this.shadowWarnTimer > 0)
+    {
+      let intensity
+      if (this.shadow)
+      {
+        intensity = 0.18 + Math.sin(this.elapsed * 9) * 0.07
+      }
+      else
+      {
+        const p = 1 - this.shadowWarnTimer / SHADOW_WARN_TIME
+        intensity = p * 0.30 + Math.sin(this.elapsed * 18) * 0.07 * p
+      }
+      fx.rect(0, 0, W, H).fill({ color: 0x800030, alpha: clamp(intensity, 0, 1) })
+    }
+
+    if (this.flash > 0)
+    {
+      fx.rect(0, 0, W, H).fill({ color: this.flashCol, alpha: this.flash * 0.55 })
+    }
+
+    if (this.shake > 0.15)
+    {
+      this.world.x = (Math.random() - 0.5) * this.shake
+      this.world.y = (Math.random() - 0.5) * this.shake
+    }
+    else
+    {
+      this.world.x = 0
+      this.world.y = 0
+    }
+  }
+
+  bindInput()
+  {
+    const jumpKeys = new Set(["Space", "ArrowUp", "KeyW", "Enter"])
+    window.addEventListener("keydown", e =>
+    {
+      if (!jumpKeys.has(e.code))
+      {
+        return
+      }
+      e.preventDefault()
+      if (e.repeat)
+      {
+        return
+      }
+      if (!this.running)
+      {
+        if (this.$startScreen.classList.contains("show"))
+        {
+          this.startGame()
+        }
+        return
+      }
+      this.press()
+    }, { passive: false })
+    window.addEventListener("keyup", e =>
+    {
+      if (!jumpKeys.has(e.code))
+      {
+        return
+      }
+      e.preventDefault()
+      this.release()
+    }, { passive: false })
+    window.addEventListener("mousedown", e =>
+    {
+      if (this.running && !this.paused && e.button === 0)
+      {
+        this.press()
+      }
+    })
+    window.addEventListener("mouseup", e =>
+    {
+      if (e.button === 0)
+      {
+        this.release()
+      }
+    })
+    window.addEventListener("touchstart", e =>
+    {
+      if (this.running && !this.paused)
+      {
+        e.preventDefault()
+        this.press()
+      }
+    }, { passive: false })
+    window.addEventListener("touchend", e =>
+    {
+      e.preventDefault()
+      this.release()
+    }, { passive: false })
+    window.addEventListener("touchcancel", () => this.release())
+    window.addEventListener("blur", () => this.release())
+  }
+
+  press()
+  {
+    if (!this.running)
+    {
+      return
+    }
+    Sfx.ensure()
+    Sfx.resume()
+    if (!this.alive)
+    {
+      if (this.deathTimer > 0.55)
+      {
+        this.reset()
+      }
+      return
+    }
+    if (!this.jumpHeld)
+    {
+      this.jumpBuffer = BUFFER
+    }
+    this.jumpHeld = true
+  }
+
+  release()
+  {
+    this.jumpHeld = false
+  }
+
+  loop(now)
+  {
+    let dt = (now - this.lastTime) / 1000
+    this.lastTime = now
+    if (dt > 0.1)
+    {
+      dt = 0.1
+    }
+    if (dt < 0)
+    {
+      dt = 0
+    }
+    this.acc += dt
+    let steps = 0
+    while (this.acc >= this.step && steps < 6)
+    {
+      this.update(this.step)
+      this.acc -= this.step
+      steps++
+    }
+    this.render()
+    requestAnimationFrame(t => this.loop(t))
+  }
+}
+
+window.addEventListener("load", () =>
+{
+  new Game()
+})
+</script>
+</body>
+</html>

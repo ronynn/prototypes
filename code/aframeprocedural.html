@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Alien World – Procedural v2</title>
+  <script src="lib/aframe.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #joystick-base, #joystick-thumb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #info {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: monospace;
+      z-index: 20;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <a-scene
+    vr-mode-ui="enabled: false"
+    renderer="antialias: true; alpha: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <!-- Soft, cartoonish lighting -->
+    <a-light type="ambient" color="#fff5e6" intensity="0.7"></a-light>
+    <a-light type="directional" position="10 20 5" intensity="1.0" cast-shadow="true"></a-light>
+
+    <!-- Player -->
+    <a-entity id="player" position="0 1.6 0">
+      <a-camera
+        id="camera"
+        look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"
+        wasd-controls="enabled: false">
+      </a-camera>
+    </a-entity>
+  </a-scene>
+
+  <!-- Joystick UI -->
+  <div id="joystick-base" style="display:none; width:100px; height:100px; background:rgba(255,255,255,0.2); bottom:30px; left:30px;"></div>
+  <div id="joystick-thumb" style="display:none; width:50px; height:50px; background:rgba(255,255,255,0.5); bottom:55px; left:55px;"></div>
+
+  <div id="info">Drag left side to move, right side to look</div>
+
+  <script>
+    // ---------- Improved Perlin Noise ----------
+    const Perlin = (() => {
+      const grad3 = [
+        [1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],
+        [1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],
+        [0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]
+      ];
+      const p = new Uint8Array(512);
+      for (let i = 0; i < 512; i++) p[i] = Math.floor(Math.random() * 256);
+      const perm = new Uint8Array(512);
+      const gradP = new Array(512);
+      for (let i = 0; i < 512; i++) {
+        const v = p[i & 255];
+        perm[i] = v;
+        gradP[i] = grad3[v % 12];
+      }
+      function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+      function lerp(a, b, t) { return a + t * (b - a); }
+      function dot(g, x, y, z) { return g[0]*x + g[1]*y + g[2]*z; }
+      function noise(x, y, z) {
+        const X = Math.floor(x) & 255;
+        const Y = Math.floor(y) & 255;
+        const Z = Math.floor(z) & 255;
+        x -= Math.floor(x); y -= Math.floor(y); z -= Math.floor(z);
+        const u = fade(x), v = fade(y), w = fade(z);
+        const A = perm[X] + Y, AA = perm[A] + Z, AB = perm[A+1] + Z;
+        const B = perm[X+1] + Y, BA = perm[B] + Z, BB = perm[B+1] + Z;
+        return lerp(
+          lerp(lerp(dot(gradP[AA], x, y, z), dot(gradP[BA], x-1, y, z), u),
+               lerp(dot(gradP[AB], x, y-1, z), dot(gradP[BB], x-1, y-1, z), u), v),
+          lerp(lerp(dot(gradP[AA+1], x, y, z-1), dot(gradP[BA+1], x-1, y, z-1), u),
+               lerp(dot(gradP[AB+1], x, y-1, z-1), dot(gradP[BB+1], x-1, y-1, z-1), u), v),
+          w
+        );
+      }
+      return { noise };
+    })();
+
+    function fbm(x, y, octaves = 5, lacunarity = 2, gain = 0.5) {
+      let total = 0, amplitude = 1, frequency = 1, maxValue = 0;
+      for (let i = 0; i < octaves; i++) {
+        total += Perlin.noise(x * frequency, y * frequency, 0) * amplitude;
+        maxValue += amplitude;
+        amplitude *= gain;
+        frequency *= lacunarity;
+      }
+      return total / maxValue; // approx [-1, 1]
+    }
+
+    // ---------- Terrain Generator ----------
+    AFRAME.registerComponent('terrain-generator', {
+      schema: {
+        width: { type: 'number', default: 100 },
+        depth: { type: 'number', default: 100 },
+        segments: { type: 'number', default: 100 },
+        amplitude: { type: 'number', default: 3.0 },
+        waterLevel: { type: 'number', default: -0.2 },
+        sandLevel: { type: 'number', default: 0.0 },
+        grassLevel: { type: 'number', default: 0.5 },
+        rockLevel: { type: 'number', default: 1.0 }
+      },
+      init: function () {
+        const { width, depth, segments, amplitude, waterLevel, sandLevel, grassLevel, rockLevel } = this.data;
+
+        // Create plane geometry (XY plane, will rotate)
+        const geometry = new THREE.PlaneGeometry(width, depth, segments, segments);
+        const vertices = geometry.attributes.position.array;
+        const colors = new Float32Array(vertices.length);
+
+        // Pastel palette
+        const waterColor = new THREE.Color('#8ecae6');
+        const sandColor = new THREE.Color('#f4e4ba');
+        const grassColor = new THREE.Color('#a8d5a2');
+        const rockColor = new THREE.Color('#c9b6e4');
+        const snowColor = new THREE.Color('#f1e9f6');
+
+        // Generate height and color
+        for (let i = 0; i < vertices.length; i += 3) {
+          const x = vertices[i];
+          const y = vertices[i + 1];
+          // Use x,y for noise
+          const height = fbm(x * 0.06, y * 0.06, 5) * amplitude;
+          vertices[i + 2] = height; // will become world Y after rotation
+
+          // Determine color based on height
+          let color;
+          if (height < waterLevel) color = waterColor;
+          else if (height < sandLevel) color = sandColor;
+          else if (height < grassLevel) color = grassColor;
+          else if (height < rockLevel) color = rockColor;
+          else color = snowColor;
+
+          // Add slope-based variation (later we can compute from normals)
+          colors[i] = color.r;
+          colors[i + 1] = color.g;
+          colors[i + 2] = color.b;
+        }
+
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        geometry.computeVertexNormals();
+
+        // Use vertex colors and flat shading
+        const material = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          flatShading: true,
+          roughness: 0.7,
+          metalness: 0.05
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.receiveShadow = true;
+        mesh.castShadow = true;
+        this.el.setObject3D('terrain', mesh);
+
+        // Add water plane
+        const waterGeometry = new THREE.PlaneGeometry(width, depth);
+        const waterMaterial = new THREE.MeshStandardMaterial({
+          color: '#8ecae6',
+          transparent: true,
+          opacity: 0.45,
+          roughness: 0.2,
+          metalness: 0.1
+        });
+        const waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+        waterMesh.rotation.x = -Math.PI / 2;
+        waterMesh.position.y = waterLevel * amplitude; // approximate
+        waterMesh.receiveShadow = true;
+        this.el.setObject3D('water', waterMesh);
+
+        // Scatter vegetation using moisture noise
+        this.scatterVegetation(waterLevel, grassLevel, amplitude);
+      },
+
+      scatterVegetation: function(waterLevel, grassLevel, amplitude) {
+        const plantCount = 800;
+        const worldHalf = this.data.width / 2;
+        const moistureNoise = (x, z) => fbm(x * 0.1 + 10, z * 0.1 + 10, 3);
+
+        for (let i = 0; i < plantCount; i++) {
+          const x = (Math.random() - 0.5) * this.data.width;
+          const z = (Math.random() - 0.5) * this.data.depth;
+          const height = fbm(x * 0.06, z * 0.06, 5) * amplitude;
+          const moisture = moistureNoise(x, z);
+          // Only place on grass or near water edge
+          if (height > waterLevel && height < grassLevel + 0.5) {
+            // Determine plant type based on moisture and random
+            const rand = Math.random();
+            if (moisture > 0.3 && rand < 0.15) {
+              this.createTree(x, height, z);
+            } else if (moisture > 0.6 && rand < 0.2) {
+              this.createMushroom(x, height, z);
+            } else if (rand < 0.1) {
+              this.createCrystal(x, height, z);
+            } else if (rand < 0.3) {
+              this.createBush(x, height, z);
+            }
+          }
+        }
+      },
+
+      createTree: function(x, y, z) {
+        const tree = document.createElement('a-entity');
+        tree.setAttribute('position', `${x} ${y} ${z}`);
+        // Trunk
+        const trunk = document.createElement('a-cylinder');
+        trunk.setAttribute('radius', 0.1);
+        trunk.setAttribute('height', 0.8);
+        trunk.setAttribute('color', '#9b7b6e');
+        trunk.setAttribute('position', '0 0.4 0');
+        tree.appendChild(trunk);
+        // Canopy (flattened sphere)
+        const canopy = document.createElement('a-sphere');
+        canopy.setAttribute('radius', 0.5);
+        canopy.setAttribute('color', '#c9a7eb');
+        canopy.setAttribute('scale', '1 0.6 1');
+        canopy.setAttribute('position', '0 0.9 0');
+        tree.appendChild(canopy);
+        this.el.appendChild(tree);
+      },
+
+      createMushroom: function(x, y, z) {
+        const mushroom = document.createElement('a-entity');
+        mushroom.setAttribute('position', `${x} ${y} ${z}`);
+        // Stem
+        const stem = document.createElement('a-cylinder');
+        stem.setAttribute('radius', 0.05);
+        stem.setAttribute('height', 0.3);
+        stem.setAttribute('color', '#d9c2a8');
+        mushroom.appendChild(stem);
+        // Cap (flattened sphere)
+        const cap = document.createElement('a-sphere');
+        cap.setAttribute('radius', 0.25);
+        cap.setAttribute('color', '#e76f51');
+        cap.setAttribute('scale', '1 0.4 1');
+        cap.setAttribute('position', '0 0.2 0');
+        mushroom.appendChild(cap);
+        this.el.appendChild(mushroom);
+      },
+
+      createCrystal: function(x, y, z) {
+        const crystal = document.createElement('a-entity');
+        crystal.setAttribute('position', `${x} ${y} ${z}`);
+        const octa = document.createElement('a-octahedron');
+        octa.setAttribute('radius', 0.3);
+        octa.setAttribute('color', '#80c4e9');
+        octa.setAttribute('emissive', '#80c4e9');
+        octa.setAttribute('emissive-intensity', '0.3');
+        crystal.appendChild(octa);
+        this.el.appendChild(crystal);
+      },
+
+      createBush: function(x, y, z) {
+        const bush = document.createElement('a-entity');
+        bush.setAttribute('position', `${x} ${y} ${z}`);
+        const sphere = document.createElement('a-sphere');
+        sphere.setAttribute('radius', 0.25);
+        sphere.setAttribute('color', '#90be6d');
+        sphere.setAttribute('scale', '1 0.7 1');
+        bush.appendChild(sphere);
+        this.el.appendChild(bush);
+      }
+    });
+
+    // ---------- Movement Joystick (Fixed) ----------
+    AFRAME.registerComponent('movement-joystick', {
+      schema: {
+        speed: { type: 'number', default: 4 },
+        maxDistance: { type: 'number', default: 40 }
+      },
+      init: function () {
+        this.touchStartPos = null;
+        this.activeTouchId = null;
+        this.moveVector = new THREE.Vector2(0, 0);
+        this.boundHandlers = {
+          touchstart: this.onTouchStart.bind(this),
+          touchmove: this.onTouchMove.bind(this),
+          touchend: this.onTouchEnd.bind(this),
+          mousedown: this.onMouseDown.bind(this),
+          mousemove: this.onMouseMove.bind(this),
+          mouseup: this.onMouseUp.bind(this)
+        };
+        document.addEventListener('touchstart', this.boundHandlers.touchstart, { passive: false });
+        document.addEventListener('touchmove', this.boundHandlers.touchmove, { passive: false });
+        document.addEventListener('touchend', this.boundHandlers.touchend);
+        document.addEventListener('mousedown', this.boundHandlers.mousedown);
+        document.addEventListener('mousemove', this.boundHandlers.mousemove);
+        document.addEventListener('mouseup', this.boundHandlers.mouseup);
+      },
+      onTouchStart(e) {
+        if (this.activeTouchId !== null) return;
+        const touch = e.changedTouches[0];
+        this.touchStartPos = { x: touch.clientX, y: touch.clientY };
+        this.activeTouchId = touch.identifier;
+        this.showJoystick(this.touchStartPos.x, this.touchStartPos.y);
+        e.preventDefault();
+      },
+      onTouchMove(e) {
+        if (this.activeTouchId === null) return;
+        const touch = Array.from(e.changedTouches).find(t => t.identifier === this.activeTouchId);
+        if (!touch) return;
+        const dx = touch.clientX - this.touchStartPos.x;
+        const dy = touch.clientY - this.touchStartPos.y;
+        this.updateJoystick(dx, dy);
+        e.preventDefault();
+      },
+      onTouchEnd(e) {
+        if (this.activeTouchId === null) return;
+        const touch = Array.from(e.changedTouches).find(t => t.identifier === this.activeTouchId);
+        if (touch) {
+          this.moveVector.set(0, 0);
+          this.hideJoystick();
+          this.activeTouchId = null;
+        }
+      },
+      onMouseDown(e) {
+        if (this.activeTouchId !== null) return;
+        this.touchStartPos = { x: e.clientX, y: e.clientY };
+        this.activeTouchId = 'mouse';
+        this.showJoystick(this.touchStartPos.x, this.touchStartPos.y);
+      },
+      onMouseMove(e) {
+        if (this.activeTouchId !== 'mouse') return;
+        const dx = e.clientX - this.touchStartPos.x;
+        const dy = e.clientY - this.touchStartPos.y;
+        this.updateJoystick(dx, dy);
+      },
+      onMouseUp(e) {
+        if (this.activeTouchId !== 'mouse') return;
+        this.moveVector.set(0, 0);
+        this.hideJoystick();
+        this.activeTouchId = null;
+      },
+      showJoystick(x, y) {
+        const base = document.getElementById('joystick-base');
+        const thumb = document.getElementById('joystick-thumb');
+        base.style.display = 'block';
+        thumb.style.display = 'block';
+        base.style.left = (x - 50) + 'px';
+        base.style.top = (y - 50) + 'px';
+        thumb.style.left = (x - 25) + 'px';
+        thumb.style.top = (y - 25) + 'px';
+      },
+      hideJoystick() {
+        document.getElementById('joystick-base').style.display = 'none';
+        document.getElementById('joystick-thumb').style.display = 'none';
+      },
+      updateJoystick(dx, dy) {
+        let len = Math.sqrt(dx*dx + dy*dy);
+        const max = this.data.maxDistance;
+        if (len > max) {
+          dx = dx / len * max;
+          dy = dy / len * max;
+          len = max;
+        }
+        const thumb = document.getElementById('joystick-thumb');
+        thumb.style.left = (this.touchStartPos.x + dx - 25) + 'px';
+        thumb.style.top = (this.touchStartPos.y + dy - 25) + 'px';
+        if (len > 5) {
+          this.moveVector.set(dx / len, dy / len);
+        } else {
+          this.moveVector.set(0, 0);
+        }
+      },
+      tick(time, delta) {
+        const dt = Math.min(delta / 1000, 0.1);
+        if (this.moveVector.lengthSq() > 0) {
+          const el = this.el;
+          const speed = this.data.speed;
+          // Get forward direction (where camera looks)
+          const forward = new THREE.Vector3();
+          el.object3D.getWorldDirection(forward);
+          forward.y = 0;
+          forward.normalize();
+          const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+          const moveDelta = new THREE.Vector3()
+            .addScaledVector(right, this.moveVector.x)
+            .addScaledVector(forward, this.moveVector.y)
+            .multiplyScalar(speed * dt);
+
+          el.object3D.position.add(moveDelta);
+        }
+      },
+      remove() {
+        document.removeEventListener('touchstart', this.boundHandlers.touchstart);
+        document.removeEventListener('touchmove', this.boundHandlers.touchmove);
+        document.removeEventListener('touchend', this.boundHandlers.touchend);
+        document.removeEventListener('mousedown', this.boundHandlers.mousedown);
+        document.removeEventListener('mousemove', this.boundHandlers.mousemove);
+        document.removeEventListener('mouseup', this.boundHandlers.mouseup);
+      }
+    });
+
+    // ---------- Initialization ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      const scene = document.querySelector('a-scene');
+      const terrainEntity = document.createElement('a-entity');
+      terrainEntity.setAttribute('terrain-generator', '');
+      terrainEntity.setAttribute('position', '0 0 0');
+      scene.appendChild(terrainEntity);
+
+      const player = document.querySelector('#player');
+      player.setAttribute('movement-joystick', 'speed: 4');
+    });
+  </script>
+</body>
+</html>

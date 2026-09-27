@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="gruvbox">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ジャーナル</title>
+<style>
+:root { --bg: #282828; --surface: #3c3836; --border: #d79921; --text: #ebdbb2; --accent: #fabd2f; --accent-txt: #282828; --gray: #928374; --sz: 16px; }
+[data-theme="dracula"] { --bg: #282a36; --surface: #44475a; --border: #ff79c6; --text: #f8f8f2; --accent: #bd93f9; --accent-txt: #282a36; --gray: #6272a4; }
+[data-theme="monokai"] { --bg: #272822; --surface: #3e3d32; --border: #f92672; --text: #f8f8f2; --accent: #a6e22e; --accent-txt: #272822; --gray: #75715e; }
+[data-theme="nord"] { --bg: #2e3440; --surface: #3b4252; --border: #88c0d0; --text: #d8dee9; --accent: #81a1c1; --accent-txt: #2e3440; --gray: #4c566a; }
+[data-theme="purple"] { --bg: #ffffff; --surface: #f5f5f5; --border: #8e24aa; --text: #333333; --accent: #8e24aa; --accent-txt: #ffffff; --gray: #888888; }
+[data-theme="amoled"] { --bg: #000000; --surface: #121212; --border: #ffffff; --text: #ffffff; --accent: #ffffff; --accent-txt: #000000; --gray: #555555; }
+[data-theme="cupcake"] { --bg: #faf7f5; --surface: #efeae6; --border: #ffb6c1; --text: #2e282a; --accent: #ffb6c1; --accent-txt: #2e282a; --gray: #b0a8a6; }
+[data-theme="catppuccin"] { --bg: #1e1e2e; --surface: #313244; --border: #cba6f7; --text: #cdd6f4; --accent: #cba6f7; --accent-txt: #11111b; --gray: #6c7086; }
+[data-theme="catppuccin-frappe"] { --bg: #303446; --surface: #414559; --border: #ca9ee6; --text: #c6d0f5; --accent: #ca9ee6; --accent-txt: #232634; --gray: #737994; }
+[data-theme="everforest"] { --bg: #2d353b; --surface: #3d484d; --border: #a7c080; --text: #d3c6aa; --accent: #a7c080; --accent-txt: #232a2e; --gray: #859289; }
+[data-theme="everforest-light"] { --bg: #fdf6e3; --surface: #eee8d5; --border: #859900; --text: #586e75; --accent: #859900; --accent-txt: #fdf6e3; --gray: #93a1a1; }
+[data-theme="tokyo-night"] { --bg: #1a1b26; --surface: #24283c; --border: #7aa2f7; --text: #a9b1d6; --accent: #7aa2f7; --accent-txt: #1d202f; --gray: #565f89; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; border-radius: 0; -webkit-tap-highlight-color: transparent; font-size: var(--sz); }
+body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; display: flex; }
+
+#sb { width: 260px; background: var(--bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; transform: translateX(-100%); transition: transform .2s; position: absolute; height: 100%; z-index: 40; padding-top: calc(env(safe-area-inset-top) + 20px); }
+#sb.open { transform: translateX(0); }
+.sb-btn { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--border); padding: 15px; background: var(--surface); color: var(--text); text-transform: uppercase; cursor: pointer; }
+#hist { flex: 1; overflow-y: auto; background: var(--bg); padding-bottom: 40px; }
+.hist-item { padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; background: var(--surface); margin: 5px; border: 1px solid var(--border); }
+.hist-title { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-preview { opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
+
+#main { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; }
+
+#top-mask { position: fixed; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top) + 85px); background: rgba(0,0,0,0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 30; border-bottom: 1px solid var(--border); display: flex; align-items: flex-end; padding: 0 15px 15px; }
+#sidebar-toggle { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 5px 10px; cursor: pointer; z-index: 32; margin-bottom: 0px; }
+#float-new-btn { margin-left: auto; background: var(--accent); color: var(--accent-txt); border: none; padding: 5px 10px; text-transform: uppercase; cursor: pointer; z-index: 32; margin-bottom: 0px; }
+#thinking-indicator { margin-left: 15px; color: var(--accent); display: none; margin-bottom: 2px; }
+
+#blank-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; gap: 35px; margin-top: calc(env(safe-area-inset-top) + 95px); margin-bottom: 150px; overflow-y: auto; }
+#blank-title { font-weight: normal; text-transform: uppercase; letter-spacing: 1px; color: var(--text); }
+.p-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 440px; }
+.p-card { padding: 20px 10px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; text-align: center; text-transform: uppercase; color: var(--text); transition: background 0.2s; }
+.p-card.active { background: var(--accent); color: var(--accent-txt); border-color: var(--accent); }
+
+#chat { flex: 1; overflow-y: auto; padding: 20px; padding-top: calc(env(safe-area-inset-top) + 105px); padding-bottom: calc(env(safe-area-inset-bottom) + 165px); display: flex; flex-direction: column; gap: 15px; background: var(--bg); }
+.msg { max-width: 85%; padding: 15px; border: 1px solid var(--border); background: var(--surface); word-wrap: break-word; position: relative; }
+.msg.user { align-self: flex-end; border-color: var(--accent); }
+.msg.bot { align-self: flex-start; }
+.msg-hdr { color: var(--gray); text-transform: uppercase; margin-bottom: 6px; }
+
+#bottom-mask { position: fixed; bottom: 0; left: 0; right: 0; height: calc(env(safe-area-inset-bottom) + 135px); background: rgba(0,0,0,0.15); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 30; border-top: 1px solid var(--border); }
+#inp-area { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 55px); left: 15px; right: 15px; display: flex; gap: 10px; z-index: 32; align-items: stretch; }
+textarea { flex: 1; resize: none; height: 50px; background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 12px; outline: none; font-family: inherit; }
+#send-btn { width: 80px; height: 50px; background: var(--accent); color: var(--accent-txt); border: none; text-transform: uppercase; cursor: pointer; font-weight: bold; }
+#send-btn:active { filter: brightness(0.8); }
+
+.box { border: 1px solid var(--border); padding: 25px 15px 15px; position: relative; background: var(--bg); margin-bottom: 25px; }
+.box-title { position: absolute; top: -10px; left: 10px; background: var(--bg); padding: 0 5px; color: var(--text); text-transform: uppercase; }
+
+.full-screen-modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); display: none; flex-direction: column; z-index: 100; overflow-y: auto; padding: 20px; padding-top: calc(env(safe-area-inset-top) + 20px); padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.modal-header h2 { font-weight: normal; text-transform: uppercase; }
+.close-modal-btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); padding: 8px 16px; text-transform: uppercase; cursor: pointer; }
+
+.heading-large { margin: 15px 0 10px; font-weight: normal; color: var(--text); text-transform: uppercase; letter-spacing: 1px; }
+.grid-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.theme-btn { padding: 12px 4px; background: var(--surface); color: var(--text); border: 1px solid var(--border); text-transform: uppercase; text-align: center; cursor: pointer; }
+.theme-btn.active { background: var(--accent); color: var(--accent-txt); }
+
+.font-size-ctrl { display: flex; align-items: center; justify-content: flex-start; gap: 15px; margin-top: 15px; }
+.font-size-ctrl button { width: 45px; height: 45px; background: var(--surface); color: var(--text); border: 1px solid var(--border); cursor: pointer; }
+
+.about-text { line-height: 1.6; color: var(--text); }
+.about-text ul { padding-left: 20px; margin-top: 10px; }
+
+#overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 35; display: none; }
+
+#ob-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 200; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+#ob-form { max-width: 400px; width: 100%; display: flex; flex-direction: column; gap: 15px; }
+#ob-form input { width: 100%; padding: 12px; background: var(--surface); color: var(--text); border: 1px solid var(--border); outline: none; }
+#ob-form button { width: 100%; padding: 12px; background: var(--accent); color: var(--accent-txt); border: none; text-transform: uppercase; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<div id="ob-panel">
+  <div id="ob-form">
+    <h2 style="text-transform:uppercase; font-weight:normal;">ジャーナル (jānaru) Initialization</h2>
+    <p style="opacity:0.8;">Completely offline local data storage engine.</p>
+    <input type="text" id="ob-name" placeholder="YOUR NAME">
+    <input type="text" id="ob-nicks" placeholder="YOUR NICKNAMES (COMMA SEPARATED)">
+    <input type="text" id="ob-cat" placeholder="YOUR CAT'S NAME">
+    <input type="text" id="ob-catnick" placeholder="CAT NICKNAME">
+    <button onclick="saveOnboarding()">Initialize</button>
+  </div>
+</div>
+
+<div id="sb">
+  <button class="sb-btn" onclick="openFullscreenSettings()">⚙ Settings</button>
+  <div id="hist"></div>
+</div>
+
+<div id="main">
+  <div id="top-mask">
+    <button id="sidebar-toggle" onclick="toggleSidebar(event)">☰</button>
+    <span id="thinking-indicator">Thinking \</span>
+    <button id="float-new-btn" onclick="newChat()">+ New Chat</button>
+  </div>
+
+  <div id="blank-screen">
+    <div id="blank-title">What's today's gossip?</div>
+    <div class="p-grid">
+      <div class="p-card" id="card-doctor" onclick="selectPersona('doctor')">Doctor</div>
+      <div class="p-card" id="card-sister" onclick="selectPersona('sister')">Big Sis</div>
+      <div class="p-card" id="card-cat" onclick="selectPersona('cat')">Your Cat</div>
+      <div class="p-card" id="card-spirits" onclick="selectPersona('spirits')">Spirits around you</div>
+    </div>
+  </div>
+
+  <div id="chat" style="display:none"></div>
+  
+  <div id="bottom-mask"></div>
+  <div id="inp-area">
+    <textarea id="msgInp" placeholder="Type journal entry..." oninput="handleTyping(this)" onkeypress="checkSend(event)"></textarea>
+    <button id="send-btn" onclick="sendMsg()">Send</button>
+  </div>
+</div>
+
+<div id="fullscreenSettings" class="full-screen-modal">
+  <div class="modal-header">
+    <h2>Settings</h2>
+    <button class="close-modal-btn" onclick="closeFullscreenSettings()">Close</button>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Theme & Font</span>
+    <h3 class="heading-large">Themes</h3>
+    <div class="grid-btns" id="theme-btns">
+      <button class="theme-btn" id="t-gruvbox" onclick="setTheme('gruvbox')">GRUVBOX</button>
+      <button class="theme-btn" id="t-dracula" onclick="setTheme('dracula')">DRACULA</button>
+      <button class="theme-btn" id="t-monokai" onclick="setTheme('monokai')">MONOKAI</button>
+      <button class="theme-btn" id="t-nord" onclick="setTheme('nord')">NORD</button>
+      <button class="theme-btn" id="t-purple" onclick="setTheme('purple')">PURPLE</button>
+      <button class="theme-btn" id="t-amoled" onclick="setTheme('amoled')">AMOLED</button>
+      <button class="theme-btn" id="t-cupcake" onclick="setTheme('cupcake')">CUPCAKE</button>
+      <button class="theme-btn" id="t-catppuccin" onclick="setTheme('catppuccin')">CATPPUCCIN</button>
+      <button class="theme-btn" id="t-catppuccin-frappe" onclick="setTheme('catppuccin-frappe')">FRAPPE</button>
+      <button class="theme-btn" id="t-everforest" onclick="setTheme('everforest')">EVERFOREST</button>
+      <button class="theme-btn" id="t-everforest-light" onclick="setTheme('everforest-light')">EV-LIGHT</button>
+      <button class="theme-btn" id="t-tokyo-night" onclick="setTheme('tokyo-night')">TOKYO</button>
+    </div>
+    
+    <h3 class="heading-large">Font Size</h3>
+    <div class="font-size-ctrl">
+      <button onclick="adjFont(-1)">-</button>
+      <span id="sz-display">2</span>
+      <button onclick="adjFont(1)">+</button>
+    </div>
+
+    <h3 class="heading-large">Custom Font</h3>
+    <div style="margin-top: 10px;">
+      <button class="theme-btn" style="padding:10px; width:100%;" onclick="document.getElementById('fontFile').click()">Load Custom Font File</button>
+      <input type="file" id="fontFile" accept=".ttf,.otf" style="display:none" onchange="loadCustomFont(event)">
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">Data Actions</span>
+    <div class="grid-btns" style="grid-template-columns: 1fr; gap: 10px;">
+      <button class="theme-btn" style="padding:12px;" onclick="exportAll()">Export All Chats (ZIP)</button>
+      <button class="theme-btn" style="padding:12px;" onclick="document.getElementById('impFile').click()">Import All Chats (ZIP)</button>
+      <input type="file" id="impFile" accept=".zip" style="display:none" onchange="importAll(event)">
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="box-title">About</span>
+    <div class="about-text">
+      ジャーナル (jānaru) is an offline local-first privacy engine designed for deep personal journaling with the active presence of an alternate perspective listening to your thoughts. It functions purely locally to serve as a private space to speak, reflect, and trace personal history.
+      <ul>
+        <li>Doctor: Eliza structural Rogerian psychotherapist script loops.</li>
+        <li>Big Sis: High volume attentive listening state model.</li>
+        <li>Your Cat: Feline dialogue simulation tracking contextual parameters.</li>
+        <li>Spirits around you: Stochastic contextual Markov transition network.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="del-modal" class="full-screen-modal" style="justify-content:center; align-items:center; background:rgba(0,0,0,0.65); display:none; z-index:150;">
+  <div class="box" style="max-width:300px; width:100%; text-align:center;">
+    <span class="box-title">Delete Chat</span>
+    <p style="margin-bottom:20px; line-height:1.4;">Are you sure you want to delete this conversation permanently?</p>
+    <div style="display:flex; gap:10px;">
+      <button class="theme-btn" style="flex:1; background:var(--accent); color:var(--accent-txt); border:none; padding:10px;" onclick="confirmDelete()">Delete</button>
+      <button class="theme-btn" style="flex:1; padding:10px;" onclick="closeDeleteModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="persona.js"></script>
+<script>
+let db, uData={}, activeC=null, cPers='doctor', isTyping=false, typeTimer=null, lastTypeTime=0;
+let mkv={}, spiritTimer=null, pressTimer=null, targetDelId=null;
+const prompts = ["What's today's gossip?", "What new happened today?", "What interesting happened today?"];
+const szMap = { 1: "13px", 2: "16px", 3: "20px" };
+
+const requestDB=indexedDB.open("catgpt_db",2);
+requestDB.onupgradeneeded=e=>{
+  let d=e.target.result;
+  if(!d.objectStoreNames.contains("chats")) d.createObjectStore("chats",{keyPath:"id"});
+  if(!d.objectStoreNames.contains("meta")) d.createObjectStore("meta",{keyPath:"key"});
+};
+requestDB.onsuccess=e=>{
+  db=e.target.result;
+  loadMeta();
+};
+
+function loadMeta(){
+  let tx=db.transaction("meta","readonly"),st=tx.objectStore("meta");
+  st.get("uData").onsuccess=e=>{
+    if(e.target.result){uData=e.target.result.val;initApp();}else{document.getElementById("ob-panel").style.display="flex";}
+  };
+}
+function saveOnboarding(){
+  let n=document.getElementById("ob-name").value.trim(),nk=document.getElementById("ob-nicks").value.trim(),c=document.getElementById("ob-cat").value.trim(),cnk=document.getElementById("ob-catnick").value.trim();
+  if(!n||!c)return;
+  uData={name:n,nicks:nk,catName:c,catNick:cnk,theme:'gruvbox',fontSz:'2',customFontData:''};
+  db.transaction("meta","readwrite").objectStore("meta").put({key:"uData",val:uData});
+  document.getElementById("ob-panel").style.display="none";
+  initApp();
+}
+function initApp(){
+  setTheme(uData.theme);setFontSize(uData.fontSz);
+  if(uData.customFontData) injectCustomFont(uData.customFontData);
+  loadHistory();newChat();loadModel();
+}
+function toggleSidebar(e){
+  e.stopPropagation();
+  let s=document.getElementById("sb"), o=document.getElementById("overlay");
+  s.classList.toggle("open");
+  o.style.display=s.classList.contains("open")?"block":"none";
+}
+function closeSidebar(){
+  document.getElementById("sb").classList.remove("open");
+  document.getElementById("overlay").style.display="none";
+}
+function openFullscreenSettings(){document.getElementById('fullscreenSettings').style.display="flex";closeSidebar();}
+function closeFullscreenSettings(){document.getElementById('fullscreenSettings').style.display="none";}
+
+function setTheme(t){
+  document.body.setAttribute("data-theme",t);uData.theme=t;
+  document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));
+  let ab=document.getElementById('t-'+t);if(ab)ab.classList.add('active');
+  saveSettings();
+}
+function setFontSize(s) {
+  uData.fontSz=s;
+  document.getElementById('sz-display').innerText=s;
+  document.documentElement.style.setProperty("--sz", szMap[s] || "16px");
+  saveSettings();
+}
+function adjFont(v){let s=Math.max(1, Math.min(3, parseInt(uData.fontSz)+v));setFontSize(s)}
+function saveSettings(){if(db)db.transaction("meta","readwrite").objectStore("meta").put({key:"uData",val:uData})}
+
+function loadCustomFont(e) {
+  let f = e.target.files[0]; if(!f) return;
+  let r = new FileReader();
+  r.onload = ev => {
+    uData.customFontData = ev.target.result;
+    injectCustomFont(uData.customFontData);
+    saveSettings();
+  };
+  r.readAsDataURL(f);
+}
+function injectCustomFont(data) {
+  let s = document.getElementById('c-font');
+  if(!s) { s = document.createElement('style'); s.id = 'c-font'; document.head.appendChild(s); }
+  s.textContent = `@font-face { font-family: 'CustomFont'; src: url('${data}'); } * { font-family: 'CustomFont', system-ui, sans-serif !important; }`;
+}
+
+function loadHistory(){
+  let st=db.transaction("chats","readonly").objectStore("chats"), h=document.getElementById("hist"), fr=document.createDocumentFragment();
+  h.innerHTML="";
+  st.openCursor().onsuccess=e=>{
+    let c=e.target.result;
+    if(c){
+      let d=c.value;
+      let div=document.createElement("div");div.className="hist-item";
+      
+      div.onclick=()=>loadChat(d.id);
+      
+      div.onpointerdown=(ev)=>{
+        clearTimeout(pressTimer);
+        let sx=ev.clientX, sy=ev.clientY;
+        pressTimer=setTimeout(()=>{
+          targetDelId=d.id;
+          document.getElementById('del-modal').style.display="flex";
+        },600);
+        div.onpointermove=(mev)=>{
+          if(Math.abs(mev.clientX-sx)>8 || Math.abs(mev.clientY-sy)>8) clearTimeout(pressTimer);
+        };
+      };
+      div.onpointerup=()=>clearTimeout(pressTimer);
+      div.onpointerleave=()=>clearTimeout(pressTimer);
+      div.onpointercancel=()=>clearTimeout(pressTimer);
+      
+      let t=document.createElement("div");t.className="hist-title";t.innerText=new Date(d.id).toLocaleDateString()+" - "+getPersonaLabel(d.p);
+      let p=document.createElement("div");p.className="hist-preview";
+      let lastM=d.m[d.m.length-1];p.innerText=lastM?(lastM.r==='u'?'You: ':'Bot: ')+lastM.t:'Empty chat.';
+      div.appendChild(t);div.appendChild(p);fr.insertBefore(div,fr.firstChild);
+      c.continue();
+    }else{h.appendChild(fr)}
+  };
+}
+
+function closeDeleteModal(){
+  document.getElementById('del-modal').style.display="none";
+  targetDelId=null;
+}
+function confirmDelete(){
+  if(!targetDelId)return;
+  let tx=db.transaction("chats","readwrite"), st=tx.objectStore("chats");
+  st.delete(targetDelId);
+  tx.oncomplete=()=>{
+    if(activeC && activeC.id===targetDelId) newChat();
+    closeDeleteModal();
+    loadHistory();
+  };
+}
+
+function getPersonaLabel(p){
+  if(p==='cat') return uData.catName || "Your Cat";
+  if(p==='doctor') return "Doctor";
+  if(p==='sister') return "Big Sis";
+  if(p==='spirits') return "Spirits around you";
+  return p;
+}
+function selectPersona(p){
+  cPers = p;
+  if(activeC) activeC.p = cPers;
+  document.querySelectorAll('.p-card').forEach(c=>c.classList.remove('active'));
+  let ac=document.getElementById('card-'+p);if(ac)ac.classList.add('active');
+}
+function newChat(){
+  activeC={id:Date.now(),p:cPers,m:[]};
+  document.getElementById('blank-title').innerText = prompts[Math.floor(Math.random()*prompts.length)];
+  document.getElementById('card-cat').innerText = uData.catName ? "Your Cat ("+uData.catName+")" : "Your Cat";
+  selectPersona(cPers);
+  renderChat();
+  closeSidebar();
+  clearTimeout(spiritTimer);
+}
+function loadChat(id){
+  db.transaction("chats","readonly").objectStore("chats").get(id).onsuccess=e=>{
+    activeC=e.target.result;cPers=activeC.p;renderChat();closeSidebar();
+  };
+}
+function renderChat(){
+  let box=document.getElementById("chat"), fr=document.createDocumentFragment(), bs=document.getElementById("blank-screen");
+  box.innerHTML="";
+  clearTimeout(spiritTimer);
+  
+  if(!activeC || activeC.m.length===0){
+    bs.style.display="flex";
+    box.style.display="none";
+  } else {
+    bs.style.display="none";
+    box.style.display="flex";
+    
+    activeC.m.forEach(m=>{
+      let div=document.createElement("div");div.className=`msg ${m.r==='u'?'user':'bot'}`;
+      let mHdr=document.createElement("div");mHdr.className="msg-hdr";
+      mHdr.innerText = m.r==='u' ? uData.name : getPersonaLabel(activeC.p);
+      let bdy=document.createElement("div");bdy.innerText=m.t;
+      div.appendChild(mHdr);div.appendChild(bdy);fr.appendChild(div);
+    });
+    box.appendChild(fr);box.scrollTop=box.scrollHeight;
+    
+    if(cPers === 'spirits') {
+      setupSpiritAutoTalk();
+    }
+  }
+}
+function checkSend(event){if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}}
+
+function handleTyping(el){
+  let now=Date.now();
+  if(!isTyping){isTyping=true;lastTypeTime=now;}
+  clearTimeout(typeTimer);
+  typeTimer=setTimeout(()=>{isTyping=false;},1500);
+  if(now-lastTypeTime>4000&&el.value.trim().length>40){
+    lastTypeTime=now;
+    triggerInterruptionReply();
+  }
+}
+
+function sendMsg(){
+  let inp=document.getElementById("msgInp"), t=inp.value.trim();
+  if(!t)return;
+  inp.value="";isTyping=false;
+  clearTimeout(spiritTimer);
+  activeC.m.push({r:'u',t:t});renderChat();
+  if(cPers!=='spirits')buildMarkov(t);
+  
+  let anim=document.getElementById("thinking-indicator");
+  anim.style.display="inline";
+  
+  let fr=["\\", "|", "/", "-"], idx=0;
+  let tLoop = setInterval(()=>{
+    anim.innerText = "Thinking " + fr[idx++ % 4];
+  }, 120);
+  
+  let delay = Math.random() > 0.5 ? 2000 : (300 + Math.random() * 200);
+  
+  setTimeout(()=>{
+    clearInterval(tLoop);
+    anim.style.display="none";
+    let rep=calcReply(t);
+    activeC.m.push({r:'b',t:rep});renderChat();saveActiveChat();loadHistory();
+  }, delay);
+}
+
+function setupSpiritAutoTalk(){
+  let ms = 15000 + Math.random() * 30000;
+  spiritTimer = setTimeout(()=>{
+    if(activeC && cPers === 'spirits' && !isTyping && Math.random() > 0.93) {
+      let r = genMarkovSentence();
+      if(r && r !== "...") {
+        activeC.m.push({r:'b',t:r});renderChat();saveActiveChat();loadHistory();
+      }
+    }
+  }, ms);
+}
+
+function saveActiveChat(){db.transaction("chats","readwrite").objectStore("chats").put(activeC)}
+
+function loadModel(){
+  db.transaction("meta","readonly").objectStore("meta").get("mkvModel").onsuccess=e=>{
+    if(e.target.result)mkv=e.target.result.val;
+  };
+}
+
+function createZip(files) {
+  let out = [], center = [], cOffset = 0;
+  files.forEach(f => {
+    let nameBuf = new TextEncoder().encode(f.name);
+    let contentBuf = new TextEncoder().encode(f.content);
+    let nLen = nameBuf.length, cLen = contentBuf.length;
+    let lh = new Uint8Array(30 + nLen);
+    lh.set([0x50, 0x4b, 0x03, 0x04, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    lh[18] = cLen & 0xff; lh[19] = (cLen >> 8) & 0xff; lh[20] = (cLen >> 16) & 0xff; lh[21] = (cLen >> 24) & 0xff;
+    lh[22] = cLen & 0xff; lh[23] = (cLen >> 8) & 0xff; lh[24] = (cLen >> 16) & 0xff; lh[25] = (cLen >> 24) & 0xff;
+    lh[26] = nLen & 0xff; lh[27] = (nLen >> 8) & 0xff;
+    lh.set(nameBuf, 30);
+    out.push(lh, contentBuf);
+    let ch = new Uint8Array(46 + nLen);
+    ch.set([0x50, 0x4b, 0x01, 0x02, 10, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    ch[20] = cLen & 0xff; ch[21] = (cLen >> 8) & 0xff; ch[22] = (cLen >> 16) & 0xff; ch[23] = (cLen >> 24) & 0xff;
+    ch[24] = cLen & 0xff; ch[25] = (cLen >> 8) & 0xff; ch[26] = (cLen >> 16) & 0xff; ch[27] = (cLen >> 24) & 0xff;
+    ch[28] = nLen & 0xff; ch[29] = (nLen >> 8) & 0xff;
+    ch[42] = cOffset & 0xff; ch[43] = (cOffset >> 8) & 0xff; ch[44] = (cOffset >> 16) & 0xff; ch[45] = (cOffset >> 24) & 0xff;
+    ch.set(nameBuf, 46);
+    center.push(ch);
+    cOffset += lh.length + contentBuf.length;
+  });
+  let cLen = center.reduce((a, b) => a + b.length, 0);
+  let eocd = new Uint8Array(22);
+  eocd.set([0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0]);
+  let count = files.length;
+  eocd[8] = count & 0xff; eocd[9] = (count >> 8) & 0xff;
+  eocd[10] = count & 0xff; eocd[11] = (count >> 8) & 0xff;
+  eocd[12] = cLen & 0xff; eocd[13] = (cLen >> 8) & 0xff; eocd[14] = (cLen >> 16) & 0xff; eocd[15] = (cLen >> 24) & 0xff;
+  eocd[16] = cOffset & 0xff; eocd[17] = (cOffset >> 8) & 0xff; eocd[18] = (cOffset >> 16) & 0xff; eocd[19] = (cOffset >> 24) & 0xff;
+  out.push(...center, eocd);
+  return new Blob(out, {type: "application/zip"});
+}
+
+function parseZip(buffer) {
+  let view = new DataView(buffer), offset = 0, files = [];
+  while (offset < buffer.byteLength - 30) {
+    if (view.getUint32(offset, true) === 0x04034b50) {
+      let cLen = view.getUint32(offset + 18, true);
+      let nLen = view.getUint16(offset + 26, true);
+      let eLen = view.getUint16(offset + 28, true);
+      let name = new TextDecoder().decode(new Uint8Array(buffer, offset + 30, nLen));
+      let content = new TextDecoder().decode(new Uint8Array(buffer, offset + 30 + nLen + eLen, cLen));
+      files.push({ name, content });
+      offset += 30 + nLen + eLen + cLen;
+    } else {
+      break;
+    }
+  }
+  return files;
+}
+
+function exportAll(){
+  let tx=db.transaction("chats","readonly"), st=tx.objectStore("chats"), allChats=[];
+  st.openCursor().onsuccess=e=>{
+    let c=e.target.result;
+    if(c){ allChats.push(c.value); c.continue(); }
+    else {
+      if(allChats.length===0){ alert("No data."); return; }
+      let files = allChats.map(chat => {
+        let dStr = new Date(chat.id).toISOString().split('T')[0];
+        let name = `journal_${dStr}_${chat.id}.txt`;
+        let content = `ID: ${chat.id}\nPERSONA: ${chat.p}\n`;
+        chat.m.forEach(m => { content += `${m.r==='u'?'U':'B'}: ${m.t}\n`; });
+        return { name, content };
+      });
+      dlBlob(createZip(files), "journal_backup.zip");
+    }
+  };
+}
+
+function importAll(e){
+  let f=e.target.files[0]; if(!f)return;
+  let r=new FileReader();
+  r.onload=ev=>{
+    let files = parseZip(ev.target.result);
+    if(files.length===0){ alert("No entries found."); return; }
+    let tx=db.transaction("chats","readwrite"), st=tx.objectStore("chats");
+    files.forEach(f => {
+      let lines = f.content.split("\n"), id = null, persona = 'doctor', messages = [];
+      lines.forEach(l => {
+        if(l.startsWith("ID: ")) id = parseInt(l.substring(4).trim());
+        else if(l.startsWith("PERSONA: ")) persona = l.substring(9).trim();
+        else if(l.startsWith("U: ")) messages.push({r:'u', t:l.substring(3)});
+        else if(l.startsWith("B: ")) messages.push({r:'b', t:l.substring(3)});
+        else if(messages.length > 0 && l.trim() !== "") messages[messages.length-1].t += "\n" + l;
+      });
+      if(id) st.put({ id: id, p: persona, m: messages });
+    });
+    tx.oncomplete = () => { loadHistory(); newChat(); alert("Import complete."); };
+  };
+  r.readAsArrayBuffer(f);
+}
+
+function dlBlob(b,fn){
+  let a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download=fn; a.click();
+}
+</script>
+</body>
+</html>

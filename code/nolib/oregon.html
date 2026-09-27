@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Oregon Trail</title>
+<style>
+:root { --bg:#1a1410; --panel:#2a2018; --border:#5a4a38; --cream:#e8dcc8; --amber:#d4a030; --red:#c04030; --green:#6a9a50; --blue:#5a8aa8 }
+* { box-sizing: border-box; margin: 0; padding: 0 }
+html, body { background: var(--bg); height: 100%; overflow: hidden }
+body { color: var(--cream); font-family: system-ui, sans-serif; font-size: 15px; line-height: 1.4; display: flex; justify-content: center }
+#app { width: 100%; max-width: 640px; height: 100dvh; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin }
+#app::-webkit-scrollbar { width: 6px }
+#app::-webkit-scrollbar-thumb { background: var(--border) }
+h1 { font-size: 1.2rem; letter-spacing: 3px; text-align: center; text-transform: uppercase; font-weight: bold }
+.sub { text-align: center; font-size: 0.72rem; letter-spacing: 2px; color: var(--amber); margin-bottom: 4px }
+fieldset { border: 1px solid var(--border); padding: 8px 10px 10px }
+legend { font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--amber); padding: 0 5px; background: var(--bg); font-weight: bold }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px }
+.stat { border: 1px solid var(--border); background: var(--panel); padding: 5px 3px; text-align: center }
+.stat .k { font-size: 0.62rem; letter-spacing: 1px; color: var(--amber); text-transform: uppercase }
+.stat .v { font-size: 1.05rem; margin-top: 2px; font-weight: bold; line-height: 1.1 }
+.party-line { display: flex; flex-wrap: wrap; gap: 4px; font-size: 0.82rem }
+.party-member { padding: 3px 8px; border: 1px solid var(--border) }
+.party-member.sick { color: var(--red); border-color: var(--red) }
+.log { font-size: 0.88rem; line-height: 1.5; overflow-y: auto; max-height: 140px }
+.log .entry { padding: 2px 0 }
+.log .danger { color: var(--red) }
+.log .success { color: var(--green) }
+.log .info { color: var(--blue) }
+.seg-row { display: flex; gap: 6px; align-items: center; margin-bottom: 5px }
+.seg-title { font-size: 0.7rem; letter-spacing: 2px; color: var(--amber); text-transform: uppercase; min-width: 58px }
+.segmented { display: flex; flex: 1; border: 1px solid var(--border) }
+.segmented label { flex: 1; cursor: pointer }
+.segmented label input { display: none }
+.segmented label span { display: block; text-align: center; padding: 8px 4px; font-size: 0.74rem; letter-spacing: 1px; text-transform: uppercase; border-right: 1px solid var(--border) }
+.segmented label:last-child span { border-right: none }
+.segmented label input:checked + span { background: var(--amber); color: var(--bg); font-weight: bold }
+.btn-row { display: flex; gap: 6px; margin-top: 8px }
+button { flex: 1; background: var(--amber); color: var(--bg); border: 1px solid var(--amber); padding: 12px 8px; font-family: inherit; font-size: 0.76rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; cursor: pointer }
+button:hover:not(:disabled) { background: transparent; color: var(--amber) }
+button:disabled { opacity: 0.3; cursor: not-allowed }
+button.secondary { background: transparent; border-color: var(--border); color: var(--cream) }
+button.secondary:hover:not(:disabled) { border-color: var(--amber); color: var(--amber) }
+.option { display: block; width: 100%; text-align: left; margin-bottom: 6px; padding: 14px }
+.slider-group { margin-bottom: 12px }
+.slider-header { display: flex; justify-content: space-between; margin-bottom: 3px }
+.slider-label { font-size: 0.76rem; letter-spacing: 2px; color: var(--amber); text-transform: uppercase }
+.slider-value { font-size: 0.95rem; font-weight: bold }
+.slider-hint { font-size: 0.68rem; color: #888; margin-top: 2px }
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; cursor: pointer; display: block }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; background: #3a2a1a; border: 1px solid var(--border) }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--amber); border: 2px solid var(--cream); margin-top: -9px; border-radius: 0 }
+input[type=range]::-moz-range-track { height: 4px; background: #3a2a1a; border: 1px solid var(--border) }
+input[type=range]::-moz-range-thumb { width: 18px; height: 18px; background: var(--amber); border: 2px solid var(--cream); border-radius: 0 }
+.total-line { text-align: center; padding: 8px; border: 1px dashed var(--border); margin-bottom: 8px; font-size: 0.85rem }
+.total-line.over { color: var(--red); border-color: var(--red) }
+#hunt-canvas { display: block; width: 100%; aspect-ratio: 3 / 2; border: 1px solid var(--border); background: #6a8aa8; cursor: crosshair; touch-action: none }
+.hunt-info { display: flex; justify-content: space-around; margin-top: 6px; font-size: 0.82rem; color: var(--amber) }
+.hunt-info b { color: var(--cream) }
+.sticky-actions { position: sticky; bottom: 0; z-index: 10; background: var(--bg); margin-top: auto; box-shadow: 0 -6px 10px var(--bg) }
+.sticky-actions fieldset { background: var(--bg) }
+.screen-h1 { margin-top: 10px }
+@media (orientation: landscape) and (max-height: 520px)
+{
+  h1 { font-size: 1rem }
+  .sub { display: none }
+  #app { padding: 6px; gap: 4px }
+  fieldset { padding: 5px 8px 7px }
+  .log { max-height: 70px }
+  .stat .v { font-size: 0.95rem }
+  .stat .k { font-size: 0.55rem }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── audio ───
+let ac = null;
+
+function audio()
+{
+  if (!ac)
+  {
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { ac = null; }
+  }
+  return ac;
+}
+
+function tone(freq, dur, type, vol)
+{
+  const c = audio();
+  if (!c) return;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(vol || 0.05, c.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+  o.connect(g).connect(c.destination);
+  o.start();
+  o.stop(c.currentTime + dur);
+}
+
+function sClick() { tone(660, 0.05, 'square', 0.04); }
+function sGood() { tone(660, 0.08); setTimeout(function() { tone(990, 0.12); }, 70); }
+function sBad() { tone(220, 0.15, 'sawtooth', 0.05); }
+function sCoin() { tone(1200, 0.05, 'square', 0.05); setTimeout(function() { tone(1800, 0.06, 'square', 0.05); }, 45); }
+function sDeath() { tone(200, 0.3); setTimeout(function() { tone(140, 0.5); }, 250); setTimeout(function() { tone(90, 0.8); }, 550); }
+
+function sWin()
+{
+  const notes = [523, 659, 784, 1047];
+  for (let i = 0; i < notes.length; i++)
+  {
+    (function(f, delay) { setTimeout(function() { tone(f, 0.2); }, delay); })(notes[i], i * 140);
+  }
+}
+
+function sGun()
+{
+  const c = audio();
+  if (!c) return;
+  const len = Math.floor(c.sampleRate * 0.12);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const filt = c.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.frequency.value = 1800;
+  const g = c.createGain();
+  g.gain.value = 0.15;
+  src.connect(filt).connect(g).connect(c.destination);
+  src.start();
+}
+
+function sHit() { tone(140, 0.1, 'square', 0.08); tone(90, 0.15); }
+
+// ─── signals ───
+let active = null;
+
+function signal(initial)
+{
+  let value = initial;
+  const subs = new Set();
+  return {
+    get()
+    {
+      if (active)
+      {
+        subs.add(active);
+        active.deps.add(subs);
+      }
+      return value;
+    },
+    set(v)
+    {
+      if (Object.is(v, value)) return;
+      value = v;
+      const copy = Array.from(subs);
+      for (let i = 0; i < copy.length; i++) copy[i]();
+    },
+    peek: function() { return value; }
+  };
+}
+
+function effect(fn)
+{
+  function run()
+  {
+    run.deps.forEach(function(d) { d.delete(run); });
+    run.deps.clear();
+    const prev = active;
+    active = run;
+    try { fn(); } finally { active = prev; }
+  }
+  run.deps = new Set();
+  run();
+  return function() { run.deps.forEach(function(d) { d.delete(run); }); };
+}
+
+function computed(fn)
+{
+  const s = signal(undefined);
+  effect(function() { s.set(fn()); });
+  return s;
+}
+
+let screenEffects = [];
+function watch(fn) { screenEffects.push(effect(fn)); }
+
+function disposeScreenEffects()
+{
+  for (let i = 0; i < screenEffects.length; i++) screenEffects[i]();
+  screenEffects = [];
+}
+
+function bindText(id, source)
+{
+  const el = document.getElementById(id);
+  const read = typeof source === 'function' ? source : function() { return source.get(); };
+  watch(function() { el.textContent = read(); });
+}
+
+// ─── data ───
+const OCCUPATIONS = [
+  { name: 'Banker',    money: 800, bonus: 'Starts with more cash' },
+  { name: 'Carpenter', money: 500, bonus: 'Repairs cost less' },
+  { name: 'Farmer',    money: 300, bonus: 'Food lasts longer' }
+];
+
+const PRICES = { oxen: 60, food: 0.40, clothing: 10, ammo: 5, spareParts: 15, medicine: 25 };
+
+const LANDMARKS = [
+  { mile: 0,    name: 'Independence, Missouri' },
+  { mile: 304,  name: 'Kansas River Crossing',   river: true },
+  { mile: 554,  name: 'Big Blue River Crossing', river: true },
+  { mile: 640,  name: 'Fort Kearney',            trade: true },
+  { mile: 989,  name: 'Chimney Rock' },
+  { mile: 1151, name: 'Fort Laramie',            trade: true },
+  { mile: 1295, name: 'Independence Rock' },
+  { mile: 1424, name: 'South Pass' },
+  { mile: 1534, name: 'Green River Crossing',    river: true },
+  { mile: 1647, name: 'Fort Hall',               trade: true },
+  { mile: 1826, name: 'Snake River Crossing',    river: true },
+  { mile: 1901, name: 'Fort Boise',              trade: true },
+  { mile: 2080, name: 'The Dalles' },
+  { mile: 2170, name: 'Oregon City' }
+];
+
+const TOTAL_MILES = 2170;
+const HUNT_MIN = 300;
+const HUNT_MAX = 1700;
+const PARTY_SIZE = 5;
+
+const PACES = {
+  steady:    { min: 14, max: 20, healthCost: 0, label: 'Steady' },
+  strenuous: { min: 20, max: 26, healthCost: 2, label: 'Strenuous' },
+  grueling:  { min: 26, max: 34, healthCost: 5, label: 'Grueling' }
+};
+
+const RATIONS = {
+  filling:      { lbs: 2.0, healthGain: 1,  label: 'Filling' },
+  meager:       { lbs: 1.5, healthGain: 0,  label: 'Meager' },
+  'bare-bones': { lbs: 1.0, healthGain: -2, label: 'Bare' }
+};
+
+const ILLNESSES = ['Dysentery', 'Cholera', 'Typhoid', 'Measles', 'A fever', 'Exhaustion', 'Influenza'];
+
+// ─── state ───
+const screen          = signal('start');
+const occupation      = signal(null);
+const money           = signal(0);
+const day             = signal(1);
+const miles           = signal(0);
+const oxen            = signal(0);
+const food            = signal(0);
+const clothing        = signal(0);
+const ammo            = signal(0);
+const spareParts      = signal(0);
+const medicine        = signal(0);
+const health          = signal(100);
+const pace            = signal('steady');
+const rations         = signal('filling');
+const journal         = signal([]);
+const causeOfDeath    = signal(null);
+const currentLandmark = signal(null);
+const atRiver         = signal(false);
+const atTrade         = signal(false);
+const huntResult      = signal(null);
+const party           = signal([
+  { name: 'You',       sick: false },
+  { name: 'Sarah',     sick: false },
+  { name: 'Thomas',    sick: false },
+  { name: 'Elizabeth', sick: false },
+  { name: 'William',   sick: false }
+]);
+
+const buyOxen       = signal(0);
+const buyFood       = signal(0);
+const buyClothing   = signal(0);
+const buyAmmo       = signal(0);
+const buySpareParts = signal(0);
+const buyMedicine   = signal(0);
+
+const sickCount = computed(function()
+{
+  const list = party.get();
+  let n = 0;
+  for (let i = 0; i < list.length; i++) if (list[i].sick) n++;
+  return n;
+});
+
+const canHunt = computed(function()
+{
+  const m = miles.get();
+  return m >= HUNT_MIN && m <= HUNT_MAX;
+});
+
+const cartTotal = computed(function()
+{
+  return buyOxen.get() * PRICES.oxen
+       + buyFood.get() * PRICES.food
+       + buyClothing.get() * PRICES.clothing
+       + buyAmmo.get() * PRICES.ammo
+       + buySpareParts.get() * PRICES.spareParts
+       + buyMedicine.get() * PRICES.medicine;
+});
+
+function log(msg, type)
+{
+  const list = journal.get().slice();
+  list.push({ msg: msg, type: type || 'info' });
+  if (list.length > 40) list.shift();
+  journal.set(list);
+}
+
+// ─── actions ───
+function pickOccupation(o)
+{
+  sClick();
+  occupation.set(o);
+  money.set(o.money);
+  buyOxen.set(0);
+  buyFood.set(0);
+  buyClothing.set(0);
+  buyAmmo.set(0);
+  buySpareParts.set(0);
+  buyMedicine.set(0);
+  screen.set('store');
+}
+
+function depart()
+{
+  if (cartTotal.get() > money.get()) return;
+  if (buyOxen.get() < 1) { log('You need at least one ox!', 'danger'); sBad(); return; }
+  if (buyFood.get() < 50) { log('Buy more food first.', 'danger'); sBad(); return; }
+
+  sCoin();
+  money.set(money.get() - cartTotal.get());
+  oxen.set(buyOxen.get());
+  food.set(buyFood.get());
+  clothing.set(buyClothing.get());
+  ammo.set(buyAmmo.get());
+  spareParts.set(buySpareParts.get());
+  medicine.set(buyMedicine.get());
+
+  journal.set([]);
+  log('You depart Independence, Missouri on April 1, 1848.', 'success');
+  log('A ' + occupation.get().name + ' with ' + oxen.get() + ' oxen and ' + food.get() + ' lbs food.');
+  screen.set('travel');
+}
+
+function sicken()
+{
+  const list = party.get();
+  const healthy = list.filter(function(m) { return !m.sick; });
+  if (healthy.length === 0) return;
+  const target = healthy[Math.floor(Math.random() * healthy.length)];
+  party.set(list.map(function(m) { return m.name === target.name ? { name: m.name, sick: true } : m; }));
+  const ill = ILLNESSES[Math.floor(Math.random() * ILLNESSES.length)];
+  log(target.name + ' has come down with ' + ill + '.', 'danger');
+  sBad();
+}
+
+function treat()
+{
+  if (medicine.get() < 1) { log('No medicine left!', 'danger'); sBad(); return; }
+  const list = party.get();
+  let target = null;
+  for (let i = 0; i < list.length; i++) if (list[i].sick) { target = list[i]; break; }
+  if (!target) { log('Nobody is sick.', 'info'); return; }
+  medicine.set(medicine.get() - 1);
+  party.set(list.map(function(m) { return m.name === target.name ? { name: m.name, sick: false } : m; }));
+  log(target.name + ' recovered after treatment.', 'success');
+  sGood();
+}
+
+function randomEvent()
+{
+  if (Math.random() > 0.42) return;
+  const r = Math.random();
+  if (r < 0.40) { sicken(); return; }
+  if (r < 0.48) { food.set(Math.max(0, food.get() - 25)); log('Spoilage! -25 lbs food.', 'danger'); sBad(); return; }
+  if (r < 0.54) { food.set(food.get() + 10); log('Wild berries. +10 lbs food.', 'success'); return; }
+  if (r < 0.60) { ammo.set(Math.max(0, ammo.get() - 1)); log('Lost a box of ammo.', 'danger'); sBad(); return; }
+  if (r < 0.66) { spareParts.set(Math.max(0, spareParts.get() - 1)); log('A wheel broke. -1 spare.', 'danger'); sBad(); return; }
+  if (r < 0.70) { money.set(Math.max(0, money.get() - 20)); log('Thieves stole $20!', 'danger'); sBad(); return; }
+  if (r < 0.74) { health.set(Math.max(0, health.get() - 8)); log('A bad storm. -8 health.', 'danger'); sBad(); return; }
+  if (r < 0.80) { oxen.set(oxen.get() + 1); log('Found a stray ox! +1 ox.', 'success'); sGood(); return; }
+  if (r < 0.86) { oxen.set(Math.max(0, oxen.get() - 1)); log('An ox wandered off.', 'danger'); sBad(); return; }
+  if (r < 0.92) { health.set(Math.min(100, health.get() + 5)); log('Clear skies. Good rest.', 'success'); return; }
+  miles.set(miles.get() + 4);
+  log('Favorable winds. +4 miles.', 'success');
+}
+
+function checkLandmark(prev, next)
+{
+  for (let i = 0; i < LANDMARKS.length; i++)
+  {
+    const lm = LANDMARKS[i];
+    if (lm.mile > prev && lm.mile <= next)
+    {
+      if (lm.mile === TOTAL_MILES) { sWin(); screen.set('win'); return true; }
+      currentLandmark.set(lm);
+      atRiver.set(!!lm.river);
+      atTrade.set(!!lm.trade);
+      screen.set('landmark');
+      return true;
+    }
+  }
+  return false;
+}
+
+function travelDay()
+{
+  if (screen.get() !== 'travel') return;
+  sClick();
+
+  const p = PACES[pace.get()];
+  const r = RATIONS[rations.get()];
+
+  day.set(day.get() + 1);
+
+  const base = p.min + Math.random() * (p.max - p.min);
+  const speedMod = Math.min(1.5, 0.65 + oxen.get() * 0.12);
+  const gained = Math.floor(base * speedMod);
+  const prev = miles.get();
+  const next = Math.min(TOTAL_MILES, prev + gained);
+  miles.set(next);
+
+  let lbs = r.lbs * PARTY_SIZE;
+  if (occupation.get().name === 'Farmer') lbs = lbs * 0.85;
+  const newFood = Math.max(0, food.get() - Math.round(lbs));
+  food.set(newFood);
+
+  let delta = r.healthGain - p.healthCost;
+  if (newFood === 0) { delta = delta - 6; log('You are starving!', 'danger'); sBad(); }
+  delta = delta - sickCount.get() * 3;
+  health.set(Math.max(0, Math.min(100, health.get() + delta)));
+
+  log('Day ' + day.get() + ': traveled ' + gained + ' miles to ' + next + '.');
+  randomEvent();
+
+  if (sickCount.get() > 0 && Math.random() < 0.08)
+  {
+    const list = party.get();
+    let target = null;
+    for (let i = 0; i < list.length; i++) if (list[i].sick) { target = list[i]; break; }
+    if (target)
+    {
+      party.set(list.map(function(m) { return m.name === target.name ? { name: m.name, sick: false } : m; }));
+      log(target.name + ' recovered on their own.', 'success');
+    }
+  }
+
+  if (health.get() <= 0)
+  {
+    causeOfDeath.set('You succumbed to illness and exhaustion.');
+    sDeath();
+    screen.set('gameover');
+    return;
+  }
+  if (oxen.get() < 1)
+  {
+    causeOfDeath.set('No oxen to pull the wagon. You are stranded.');
+    sDeath();
+    screen.set('gameover');
+    return;
+  }
+  if (checkLandmark(prev, next)) return;
+  if (next >= TOTAL_MILES) { sWin(); screen.set('win'); }
+}
+
+function leaveLandmark()
+{
+  sClick();
+  currentLandmark.set(null);
+  atRiver.set(false);
+  atTrade.set(false);
+  screen.set('travel');
+}
+
+function crossRiver(method)
+{
+  log('At ' + currentLandmark.get().name + ', you chose to ' + method + '.');
+
+  if (method === 'ford')
+  {
+    if (Math.random() < 0.25)
+    {
+      log('The wagon tips! Lost food and supplies.', 'danger');
+      food.set(Math.max(0, food.get() - 60));
+      spareParts.set(Math.max(0, spareParts.get() - 1));
+      sBad();
+    }
+    else { log('Fords the river successfully.', 'success'); sGood(); }
+  }
+  else if (method === 'caulk')
+  {
+    if (spareParts.get() < 1) { log('Need at least 1 spare part!', 'danger'); sBad(); return; }
+    spareParts.set(spareParts.get() - 1);
+    if (Math.random() < 0.15)
+    {
+      log('The wagon floods mid-crossing!', 'danger');
+      food.set(Math.max(0, food.get() - 90));
+      sBad();
+    }
+    else { log('Caulked the wagon and floated across.', 'success'); sGood(); }
+  }
+  else if (method === 'wait')
+  {
+    day.set(day.get() + 2);
+    log('Waited two days, then crossed safely.', 'success');
+    if (Math.random() < 0.15) sicken();
+  }
+
+  if (health.get() <= 0)
+  {
+    causeOfDeath.set('You died at a river crossing.');
+    sDeath();
+    screen.set('gameover');
+    return;
+  }
+  leaveLandmark();
+}
+
+function buyAt(item, qty, each)
+{
+  const cost = qty * each;
+  if (cost > money.get()) { sBad(); return; }
+  money.set(money.get() - cost);
+  if (item === 'food') food.set(food.get() + qty);
+  if (item === 'ammo') ammo.set(ammo.get() + qty);
+  if (item === 'medicine') medicine.set(medicine.get() + qty);
+  if (item === 'oxen') oxen.set(oxen.get() + qty);
+  log('Bought ' + qty + ' ' + item + ' for $' + cost + '.', 'success');
+  sCoin();
+}
+
+// ─── hunt ───
+let hunt = null;
+let huntRAF = null;
+
+function startHunt()
+{
+  if (!canHunt.get()) return;
+  sClick();
+  screen.set('hunt');
+}
+
+function initHunt()
+{
+  const canvas = document.getElementById('hunt-canvas');
+  if (!canvas) return;
+
+  canvas.width = 600;
+  canvas.height = 400;
+
+  hunt = {
+    canvas: canvas,
+    ctx: canvas.getContext('2d'),
+    W: 600,
+    H: 400,
+    groundTop: 140,
+    groundBot: 380,
+    gun: { x: 300, y: 380 },
+    aim: { x: 300, y: 240 },
+    bullets: [],
+    buffalo: [],
+    blood: [],
+    ammoLeft: ammo.get() * 20,
+    ammoStart: ammo.get() * 20,
+    kills: 0,
+    timeLeft: 30,
+    nextSpawn: 0,
+    panicked: false,
+    last: performance.now(),
+    running: true
+  };
+
+  for (let i = 0; i < 4; i++) spawnBuffalo(true);
+
+  canvas.addEventListener('pointermove', aimAt);
+  canvas.addEventListener('pointerdown', aimAt);
+  document.getElementById('hunt-fire').onclick = fire;
+
+  huntRAF = requestAnimationFrame(huntLoop);
+}
+
+function spawnBuffalo(initial)
+{
+  const depth = Math.random();
+  const scale = 0.5 + depth * 0.7;
+  const y = hunt.groundTop + depth * (hunt.groundBot - hunt.groundTop);
+  const x = initial ? 80 + Math.random() * (hunt.W - 160) : hunt.W + 60;
+  hunt.buffalo.push({
+    x: x,
+    y: y,
+    w: 46 * scale,
+    h: 28 * scale,
+    vx: (Math.random() - 0.5) * 40,
+    vy: (Math.random() - 0.5) * 15,
+    timer: 0.5 + Math.random() * 1.5,
+    alive: true,
+    fade: 0
+  });
+}
+
+function aimAt(e)
+{
+  if (!hunt) return;
+  const rect = hunt.canvas.getBoundingClientRect();
+  hunt.aim.x = (e.clientX - rect.left) * (hunt.W / rect.width);
+  hunt.aim.y = (e.clientY - rect.top) * (hunt.H / rect.height);
+}
+
+function fire()
+{
+  if (!hunt || !hunt.running || hunt.ammoLeft <= 0) return;
+  hunt.ammoLeft--;
+  sGun();
+
+  const dx = hunt.aim.x - hunt.gun.x;
+  const dy = hunt.aim.y - hunt.gun.y;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  const spd = 900;
+
+  hunt.bullets.push({
+    x: hunt.gun.x,
+    y: hunt.gun.y,
+    vx: (dx / len) * spd,
+    vy: (dy / len) * spd,
+    life: 1.5
+  });
+
+  if (!hunt.panicked)
+  {
+    hunt.panicked = true;
+    for (let i = 0; i < hunt.buffalo.length; i++) hunt.buffalo[i].timer = 0;
+  }
+}
+
+function huntLoop(now)
+{
+  if (!hunt || !hunt.running) return;
+  const dt = Math.min((now - hunt.last) / 1000, 0.05);
+  hunt.last = now;
+  hunt.timeLeft -= dt;
+
+  hunt.nextSpawn -= dt;
+  if (hunt.nextSpawn <= 0 && hunt.timeLeft > 4 && hunt.buffalo.length < 5)
+  {
+    if (!hunt.panicked) spawnBuffalo(false);
+    hunt.nextSpawn = 3 + Math.random() * 3;
+  }
+
+  for (let i = 0; i < hunt.buffalo.length; i++)
+  {
+    const b = hunt.buffalo[i];
+    if (!b.alive) { b.fade += dt; continue; }
+
+    b.timer -= dt;
+    if (b.timer <= 0)
+    {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = hunt.panicked ? 180 + Math.random() * 140 : 15 + Math.random() * 25;
+      b.vx = Math.cos(ang) * spd;
+      b.vy = Math.sin(ang) * spd * 0.4;
+      b.timer = hunt.panicked ? 0.3 + Math.random() * 0.6 : 1 + Math.random() * 2;
+    }
+
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+
+    if (b.x < 30) { b.x = 30; b.vx = Math.abs(b.vx); }
+    if (b.x > hunt.W - 30) { b.x = hunt.W - 30; b.vx = -Math.abs(b.vx); }
+    if (b.y < hunt.groundTop + 20) { b.y = hunt.groundTop + 20; b.vy = Math.abs(b.vy); }
+    if (b.y > hunt.groundBot - 5) { b.y = hunt.groundBot - 5; b.vy = -Math.abs(b.vy); }
+  }
+
+  hunt.buffalo = hunt.buffalo.filter(function(b) { return b.alive || b.fade < 1.2; });
+
+  for (let i = 0; i < hunt.bullets.length; i++)
+  {
+    const bullet = hunt.bullets[i];
+
+    const travelX = bullet.vx * dt;
+    const travelY = bullet.vy * dt;
+    const dist = Math.sqrt(travelX * travelX + travelY * travelY);
+    const steps = Math.max(1, Math.ceil(dist / 6));
+    const stepX = travelX / steps;
+    const stepY = travelY / steps;
+
+    for (let s = 0; s < steps; s++)
+    {
+      bullet.x += stepX;
+      bullet.y += stepY;
+
+      let hit = false;
+      for (let j = 0; j < hunt.buffalo.length; j++)
+      {
+        const b = hunt.buffalo[j];
+        if (!b.alive) continue;
+        const left = b.x - b.w / 2 - b.w * 0.3;
+        const right = b.x + b.w / 2;
+        const top = b.y - b.h * 1.25;
+        const bot = b.y + 4;
+        if (bullet.x >= left && bullet.x <= right && bullet.y >= top && bullet.y <= bot)
+        {
+          b.alive = false;
+          hunt.kills++;
+          sHit();
+          for (let k = 0; k < 10; k++)
+          {
+            hunt.blood.push({
+              x: b.x,
+              y: b.y - b.h,
+              vx: (Math.random() - 0.5) * 250,
+              vy: -Math.random() * 180,
+              life: 0.7
+            });
+          }
+          hit = true;
+          break;
+        }
+      }
+      if (hit) { bullet.life = 0; break; }
+    }
+  }
+
+  hunt.bullets = hunt.bullets.filter(function(b)
+  {
+    return b.life > 0 && b.x > -10 && b.x < hunt.W + 10 && b.y > -10 && b.y < hunt.H + 10;
+  });
+
+  for (let i = 0; i < hunt.blood.length; i++)
+  {
+    const p = hunt.blood[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 380 * dt;
+    p.life -= dt;
+  }
+  hunt.blood = hunt.blood.filter(function(p) { return p.life > 0; });
+
+  draw();
+
+  const kEl = document.getElementById('hunt-kills');
+  const aEl = document.getElementById('hunt-ammo');
+  const tEl = document.getElementById('hunt-time');
+  if (kEl) kEl.textContent = hunt.kills;
+  if (aEl) aEl.textContent = hunt.ammoLeft;
+  if (tEl) tEl.textContent = Math.ceil(hunt.timeLeft);
+
+  if (hunt.timeLeft <= 0 || hunt.ammoLeft <= 0) { endHunt(); return; }
+
+  let anyAlive = false;
+  for (let i = 0; i < hunt.buffalo.length; i++)
+  {
+    if (hunt.buffalo[i].alive) { anyAlive = true; break; }
+  }
+  if (!anyAlive && hunt.kills > 0) { endHunt(); return; }
+
+  huntRAF = requestAnimationFrame(huntLoop);
+}
+
+function draw()
+{
+  const ctx = hunt.ctx;
+  const W = hunt.W;
+  const H = hunt.H;
+
+  ctx.fillStyle = '#6a8aa8';
+  ctx.fillRect(0, 0, W, hunt.groundTop);
+  ctx.fillStyle = '#7a9060';
+  ctx.fillRect(0, hunt.groundTop, W, H - hunt.groundTop);
+
+  const sorted = hunt.buffalo.slice().sort(function(a, b) { return a.y - b.y; });
+
+  for (let i = 0; i < sorted.length; i++)
+  {
+    const b = sorted[i];
+    ctx.globalAlpha = b.alive ? 1 : Math.max(0, 1 - b.fade / 1.2);
+    const x = b.x;
+    const y = b.y;
+    const w = b.w;
+    const h = b.h;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(x - w / 2, y + 2, w, 3);
+
+    ctx.fillStyle = b.alive ? '#4a3520' : '#2a1a10';
+    ctx.fillRect(x - w / 2, y - h, w, h);
+    ctx.fillRect(x - w / 2 + w * 0.15, y - h - h * 0.2, w * 0.4, h * 0.25);
+    ctx.fillRect(x - w / 2 - w * 0.3, y - h + h * 0.15, w * 0.32, h * 0.75);
+
+    ctx.fillStyle = '#d8c8a0';
+    ctx.fillRect(x - w / 2 - w * 0.28, y - h + h * 0.1, 2, 4);
+
+    ctx.fillStyle = '#3a2818';
+    const legH = h * 0.3;
+    ctx.fillRect(x - w / 2 + w * 0.15, y - legH, w * 0.1, legH);
+    ctx.fillRect(x - w / 2 + w * 0.4, y - legH, w * 0.1, legH);
+    ctx.fillRect(x + w / 2 - w * 0.3, y - legH, w * 0.1, legH);
+    ctx.fillRect(x + w / 2 - w * 0.1, y - legH, w * 0.1, legH);
+
+    if (b.alive)
+    {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - w / 2 - w * 0.2, y - h + h * 0.35, 2, 2);
+    }
+  }
+
+  ctx.globalAlpha = 1;
+
+  for (let i = 0; i < hunt.blood.length; i++)
+  {
+    const p = hunt.blood[i];
+    ctx.fillStyle = 'rgba(160,32,32,' + Math.max(0, p.life / 0.7) + ')';
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+
+  for (let i = 0; i < hunt.bullets.length; i++)
+  {
+    const b = hunt.bullets[i];
+    ctx.fillStyle = '#ffe080';
+    ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+  }
+
+  const g = hunt.gun;
+  ctx.fillStyle = '#2a2018';
+  ctx.fillRect(g.x - 20, g.y - 5, 40, 15);
+  const ang = Math.atan2(hunt.aim.y - g.y, hunt.aim.x - g.x);
+  ctx.save();
+  ctx.translate(g.x, g.y);
+  ctx.rotate(ang);
+  ctx.fillStyle = '#1a1410';
+  ctx.fillRect(0, -3, 26, 6);
+  ctx.restore();
+
+  const cx = hunt.aim.x;
+  const cy = hunt.aim.y;
+  ctx.strokeStyle = '#d4a030';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, cy); ctx.lineTo(cx - 5, cy);
+  ctx.moveTo(cx + 5, cy);  ctx.lineTo(cx + 16, cy);
+  ctx.moveTo(cx, cy - 16); ctx.lineTo(cx, cy - 5);
+  ctx.moveTo(cx, cy + 5);  ctx.lineTo(cx, cy + 16);
+  ctx.stroke();
+}
+
+function endHunt()
+{
+  if (!hunt) return;
+  hunt.running = false;
+  if (huntRAF) cancelAnimationFrame(huntRAF);
+  huntRAF = null;
+
+  const fired = hunt.ammoStart - hunt.ammoLeft;
+  const boxes = Math.ceil(fired / 20);
+  ammo.set(Math.max(0, ammo.get() - boxes));
+
+  const meat = Math.min(hunt.kills * 100, 300);
+  food.set(food.get() + meat);
+
+  huntResult.set({
+    kills: hunt.kills,
+    meat: meat,
+    ammoUsed: boxes,
+    foodAfter: food.get()
+  });
+
+  hunt = null;
+  screen.set('hunt-result');
+}
+
+// ─── screens ───
+const app = document.getElementById('app');
+
+function renderStart()
+{
+  app.innerHTML = '<h1 class="screen-h1">Oregon Trail</h1>'
+    + '<div class="sub">1848 · A journey west</div>'
+    + '<fieldset><legend>Briefing</legend>'
+    + '<div class="log" style="max-height:none">'
+    + '<div class="entry">Travel 2,170 miles from Independence to Oregon City.</div>'
+    + '<div class="entry">Buy supplies, choose your pace, and survive.</div>'
+    + '<div class="entry info">Sickness, hunger, and rivers await.</div>'
+    + '<div class="entry success">Reach Oregon City to win.</div>'
+    + '</div>'
+    + '<div class="btn-row"><button id="btn-begin">Begin</button></div>'
+    + '</fieldset>';
+  document.getElementById('btn-begin').onclick = function() { sClick(); screen.set('occupation'); };
+}
+
+function renderOccupation()
+{
+  app.innerHTML = '<h1 class="screen-h1">Choose Occupation</h1>'
+    + '<div class="sub">Starting funds vary</div>'
+    + '<fieldset><legend>Occupation</legend><div id="occ-list"></div></fieldset>';
+  const list = document.getElementById('occ-list');
+  for (let i = 0; i < OCCUPATIONS.length; i++)
+  {
+    const o = OCCUPATIONS[i];
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = '<div style="font-size:1rem;letter-spacing:2px;">' + o.name + '</div>'
+      + '<div style="font-size:0.74rem;opacity:0.7;margin-top:4px;">$' + o.money + ' · ' + o.bonus + '</div>';
+    (function(occ) { btn.onclick = function() { pickOccupation(occ); }; })(o);
+    list.appendChild(btn);
+  }
+}
+
+function renderStore()
+{
+  app.innerHTML = '<h1>General Store</h1>'
+    + '<div class="sub">Money $<span id="store-money">0</span></div>'
+    + '<fieldset><legend>Supplies</legend>'
+    + '<div id="store-sliders"></div>'
+    + '<div class="total-line" id="total-line"></div>'
+    + '</fieldset>'
+    + '<div class="sticky-actions"><fieldset><div class="btn-row" style="margin-top:0">'
+    + '<button id="btn-depart">Depart</button>'
+    + '<button id="btn-back" class="secondary">Back</button>'
+    + '</div></fieldset></div>';
+
+  bindText('store-money', money);
+
+  const host = document.getElementById('store-sliders');
+
+  function addSlider(label, hint, sig, max, step)
+  {
+    const group = document.createElement('div');
+    group.className = 'slider-group';
+    group.innerHTML = '<div class="slider-header">'
+      + '<span class="slider-label">' + label + '</span>'
+      + '<span class="slider-value"></span></div>'
+      + '<input type="range" min="0" max="' + max + '" step="' + (step || 1) + '">'
+      + '<div class="slider-hint">' + hint + '</div>';
+    const vEl = group.querySelector('.slider-value');
+    const input = group.querySelector('input');
+    watch(function()
+    {
+      const v = sig.get();
+      if (input.value !== String(v)) input.value = String(v);
+      vEl.textContent = String(v);
+    });
+    input.oninput = function() { sig.set(parseFloat(input.value)); };
+    host.appendChild(group);
+  }
+
+  addSlider('Oxen',        '$60 each',         buyOxen,        6);
+  addSlider('Food',        '$0.40 per lb',     buyFood,        1000, 25);
+  addSlider('Clothing',    '$10 per set',      buyClothing,    10);
+  addSlider('Ammo',        '$5 per box (20)',  buyAmmo,        20);
+  addSlider('Spare parts', '$15 each',         buySpareParts,  6);
+  addSlider('Medicine',    '$25 per dose',     buyMedicine,    8);
+
+  const totalLine = document.getElementById('total-line');
+  const departBtn = document.getElementById('btn-depart');
+  watch(function()
+  {
+    const t = cartTotal.get();
+    const m = money.get();
+    totalLine.textContent = 'Total $' + t.toFixed(2) + ' · Remaining $' + (m - t).toFixed(2);
+    totalLine.classList.toggle('over', t > m);
+    departBtn.disabled = t > m || buyOxen.get() < 1 || buyFood.get() < 50;
+  });
+
+  departBtn.onclick = depart;
+  document.getElementById('btn-back').onclick = function() { sClick(); screen.set('occupation'); };
+}
+
+function renderTravel()
+{
+  app.innerHTML = '<fieldset><legend>Status</legend><div class="stats">'
+    + '<div class="stat"><div class="k">Day</div><div class="v" id="s-day"></div></div>'
+    + '<div class="stat"><div class="k">Miles</div><div class="v" id="s-miles"></div></div>'
+    + '<div class="stat"><div class="k">Health</div><div class="v" id="s-health"></div></div>'
+    + '<div class="stat"><div class="k">Food</div><div class="v" id="s-food"></div></div>'
+    + '<div class="stat"><div class="k">Oxen</div><div class="v" id="s-oxen"></div></div>'
+    + '<div class="stat"><div class="k">Ammo</div><div class="v" id="s-ammo"></div></div>'
+    + '<div class="stat"><div class="k">Med</div><div class="v" id="s-med"></div></div>'
+    + '<div class="stat"><div class="k">Sick</div><div class="v" id="s-sick"></div></div>'
+    + '</div></fieldset>'
+    + '<fieldset><legend>Party</legend><div class="party-line" id="party-list"></div></fieldset>'
+    + '<fieldset><legend>Journal</legend><div class="log" id="journal-list"></div></fieldset>'
+    + '<div class="sticky-actions"><fieldset><legend>Orders</legend>'
+    + '<div class="seg-row"><div class="seg-title">Pace</div><div class="segmented" id="pace-seg">'
+    + '<label><input type="radio" name="pace-sel" value="steady"><span>Steady</span></label>'
+    + '<label><input type="radio" name="pace-sel" value="strenuous"><span>Strenuous</span></label>'
+    + '<label><input type="radio" name="pace-sel" value="grueling"><span>Grueling</span></label>'
+    + '</div></div>'
+    + '<div class="seg-row"><div class="seg-title">Rations</div><div class="segmented" id="ration-seg">'
+    + '<label><input type="radio" name="ration-sel" value="filling"><span>Filling</span></label>'
+    + '<label><input type="radio" name="ration-sel" value="meager"><span>Meager</span></label>'
+    + '<label><input type="radio" name="ration-sel" value="bare-bones"><span>Bare</span></label>'
+    + '</div></div>'
+    + '<div class="btn-row">'
+    + '<button id="btn-continue">Continue</button>'
+    + '<button id="btn-hunt" class="secondary">Hunt</button>'
+    + '<button id="btn-treat" class="secondary">Treat</button>'
+    + '</div></fieldset></div>';
+
+  bindText('s-day', day);
+  bindText('s-miles', function() { return miles.get() + '/' + TOTAL_MILES; });
+  bindText('s-health', function() { return health.get() + '%'; });
+  bindText('s-food', function() { return food.get() + ' lbs'; });
+  bindText('s-oxen', oxen);
+  bindText('s-ammo', ammo);
+  bindText('s-med', medicine);
+  bindText('s-sick', sickCount);
+
+  const partyList = document.getElementById('party-list');
+  watch(function()
+  {
+    const list = party.get();
+    const parts = [];
+    for (let i = 0; i < list.length; i++)
+    {
+      const p = list[i];
+      parts.push('<span class="party-member ' + (p.sick ? 'sick' : '') + '">' + p.name + (p.sick ? ' · sick' : '') + '</span>');
+    }
+    partyList.innerHTML = parts.join('');
+  });
+
+  const journalList = document.getElementById('journal-list');
+  watch(function()
+  {
+    const list = journal.get();
+    const parts = [];
+    for (let i = 0; i < list.length; i++)
+    {
+      const e = list[i];
+      parts.push('<div class="entry ' + (e.type || '') + '">' + e.msg + '</div>');
+    }
+    journalList.innerHTML = parts.join('');
+    journalList.scrollTop = journalList.scrollHeight;
+  });
+
+  const paceInputs = document.querySelectorAll('[name="pace-sel"]');
+  for (let i = 0; i < paceInputs.length; i++)
+  {
+    const r = paceInputs[i];
+    if (r.value === pace.get()) r.checked = true;
+    (function(radio) { radio.onchange = function() { if (radio.checked) { pace.set(radio.value); sClick(); } }; })(r);
+  }
+
+  const rationInputs = document.querySelectorAll('[name="ration-sel"]');
+  for (let i = 0; i < rationInputs.length; i++)
+  {
+    const r = rationInputs[i];
+    if (r.value === rations.get()) r.checked = true;
+    (function(radio) { radio.onchange = function() { if (radio.checked) { rations.set(radio.value); sClick(); } }; })(r);
+  }
+
+  const huntBtn = document.getElementById('btn-hunt');
+  watch(function() { huntBtn.disabled = !canHunt.get(); });
+
+  const treatBtn = document.getElementById('btn-treat');
+  watch(function() { treatBtn.disabled = medicine.get() < 1 || sickCount.get() < 1; });
+
+  document.getElementById('btn-continue').onclick = travelDay;
+  huntBtn.onclick = startHunt;
+  treatBtn.onclick = treat;
+}
+
+function renderLandmark()
+{
+  const lm = currentLandmark.get();
+  if (!lm) { screen.set('travel'); return; }
+  const river = atRiver.get();
+  const trade = atTrade.get();
+
+  app.innerHTML = '<h1>Landmark</h1>'
+    + '<div class="sub">Mile ' + lm.mile + ' · Day <span id="lm-day"></span></div>'
+    + '<fieldset><legend>' + lm.name + '</legend>'
+    + '<div class="log" style="max-height:none">'
+    + '<div class="entry success">You have arrived at ' + lm.name + '.</div>'
+    + '<div class="entry info" id="lm-supplies"></div>'
+    + '</div>'
+    + '<div id="lm-actions" style="margin-top:10px"></div>'
+    + '</fieldset>';
+
+  bindText('lm-day', day);
+  bindText('lm-supplies', function()
+  {
+    return food.get() + ' lbs food · ' + oxen.get() + ' oxen · ' + ammo.get() + ' boxes ammo · $' + money.get();
+  });
+
+  const actions = document.getElementById('lm-actions');
+
+  if (river)
+  {
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    row.style.marginTop = '0';
+    row.innerHTML = '<button data-m="ford">Ford</button>'
+      + '<button data-m="caulk">Caulk</button>'
+      + '<button data-m="wait">Wait</button>';
+    const btns = row.querySelectorAll('button');
+    for (let i = 0; i < btns.length; i++)
+    {
+      (function(b) { b.onclick = function() { crossRiver(b.getAttribute('data-m')); }; })(btns[i]);
+    }
+    actions.appendChild(row);
+  }
+  else if (trade)
+  {
+    const items = [
+      { label: '50 lbs food · $30',  item: 'food',     qty: 50, each: 0.60 },
+      { label: '2 boxes ammo · $12', item: 'ammo',     qty: 2,  each: 6 },
+      { label: 'Medicine · $30',     item: 'medicine', qty: 1,  each: 30 },
+      { label: '1 ox · $75',         item: 'oxen',     qty: 1,  each: 75 }
+    ];
+    for (let i = 0; i < items.length; i++)
+    {
+      const it = items[i];
+      const b = document.createElement('button');
+      b.style.display = 'block';
+      b.style.width = '100%';
+      b.style.marginBottom = '5px';
+      b.textContent = it.label;
+      (function(x) { b.onclick = function() { buyAt(x.item, x.qty, x.each); rerender(); }; })(it);
+      actions.appendChild(b);
+    }
+    const cont = document.createElement('button');
+    cont.className = 'secondary';
+    cont.style.width = '100%';
+    cont.textContent = 'Continue';
+    cont.onclick = leaveLandmark;
+    actions.appendChild(cont);
+  }
+  else
+  {
+    const row = document.createElement('div');
+    row.className = 'btn-row';
+    row.style.marginTop = '0';
+    row.innerHTML = '<button id="lm-continue">Continue</button>'
+      + (canHunt.get() ? '<button id="lm-hunt" class="secondary">Hunt</button>' : '');
+    actions.appendChild(row);
+    document.getElementById('lm-continue').onclick = leaveLandmark;
+    const hb = document.getElementById('lm-hunt');
+    if (hb) hb.onclick = startHunt;
+  }
+}
+
+function rerender()
+{
+  disposeScreenEffects();
+  renderLandmark();
+}
+
+function renderHunt()
+{
+  app.innerHTML = '<h1>Buffalo Hunt</h1>'
+    + '<div class="sub">Aim with pointer · Fire before they scatter</div>'
+    + '<canvas id="hunt-canvas"></canvas>'
+    + '<div class="hunt-info">'
+    + '<span>Kills <b id="hunt-kills">0</b></span>'
+    + '<span>Ammo <b id="hunt-ammo">0</b></span>'
+    + '<span>Time <b id="hunt-time">30</b>s</span>'
+    + '</div>'
+    + '<div class="sticky-actions"><fieldset><div class="btn-row" style="margin-top:0">'
+    + '<button id="hunt-fire">Fire</button>'
+    + '</div></fieldset></div>';
+  initHunt();
+}
+
+function renderHuntResult()
+{
+  app.innerHTML = '<h1>Hunt Complete</h1>'
+    + '<div class="sub">Returning to the wagon</div>'
+    + '<fieldset><legend>Results</legend>'
+    + '<div class="log" style="max-height:none">'
+    + '<div class="entry success">Buffalo killed: <span id="hr-kills"></span></div>'
+    + '<div class="entry success">Meat gained: <span id="hr-meat"></span></div>'
+    + '<div class="entry info">Food now: <span id="hr-food"></span></div>'
+    + '<div class="entry info">Ammo boxes used: <span id="hr-ammo"></span></div>'
+    + '</div>'
+    + '<div class="btn-row"><button id="btn-return">Return</button></div>'
+    + '</fieldset>';
+  bindText('hr-kills', function() { const r = huntResult.get(); return r ? r.kills : 0; });
+  bindText('hr-meat', function() { const r = huntResult.get(); return r ? r.meat + ' lbs' : '0 lbs'; });
+  bindText('hr-food', function() { const r = huntResult.get(); return r ? r.foodAfter + ' lbs' : '0 lbs'; });
+  bindText('hr-ammo', function() { const r = huntResult.get(); return r ? r.ammoUsed : 0; });
+  document.getElementById('btn-return').onclick = function() { sClick(); screen.set('travel'); };
+}
+
+function renderGameOver()
+{
+  app.innerHTML = '<h1 class="screen-h1">You Died</h1>'
+    + '<div class="sub">The trail claims another</div>'
+    + '<fieldset><legend>Epitaph</legend>'
+    + '<div class="log" style="max-height:none">'
+    + '<div class="entry danger" id="go-cause"></div>'
+    + '<div class="entry" id="go-progress"></div>'
+    + '</div>'
+    + '<div class="btn-row"><button id="btn-restart">Try Again</button></div>'
+    + '</fieldset>';
+  bindText('go-cause', function() { return causeOfDeath.get() || 'You died on the trail.'; });
+  bindText('go-progress', function()
+  {
+    return 'You reached mile ' + miles.get() + ' of ' + TOTAL_MILES + ' on day ' + day.get() + '.';
+  });
+  document.getElementById('btn-restart').onclick = restart;
+}
+
+function renderWin()
+{
+  app.innerHTML = '<h1 class="screen-h1">Oregon!</h1>'
+    + '<div class="sub">You made it</div>'
+    + '<fieldset><legend>Journey Complete</legend>'
+    + '<div class="log" style="max-height:none">'
+    + '<div class="entry success" id="win-days"></div>'
+    + '<div class="entry" id="win-survivors"></div>'
+    + '</div>'
+    + '<div class="btn-row"><button id="btn-again">Play Again</button></div>'
+    + '</fieldset>';
+  bindText('win-days', function()
+  {
+    return 'You arrived at Oregon City on day ' + day.get() + '.';
+  });
+  bindText('win-survivors', function()
+  {
+    const h = health.get();
+    const alive = h > 50 ? PARTY_SIZE : Math.max(1, Math.floor(PARTY_SIZE * h / 100));
+    return 'Final health: ' + h + '% · Survivors: ' + alive + '/' + PARTY_SIZE;
+  });
+  document.getElementById('btn-again').onclick = restart;
+}
+
+// ─── router ───
+const SCREENS = {
+  start:         renderStart,
+  occupation:    renderOccupation,
+  store:         renderStore,
+  travel:        renderTravel,
+  landmark:      renderLandmark,
+  hunt:          renderHunt,
+  'hunt-result': renderHuntResult,
+  gameover:      renderGameOver,
+  win:           renderWin
+};
+
+effect(function()
+{
+  const s = screen.get();
+  disposeScreenEffects();
+  SCREENS[s]();
+});
+
+function restart()
+{
+  sClick();
+  occupation.set(null);
+  money.set(0);
+  day.set(1);
+  miles.set(0);
+  oxen.set(0);
+  food.set(0);
+  clothing.set(0);
+  ammo.set(0);
+  spareParts.set(0);
+  medicine.set(0);
+  health.set(100);
+  pace.set('steady');
+  rations.set('filling');
+  journal.set([]);
+  causeOfDeath.set(null);
+  currentLandmark.set(null);
+  atRiver.set(false);
+  atTrade.set(false);
+  huntResult.set(null);
+  party.set([
+    { name: 'You',       sick: false },
+    { name: 'Sarah',     sick: false },
+    { name: 'Thomas',    sick: false },
+    { name: 'Elizabeth', sick: false },
+    { name: 'William',   sick: false }
+  ]);
+  buyOxen.set(0);
+  buyFood.set(0);
+  buyClothing.set(0);
+  buyAmmo.set(0);
+  buySpareParts.set(0);
+  buyMedicine.set(0);
+  screen.set('start');
+}
+</script>
+</body>
+</html>

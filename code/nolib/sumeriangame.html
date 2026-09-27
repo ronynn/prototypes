@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lagash — Mission Control</title>
+<style>
+  :root {
+    --bg: #1a1410;
+    --panel: #2a2018;
+    --border: #5a4a38;
+    --grid: #3a2a1a;
+    --cream: #e8dcc8;
+    --amber: #d4a030;
+    --red: #c04030;
+    --green: #6a9a50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden; /* Prevent scrolling on mobile */
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--cream);
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 12px;
+    height: 100dvh;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 680px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Allow scroll inside app if needed */
+    padding-bottom: 12px;
+  }
+
+  .header { text-align: center; margin-bottom: 12px; flex-shrink: 0; }
+  .header h1 { font-size: 1.3rem; letter-spacing: 8px;
+               text-transform: uppercase; font-weight: bold; color: var(--cream); }
+  .header .sub { font-size: 0.6rem; letter-spacing: 5px;
+                 color: var(--amber); margin-top: 4px; }
+  .header .stripe {
+    height: 4px; margin-top: 8px;
+    background: repeating-linear-gradient(90deg,
+      var(--amber) 0, var(--amber) 8px,
+      var(--red) 8px, var(--red) 16px,
+      var(--border) 16px, var(--border) 24px);
+  }
+
+  fieldset {
+    border: 2px solid var(--border); padding: 10px 14px 14px;
+    margin-bottom: 10px; background: transparent;
+    flex-shrink: 0;
+  }
+  legend {
+    font-size: 0.65rem; letter-spacing: 4px; text-transform: uppercase;
+    color: var(--amber); padding: 0 8px; background: var(--bg); font-weight: bold;
+  }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .stat-box { border: 1px solid var(--border); background: var(--panel);
+              padding: 6px 2px; text-align: center; }
+  .stat-box .label { font-size: 0.5rem; letter-spacing: 2px;
+                     text-transform: uppercase; color: var(--amber); }
+  .stat-box .value { font-size: 0.9rem; margin-top: 2px; font-weight: bold; }
+
+  .log-entry { font-size: 0.7rem; line-height: 1.6;
+               padding: 1px 0; border-bottom: 1px dotted var(--grid); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry.danger { color: var(--red); }
+  .log-entry.success { color: var(--green); }
+
+  .slider-group { margin-bottom: 10px; }
+  .slider-group:last-child { margin-bottom: 0; }
+  .slider-header { display: flex; justify-content: space-between;
+                   align-items: baseline; margin-bottom: 4px; }
+  .slider-label { font-size: 0.6rem; letter-spacing: 3px;
+                  text-transform: uppercase; color: var(--amber); }
+  .slider-value { font-size: 0.85rem; font-weight: bold; }
+
+  input[type="range"] { -webkit-appearance: none; appearance: none;
+    width: 100%; height: 16px; background: transparent;
+    cursor: pointer; display: block; }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; background: var(--grid); border: 1px solid var(--border); }
+  input[type="range"]::-moz-range-track {
+    height: 4px; background: var(--grid); border: 1px solid var(--border); }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 12px; height: 16px;
+    background: var(--amber); border: 2px solid var(--cream);
+    margin-top: -7px; border-radius: 0; }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 16px; background: var(--amber);
+    border: 2px solid var(--cream); border-radius: 0; }
+
+  .remaining { font-size: 0.65rem; letter-spacing: 1px;
+               text-align: center; margin-top: 6px; color: var(--green); }
+  .remaining.over { color: var(--red); }
+
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+  button { flex: 1; background: var(--amber); color: var(--bg);
+    border: 2px solid var(--amber); padding: 10px;
+    font-family: inherit; font-size: 0.7rem; font-weight: bold;
+    letter-spacing: 4px; text-transform: uppercase; cursor: pointer; }
+  button:hover { background: transparent; color: var(--amber); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  button:disabled:hover { background: var(--amber); color: var(--bg); }
+
+  .game-over { text-align: center; padding: 16px 12px; }
+  .game-over h2 { color: var(--red); font-size: 1rem;
+                  letter-spacing: 6px; text-transform: uppercase; margin-bottom: 10px; }
+  .game-over .final { font-size: 1.6rem; color: var(--amber);
+                      font-weight: bold; margin-bottom: 10px; }
+  .game-over p { font-size: 0.75rem; opacity: 0.85;
+                 letter-spacing: 1px; margin-bottom: 16px; }
+
+  @media (max-width: 520px) {
+    body { padding: 8px; font-size: 12px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .header h1 { font-size: 1rem; letter-spacing: 5px; }
+    fieldset { padding: 8px 10px 10px; }
+    .header { margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── Signal ────────────────────────────────────────────────
+function signal(initial) {
+  let value = initial;
+  const subs = new Set();
+  return {
+    get: () => value,
+    set(v) {
+      if (v === value) return;
+      value = v;
+      subs.forEach(fn => fn(value));
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      fn(value);
+      return () => subs.delete(fn);
+    }
+  };
+}
+
+// ─── el helper ────────────────────────────────────────────
+function el(tag, attrs, children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    for (const k in attrs) {
+      const v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'style')        node.style.cssText = v;
+      else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+      else if (k === 'value' && 'value' in node) node.value = v;
+      else                      node.setAttribute(k, v);
+    }
+  }
+  if (children != null) {
+    const arr = Array.isArray(children) ? children : [children];
+    for (const c of arr) {
+      if (c == null || c === false) continue;
+      node.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+    }
+  }
+  return node;
+}
+
+// ─── State ─────────────────────────────────────────────────
+const year       = signal(1);
+const ruler      = signal(1);
+const population = signal(100);
+const grain      = signal(5000);
+const acres      = signal(1000);
+const phase      = signal('input');
+const log        = signal([]);
+const inputFood  = signal(0);
+const inputSeed  = signal(0);
+const inputStore = signal(0);
+
+const RULERS = [{ name: 'Ur-Nanshe' }, { name: 'Eannatum' }, { name: 'Entemena' }];
+const YEARS_PER_RULER = 10;
+const GRAIN_PER_PERSON = 20;
+
+function addLog(msg, type) {
+  log.set([...log.get(), { msg, type: type || '' }].slice(-8));
+}
+
+// ─── Game logic ────────────────────────────────────────────
+function remaining() {
+  return grain.get() - inputFood.get() - inputSeed.get() - inputStore.get();
+}
+
+function submitAllocation() {
+  if (remaining() < 0) return;
+
+  const food = inputFood.get();
+  const seed = inputSeed.get();
+  const store = inputStore.get();
+
+  const pop = population.get();
+  const feedable = Math.floor(food / GRAIN_PER_PERSON);
+  const fed = Math.min(feedable, pop);
+  const starved = pop - fed;
+
+  const acresPlanted = Math.min(seed, acres.get());
+  const yieldPerAcre = 1 + Math.random() * 4;
+  let harvest = Math.floor(acresPlanted * yieldPerAcre);
+
+  const roll = Math.random();
+  let mod = 1;
+  if (roll < 0.10) { mod = 0.5; addLog('FLOOD — HALF THE CROPS DESTROYED', 'danger'); }
+  else if (roll < 0.15) { mod = 0.7; addLog('FIRE — GRANARIES DAMAGED', 'danger'); }
+  else if (roll < 0.20) { mod = 1.3; addLog('ABUNDANT HARVEST — THE GODS SMILE', 'success'); }
+
+  const finalHarvest = Math.floor(harvest * mod);
+  const newGrain = store + finalHarvest;
+  const newPop = fed + Math.floor(fed * 0.02);
+
+  addLog('YEAR ' + year.get() + ': PLANTED ' + acresPlanted
+       + ' ACRES, HARVESTED ' + finalHarvest + ' BUSHELS');
+  if (starved > 0) addLog(starved + ' PEOPLE STARVED', 'danger');
+
+  population.set(newPop);
+  grain.set(newGrain);
+  phase.set('results');
+
+  if (newPop <= 0) {
+    phase.set('gameover');
+    addLog('LAGASH HAS FALLEN. YOUR PEOPLE ARE NO MORE.', 'danger');
+  }
+}
+
+function nextYear() {
+  const y = year.get();
+  const rulerIdx = Math.floor((y - 1) / YEARS_PER_RULER);
+  const newYear = y + 1;
+  const newRulerIdx = Math.floor((newYear - 1) / YEARS_PER_RULER);
+
+  if (newRulerIdx !== rulerIdx && newRulerIdx < RULERS.length) {
+    ruler.set(newRulerIdx + 1);
+    addLog('— ' + RULERS[newRulerIdx].name.toUpperCase() + ' TAKES THE THRONE —', 'success');
+  }
+
+  if (newYear > RULERS.length * YEARS_PER_RULER) {
+    phase.set('gameover');
+    addLog('YOUR DYNASTY HAS ENDED. LAGASH ENDURES.', 'success');
+    return;
+  }
+
+  year.set(newYear);
+  phase.set('input');
+  inputFood.set(0);
+  inputSeed.set(0);
+  inputStore.set(0);
+}
+
+function restart() {
+  year.set(1);
+  ruler.set(1);
+  population.set(100);
+  grain.set(5000);
+  acres.set(1000);
+  phase.set('input');
+  log.set([]);
+  inputFood.set(0);
+  inputSeed.set(0);
+  inputStore.set(0);
+  addLog('A NEW DYNASTY BEGINS. YOU RULE LAGASH.', 'success');
+}
+
+// ─── Build UI ──────────────────────────────────────────────
+const app = document.getElementById('app');
+
+app.appendChild(el('div', { class: 'header' }, [
+  el('h1', null, 'LAGASH'),
+  el('div', { class: 'sub' }, 'MISSION CONTROL · 3500 BC'),
+  el('div', { class: 'stripe' }),
+]));
+
+// Stats
+const statsFS = el('fieldset', null, el('legend', null, 'STATE'));
+const statsGrid = el('div', { class: 'stats-grid' });
+statsFS.appendChild(statsGrid);
+
+const statDefs = [
+  ['YEAR',       year,       v => String(v)],
+  ['RULER',      ruler,      v => RULERS[v - 1].name.toUpperCase()],
+  ['POPULATION', population, v => String(v)],
+  ['GRAIN',      grain,      v => String(v)],
+];
+for (const def of statDefs) {
+  const label = def[0], sig = def[1], fmt = def[2];
+  const valueEl = el('div', { class: 'value' }, fmt(sig.get()));
+  sig.subscribe(v => { valueEl.textContent = fmt(v); });
+  statsGrid.appendChild(el('div', { class: 'stat-box' }, [
+    el('div', { class: 'label' }, label),
+    valueEl,
+  ]));
+}
+app.appendChild(statsFS);
+
+// Log
+const logFS = el('fieldset', null, el('legend', null, 'CHRONICLE'));
+const logContainer = el('div');
+logFS.appendChild(logContainer);
+log.subscribe(entries => {
+  logContainer.innerHTML = '';
+  for (const e of entries) {
+    logContainer.appendChild(el('div', { class: 'log-entry ' + e.type }, e.msg));
+  }
+});
+app.appendChild(logFS);
+
+// Allocation (sliders with clamping)
+const allocFS = el('fieldset', null, el('legend', null, 'ALLOCATION'));
+
+function makeSlider(label, sig) {
+  const valueLabel = el('span', { class: 'slider-value' }, String(sig.get()));
+  const input = el('input', { type: 'range', min: 0, max: 5000 });
+
+  sig.subscribe(v => {
+    const s = String(Math.round(v));
+    if (input.value !== s) input.value = s;
+    valueLabel.textContent = s;
+  });
+  input.addEventListener('input', () => {
+    let v = parseFloat(input.value);
+    // Clamp: prevent dragging beyond what's left
+    const maxAllowed = remaining() + sig.get();
+    if (v > maxAllowed) {
+      v = maxAllowed;
+      input.value = String(v);
+    }
+    sig.set(v);
+    valueLabel.textContent = String(v);
+  });
+
+  return el('div', { class: 'slider-group' }, [
+    el('div', { class: 'slider-header' }, [
+      el('span', { class: 'slider-label' }, label),
+      valueLabel,
+    ]),
+    input,
+  ]);
+}
+
+allocFS.appendChild(makeSlider('FOOD',  inputFood));
+allocFS.appendChild(makeSlider('SEED',  inputSeed));
+allocFS.appendChild(makeSlider('STORE', inputStore));
+
+const remainingEl = el('div', { class: 'remaining' }, '');
+allocFS.appendChild(remainingEl);
+
+const allocBtn = el('button', null, 'ALLOCATE');
+allocBtn.addEventListener('click', submitAllocation);
+allocFS.appendChild(el('div', { class: 'btn-row' }, allocBtn));
+app.appendChild(allocFS);
+
+function updateRemaining() {
+  const r = remaining();
+  remainingEl.textContent = 'REMAINING: ' + r + ' BUSHELS';
+  remainingEl.className = 'remaining' + (r < 0 ? ' over' : '');
+  allocBtn.disabled = r < 0;
+}
+grain.subscribe(updateRemaining);
+inputFood.subscribe(updateRemaining);
+inputSeed.subscribe(updateRemaining);
+inputStore.subscribe(updateRemaining);
+
+// Update slider max when grain changes
+grain.subscribe(v => {
+  const maxStr = String(Math.round(v));
+  allocFS.querySelectorAll('input[type="range"]').forEach(inp => {
+    inp.max = maxStr;
+    if (parseFloat(inp.value) > v) inp.value = maxStr;
+  });
+});
+
+// Results
+const resultsFS = el('fieldset', null, el('legend', null, 'RESULTS'));
+const resultsText = el('div', { class: 'log-entry success' }, '');
+resultsFS.appendChild(resultsText);
+year.subscribe(v => { resultsText.textContent = 'YEAR ' + v + ' RESOLVED.'; });
+const nextBtn = el('button', null, 'NEXT YEAR');
+nextBtn.addEventListener('click', nextYear);
+resultsFS.appendChild(el('div', { class: 'btn-row' }, nextBtn));
+app.appendChild(resultsFS);
+
+// Game over
+const overFS = el('fieldset', null, el('legend', null, 'TERMINAL'));
+const overH2 = el('h2', null, '');
+const overScore = el('div', { class: 'final' }, '');
+const overMsg = el('p', null, '');
+const restartBtn = el('button', null, 'BEGIN ANEW');
+restartBtn.addEventListener('click', restart);
+overFS.appendChild(el('div', { class: 'game-over' }, [
+  overH2, overScore, overMsg,
+  el('div', { class: 'btn-row' }, restartBtn),
+]));
+app.appendChild(overFS);
+
+function updateOver() {
+  const pop = population.get(), y = year.get();
+  overH2.textContent = pop <= 0 ? 'CITY FALLEN' : 'DYNASTY ENDED';
+  overScore.textContent = pop <= 0 ? '0' : y + ' YEARS';
+  overMsg.textContent = pop <= 0
+    ? 'YOUR PEOPLE HAVE PERISHED. LAGASH IS DUST.'
+    : 'YOU RULED FOR ' + (y - 1) + ' YEARS. THE SCRIBES WILL REMEMBER.';
+}
+population.subscribe(updateOver);
+year.subscribe(updateOver);
+
+// Phase visibility
+phase.subscribe(p => {
+  allocFS.style.display   = p === 'input'    ? '' : 'none';
+  resultsFS.style.display = p === 'results'  ? '' : 'none';
+  overFS.style.display    = p === 'gameover' ? '' : 'none';
+});
+
+// ─── Init ──────────────────────────────────────────────────
+addLog('YOU ARE THE RULER OF LAGASH. ALLOCATE GRAIN WISELY.', 'success');
+</script>
+</body>
+</html>

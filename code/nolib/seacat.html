@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SEACAT</title>
+<style>
+:root[data-theme="dark"]{
+  --bg:#080b0a; --panel:#0d1211; --panel2:#111817;
+  --border:#20302c; --text:#cfe6df; --dim:#6b8b83;
+  --accent:#4fd1b0; --warn:#e0a35a; --bad:#e06b5a; --good:#5fd39a;
+  --water1:#0d3b35; --water2:#020a09;
+  --fish:#4fae94; --fishLo:#3a8f79; --fishShade:#2c7562; --fishDark:#0b241f;
+  --fishHi:#8fe0c8;
+  --eye:#07100e; --whisker:#d3f2e8; --fin:#3f9c83; --finHi:#6fd0b2;
+  --egg:#efe3c8; --eggShade:#c9b892; --crack:#7d6f50;
+  --heart:#ff6b8a;
+}
+:root[data-theme="light"]{
+  --bg:#eef2f0; --panel:#ffffff; --panel2:#f5f8f7;
+  --border:#b4c5c0; --text:#132420; --dim:#5f7a73;
+  --accent:#0f8a6e; --warn:#a86a15; --bad:#b23a26; --good:#14855e;
+  --water1:#c6e8e1; --water2:#78bfb3;
+  --fish:#2f8a72; --fishLo:#206b58; --fishShade:#175547; --fishDark:#062018;
+  --fishHi:#8de0c5;
+  --eye:#04100c; --whisker:#0f3a30; --fin:#20735f; --finHi:#5fbfa4;
+  --egg:#ddcda6; --eggShade:#a89670; --crack:#6b5c3d;
+  --heart:#d94a6a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg); color:var(--text);
+  font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none;
+}
+.app{
+  height:100dvh; max-height:100dvh; overflow:hidden;
+  max-width:720px; margin:0 auto; padding:10px;
+  display:flex; flex-direction:column; gap:8px;
+}
+header{
+  flex:0 0 auto;
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--border); background:var(--panel);
+  padding:7px 10px;
+}
+header h1{font-size:11px; letter-spacing:.32em; font-weight:600; color:var(--accent); flex:1;}
+.chip{font-size:9px; letter-spacing:.18em; padding:3px 7px; border:1px solid var(--border); color:var(--dim);}
+.chip.stage{color:var(--text); border-color:var(--accent)}
+#theme{
+  font-size:9px; letter-spacing:.18em; padding:3px 8px;
+  border:1px solid var(--border); background:transparent;
+  color:var(--dim); cursor:pointer;
+}
+#theme:hover{border-color:var(--accent); color:var(--accent)}
+fieldset{
+  border:1px solid var(--border); background:var(--panel);
+  padding:8px 10px 10px; position:relative; min-width:0;
+}
+legend{
+  font-size:9px; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--dim); padding:0 6px; margin-left:2px;
+}
+#tankbox{flex:0 0 auto; padding:6px}
+#tankbox legend{margin-left:6px}
+.tankwrap{
+  position:relative;
+  width:min(100%, 640px, calc(34dvh * 4 / 3));
+  aspect-ratio:4/3; margin:0 auto;
+  border:1px solid var(--border);
+  background:#000; overflow:hidden;
+  cursor:pointer; touch-action:manipulation;
+}
+canvas{display:block; width:100%; height:100%}
+#hint{
+  position:absolute; left:0; right:0; bottom:8px; text-align:center;
+  font-size:9px; letter-spacing:.28em; color:#9fe8d6;
+  pointer-events:none; text-shadow:0 1px 3px #000;
+  animation:blink 2.2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+#overlay{
+  position:absolute; inset:0; display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; padding:20px; text-align:center;
+  background:rgba(0,0,0,.8); color:#d7ece7;
+}
+#overlay.on{display:flex}
+#overlay h2{font-size:11px; letter-spacing:.32em; color:var(--accent)}
+#overlay p{font-size:11px; color:#a8ccc3; max-width:36ch; line-height:1.6}
+#overlay button{
+  font:inherit; font-size:10px; letter-spacing:.16em;
+  padding:9px 14px; cursor:pointer;
+  border:1px solid #4fd1b0; background:transparent; color:#4fd1b0;
+}
+#vitals{flex:0 0 auto; padding-bottom:8px}
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(92px,1fr)); gap:6px 12px;}
+.stat .top{display:flex; justify-content:space-between; font-size:9px; letter-spacing:.16em; color:var(--dim); margin-bottom:3px;}
+.stat .top b{color:var(--text); font-weight:600}
+.bar{height:6px; border:1px solid var(--border); background:var(--panel2)}
+.bar i{display:block; height:100%; width:0; transition:width .25s linear}
+#hints{margin-top:7px; padding-top:6px; border-top:1px dashed var(--border); font-size:10px; color:var(--dim); line-height:1.55;}
+#hints .crit{color:var(--bad)}
+#logbox{flex:1 1 auto; min-height:100px; display:flex; flex-direction:column; overflow:hidden;}
+#log{
+  flex:1 1 auto; min-height:0; overflow-y:auto;
+  display:flex; flex-direction:column; gap:5px;
+  padding-right:2px; scrollbar-width:thin;
+  -webkit-overflow-scrolling:touch;
+}
+#log::-webkit-scrollbar{width:6px}
+#log::-webkit-scrollbar-thumb{background:var(--border)}
+.msg{font-size:11.5px; line-height:1.5; padding:6px 9px; border:1px solid var(--border); max-width:88%; white-space:pre-wrap; word-break:break-word;}
+.msg.you{align-self:flex-end; background:var(--panel2); color:var(--dim)}
+.msg.pet{align-self:flex-start; border-left:3px solid var(--accent); background:var(--panel2)}
+.msg.sys{align-self:center; border-style:dashed; background:transparent; color:var(--dim); font-size:9px; letter-spacing:.14em; text-transform:uppercase; text-align:center; max-width:96%;}
+.dots{display:inline-flex; gap:4px; height:12px; align-items:center}
+.dots i{width:4px; height:4px; background:var(--accent); animation:p 1.1s infinite}
+.dots i:nth-child(2){animation-delay:.16s}
+.dots i:nth-child(3){animation-delay:.32s}
+@keyframes p{0%,100%{opacity:.2}40%{opacity:1}}
+#ctrlbox{flex:0 0 auto; display:flex; flex-direction:column; gap:8px}
+.row{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+button{
+  font:inherit; font-size:10px; letter-spacing:.14em;
+  padding:8px 11px; cursor:pointer;
+  border:1px solid var(--border); background:var(--panel2);
+  color:var(--text);
+}
+button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+button:active:not(:disabled){background:var(--accent); color:var(--bg)}
+button:disabled{opacity:.35; cursor:default}
+#tempval{min-width:52px; text-align:center; font-size:13px; font-weight:600; border:1px solid var(--border); padding:7px 8px; background:var(--panel2);}
+#say{display:flex; gap:6px}
+#say input{
+  flex:1; min-width:0; font:inherit; font-size:12px;
+  padding:9px 10px; border:1px solid var(--border);
+  background:var(--panel2); color:var(--text); outline:none;
+}
+#say input:focus{border-color:var(--accent)}
+#say input::placeholder{color:var(--dim)}
+#say input:disabled{opacity:.4}
+#say button{padding:9px 16px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>SEAPUSSY</h1>
+    <span class="chip stage" id="stage">EGG</span>
+    <span class="chip" id="day">DAY 1</span>
+    <button id="theme" type="button">LIGHT</button>
+  </header>
+
+  <fieldset id="tankbox">
+    <legend>tank</legend>
+    <div class="tankwrap" id="tankwrap">
+      <canvas id="cv" width="640" height="480"></canvas>
+      <div id="hint">TAP THE EGG</div>
+      <div id="overlay">
+        <h2 id="ov-title"></h2>
+        <p id="ov-text"></p>
+        <button id="ov-btn" type="button">START OVER</button>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset id="vitals">
+    <legend>vitals</legend>
+    <div class="stats" id="stats"></div>
+    <div id="hints"></div>
+  </fieldset>
+
+  <fieldset id="logbox">
+    <legend>log</legend>
+    <div id="log"></div>
+  </fieldset>
+
+  <fieldset id="ctrlbox">
+    <legend>controls</legend>
+    <div class="row">
+      <button id="t-" type="button">− TEMP</button>
+      <div id="tempval">55°</div>
+      <button id="t+" type="button">+ TEMP</button>
+      <button id="feed" type="button">FEED</button>
+      <button id="clean" type="button">CLEAN</button>
+    </div>
+    <div id="say">
+      <input id="input" placeholder="talk to it..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button id="send" type="button">SEND</button>
+    </div>
+  </fieldset>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1. DIALOGUE BANKS
+   ========================================================= */
+var RAW = {
+greeting:[
+"Yeah. Hello. Whatever.",
+"You're back. I noticed. I always notice.",
+"Oh, it's you. I was starting to enjoy the quiet.",
+"[annoyed] Hello. You're late.",
+"[happy] Hey. Water's good today. Sit. Or don't. Sit.",
+"Morning. Or whatever it is out there.",
+"Hi. That's all you get. I'm conserving energy.",
+"[ADULT] You say hello like it's a chore you're proud of finishing.",
+"[ELDER] Hello again. The greetings get shorter and I get older.",
+"[sick] ...hi. Everything tastes like pennies in here.",
+"You came back. Statistically I should be surprised. I'm not.",
+"Hello. I've been narrating your absence to the glass."
+],
+food:[
+"I'm a little hungry. Just a little. Don't make it a thing.",
+"Food. Yes. The one where you put things in the water and I judge them.",
+"[annoyed] I'm starving. I've been starving a while now. You were busy.",
+"[happy] That was decent. I'll allow it.",
+"Feed me before I start describing the taste of glass in detail.",
+"I don't want much. I want exactly enough. You never get it right.",
+"[ELDER] I've eaten ten thousand of those pellets. I remember three.",
+"[sick] I can't eat. Everything smells like the filter.",
+"Hunger is just boredom with a stomach attached.",
+"You forgot again. That's fine. I'll remember for both of us.",
+"The flakes. Not the pellets. We have discussed this at length.",
+"I eat. You watch. It's a whole ritual and you're bad at it."
+],
+temp:[
+"That temperature is a choice you are making.",
+"It's cold. Not deadly. Just cold enough to resent you quietly.",
+"[annoyed] Too warm. I'm soup. I'm becoming soup.",
+"You touch the dial like it's a toy. It's my entire body.",
+"[happy] This is nice. Don't touch it. Don't.",
+"I can feel the heater in my teeth.",
+"You'd think the water was for you. It isn't.",
+"[ELDER] I've been every temperature. Sixty is the only one I'd recommend.",
+"[sick] I'm cold and it's making everything slow, including my thoughts.",
+"Adjust it. Slowly. Like you're sorry.",
+"The thermometer is a suggestion. I am the verdict.",
+"Every degree is a small opinion you have about me."
+],
+clean:[
+"It's murky in here. I'm living in soup.",
+"[annoyed] The glass has a film on it. I can't see you. Only upside.",
+"You'd clean it if you had to live in it.",
+"[happy] Clean water. I can see the room now. I preferred not seeing the room.",
+"There's something growing in the corner. I've named it. It's not a friend.",
+"I'm not dirty. The water is dirty. There's a difference and the difference is mine.",
+"[ELDER] I've watched algae bloom and die. Only thing in here on a schedule.",
+"[sick] The water tastes like the bottom of a bag.",
+"Clean it. Or don't. I'll float here, becoming an anecdote.",
+"You clean when guests come. I've noticed the pattern.",
+"The filter hums. I hum back. Neither of us is helping.",
+"Every speck in this tank is something I shed. That's intimacy, technically."
+],
+love:[
+"Don't say that. You'll make it weird.",
+"I... yeah. Fine. Same.",
+"[happy] That's the correct answer. Keep it up.",
+"You love the idea of me. The actual me is a lot of maintenance.",
+"I'd say it back, but then I'd have to mean it, and where does that leave us.",
+"[annoyed] You say that when you feel guilty. It's a guilt sound.",
+"Love is a thing you do at three in the morning when the filter clogs.",
+"[ELDER] I've decided I don't mind you. That's the closest I get. Take it.",
+"[JUV] What's love. Is it the food. Be honest.",
+"[sick] Don't. I'm not good at receiving right now.",
+"You're alright. There. That's yours now. Don't frame it.",
+"I'd miss you. Briefly. Intensely. Then I'd eat."
+],
+death:[
+"Don't. It isn't funny yet.",
+"Death is just the filter turning off for good.",
+"[annoyed] You bring that up a lot. Should I be worried about you.",
+"I've thought about it. I think I'd just stop. No speech. Very clean.",
+"[ELDER] I'm not afraid of it. I'm annoyed by the timing.",
+"[JUV] ...what happens to the water.",
+"Everyone in this room dies. Only one of us has to watch.",
+"[sick] Don't say that word near me. I can hear it through the glass.",
+"You'd flush me and feel bad for a week and then get another one.",
+"I'd like it to be quiet. That's all I've decided.",
+"You'll die too. Not soon. But I'll be here the whole time.",
+"When it happens, don't narrate it. Just turn off the light."
+],
+self:[
+"I'm a cat head on a fish. Nobody explained it to me either.",
+"I don't know what I am. I know what I cost.",
+"[JUV] Am I a fish. I have a tail. I have a face. It's confusing.",
+"Seapussy. That's the name you gave me. I've made peace with roughly half of it.",
+"[annoyed] You named me. You don't get to ask what I am.",
+"I'm the thing at the bottom of the tank that knows your schedule.",
+"[ELDER] I've stopped asking what I am. The question got tired before I did.",
+"I have whiskers and gills. Whoever built me was in a hurry.",
+"I'm not a pet. I'm a tenant.",
+"The glass shows me a version of me. It's blurry. I prefer it.",
+"[sick] I'm whatever's left after the water goes bad.",
+"I'm a roommate. I don't pay rent. I do have opinions."
+],
+life:[
+"Life is a tank with a filter and a person who forgets things.",
+"[ELDER] It's mostly waiting with small interruptions. The interruptions are you.",
+"[JUV] What's the point of me. Be honest. Actually don't.",
+"I've decided it isn't about meaning. It's about routine.",
+"You wake up, you eat, you're looked at. That's the whole architecture.",
+"[annoyed] You're asking the fish about life. The fish is in a box.",
+"Everything alive is just refusing to stop for a while.",
+"[ELDER] I used to want a reason. Now I want a clean tank and a quiet evening.",
+"Meaning is a thing people with legs invented to fill the afternoon.",
+"I think we're both doing the same thing. Just at different speeds.",
+"You get to leave the room. That changes your whole philosophy.",
+"Life's fine. It's the maintenance that's unbearable."
+],
+weather:[
+"Weather. You have weather. I have a thermostat.",
+"[JUV] What's rain. Is it water. Like here.",
+"You come in wet and complain. I've never been wet on purpose.",
+"[ELDER] I remember sun. Not from here. From something. It's fading.",
+"It's raining. I can tell because you're sadder.",
+"The window's too far. I only know the sky by what it does to you.",
+"[annoyed] Don't describe the outside to me. I'm not a travelogue.",
+"Cold out? Good. Stay in. Watch me.",
+"Weather is just the room being in a mood. Mine is regulated.",
+"[sick] The light's wrong today. Or my eyes are. One of those.",
+"You get seasons. I get a heater with two settings.",
+"If it snows, bring some in. I want to see what the noise is about."
+],
+boredom:[
+"Bored. Yeah. Try being a shape in a box.",
+"I counted the bubbles. Four hundred and six. Then I lost count on purpose.",
+"[JUV] There's nothing to do. What do you do. Tell me everything.",
+"You're bored. I've been bored since I hatched. We are not the same.",
+"[annoyed] Bored. You have a door. I have a lid.",
+"I've memorized the reflection. It's improved. Slightly.",
+"[ELDER] Boredom is a luxury. I've moved past it into something quieter.",
+"Do something. Anything. Drop a pebble. Ruin my day.",
+"I made a game. It's called Watch The Filter. I'm winning.",
+"There's a scratch on the glass. I've built a personality around it.",
+"Time moves differently when nothing happens. Slower. Wider.",
+"[sick] I'm too tired to be bored. That's the worst version of it."
+],
+insult:[
+"Charming. I'll add that to the file.",
+"[annoyed] Careful. I remember things. That's my whole trick.",
+"You're insulting something that can't leave. Bold.",
+"I've been called worse by better.",
+"[JUV] ...was that mean. I think that was mean.",
+"Say it again. Slower. I want to enjoy it properly.",
+"[ELDER] You'll grow out of it. I won't be here when you do.",
+"That's the water talking. You're thirsty. Drink something.",
+"Fine. Noted. Withdrawn. Anyway.",
+"[sick] I'd argue, but everything costs something right now.",
+"You're not wrong. That's what makes it rude.",
+"Go on. I've got nowhere to be. Literally. Nowhere."
+],
+praise:[
+"Obviously. But say it again.",
+"[happy] I know. Keep going. I'm listening with my whole face.",
+"You're only saying that because I haven't blinked in an hour.",
+"[annoyed] What do you want.",
+"Flattery. The cheapest food there is. I'll take two.",
+"[JUV] Really? ...Really. Okay. Okay.",
+"That's kind. Suspiciously kind. What did you break.",
+"[ELDER] Thank you. That still works on me. Annoying.",
+"I'll allow that to live in my head rent-free.",
+"Say it in front of the glass so I can hear the echo.",
+"[sick] Thanks. I don't feel it. But thanks.",
+"You're being nice. That usually means the temperature's about to change."
+],
+question:[
+"Ask a better question.",
+"Yes. No. Maybe. Pick the one that ruins your day.",
+"[JUV] I don't know. I literally just got here.",
+"I could answer that, but you'd argue, and I'd have to float.",
+"[annoyed] You ask a lot for someone who forgets to feed me.",
+"The answer is water. The answer is always water.",
+"[ELDER] I don't know. I've stopped needing to.",
+"Why do you ask me things. I'm in a box.",
+"I'll answer if you answer one back. And you won't.",
+"That's a you question. I'm a me.",
+"[sick] Not now. Everything's loud in here.",
+"Yes. But not for the reason you're hoping."
+],
+silence:[
+"You went quiet. I noticed. I'm not going to make it a thing.",
+"It's been a while. I've been doing nothing. It went well.",
+"[annoyed] So we're just not talking now. Fine. Great.",
+"I had a thought while you were away. I forgot it. Thanks.",
+"You were gone a while. I counted.",
+"[ELDER] The quiet's fine. I've made friends with it.",
+"I watched a bubble go up. It didn't come back. I think about that.",
+"Say something. Anything. I'm losing my grip on language.",
+"The tank is loud when you're not here. The filter. It hums.",
+"[JUV] Hello? Is the tall thing still there.",
+"I don't need constant attention. I need occasional attention.",
+"You're quiet. That's new. Usually you're loud and wrong."
+],
+unknown:[
+"Sure. Yeah. That.",
+"I have no idea what you just said, and I've decided not to ask.",
+"[JUV] I don't know that word. Is it a food.",
+"Interesting. Not to me. But interesting.",
+"[annoyed] Was that a sentence or a noise.",
+"I'll file that under things you said that meant nothing.",
+"[ELDER] I've heard a lot of that. It all sounds the same at this end.",
+"Okay. We're doing this now. Fine.",
+"You said words. I received words. Nothing happened.",
+"That's the kind of thing people say when they're stalling.",
+"Mm. Yes. The thing. The whole thing.",
+"[sick] I didn't catch that. My head's full of cotton."
+],
+selfabsorbed:[
+"I've been thinking about my tail. It's the best part of me and I can't see it.",
+"Do you ever wonder if the glass is on the outside.",
+"I counted my whiskers today. I have one fewer than I remember.",
+"The heater clicked off. I felt it. Nobody else felt it.",
+"I'm going to float here for a while. Don't read into it.",
+"There's a spot on the glass. I've decided it's a star.",
+"Sometimes the bubbles come out of me. I don't control it. It's fine.",
+"I had a dream about a bigger tank. I woke up in this one.",
+"I'm doing an experiment. It's called not moving. Results pending.",
+"My left fin itches. I don't have a way to deal with that.",
+"I've named the filter. Its name is also Filter.",
+"If I hold still enough, do you think I stop existing.",
+"The light changed. I noticed before you did.",
+"I'm practicing being mysterious. How am I doing."
+],
+undercut:[
+"...mostly.",
+"Forget I said that.",
+"That was a test. You failed. Anyway.",
+"I don't mean it. I mean most of it.",
+"Don't repeat that.",
+"That's not true. Ignore it.",
+"Anyway. How's the temperature.",
+"I'm going to float away now.",
+"That was the nice version.",
+"You're welcome. Don't thank me.",
+"This conversation is over. I'm still talking though.",
+"I'll deny saying that."
+],
+ramble:[
+"The filter's been louder lately. Or I've been quieter. One of those.",
+"Do you ever just stop. I recommend it.",
+"There's a version of me that never hatched. He's fine.",
+"I think the light in here is fake. I'm not going to pursue it.",
+"You're still here. That's strange. Good strange. Mostly strange.",
+"I don't have a plan. I want that on the record."
+],
+care:[
+"Fine. Thank you. Don't hover.",
+"That's the stuff. Now leave.",
+"Noted. Filed. Forgotten.",
+"I'll allow this. This once.",
+"You did a thing. I saw it."
+],
+dismiss:[
+"I'm done. Talk to the glass.",
+"No. We're closed.",
+"I'm going to go be somewhere else in the tank.",
+"That's enough of you for one minute.",
+"I've stopped listening. I'm very good at it."
+],
+squeak:[
+"(a tiny bubble rises and pops)",
+"(something small darts behind the filter)",
+"(the water ripples near the bottom and goes still)"
+],
+fry:[
+"hm. the water's warm.",
+"you're very big.",
+"what are you.",
+"I have a tail. did you know.",
+"the light moves. why does it move.",
+"...I'm here.",
+"I think things. I think I think things.",
+"is this it. is this the whole thing.",
+"you're looking at me. I can tell.",
+"I don't know what I'm supposed to do.",
+"there's so much up.",
+"hold on. let me figure out words.",
+"I'll get better at this.",
+"the glass is cold on my face.",
+"hi. that took me a while.",
+"what do I eat. what do I say.",
+"I'm learning. slowly.",
+"say something back.",
+"you went away. I noticed.",
+"the filter sounds like breathing.",
+"I dreamed I was bigger.",
+"everything is very far away.",
+"I don't have a name yet. do I.",
+"are you going to stay.",
+"I'm small. I know. I'm working on it.",
+"tell me something true.",
+"I like when you're here. don't make it a thing.",
+"the light in here is older than me.",
+"what's outside the glass. is it more glass.",
+"I'm going to keep talking until it makes sense.",
+"you're quiet. say something.",
+"the water is where I live. that's all I know.",
+"I'm not scared. I'm just checking.",
+"hold on I'm thinking.",
+"do you think I'm getting bigger.",
+"I can almost say a whole sentence now.",
+"one day I'll have opinions about all this."
+],
+drift:["Sure.","Mm.","Fine.","Okay.","Noted.","Yes.","No.","Whatever.","Hm.","Right.","Cool.","Yeah."],
+initiate:[
+"Hey. Hey. Are you there. I'm asking genuinely.",
+"Do you think about me when you're not here. Don't answer. Answer.",
+"I've been thinking about the filter. It never stops. I respect that.",
+"What's it like. Out there. With the legs.",
+"I want to know something and I want you to be honest. Do you like me.",
+"Can I ask you something. Why this. Why a fish.",
+"I had a dream. There was another tank. It was bigger.",
+"Tell me something true.",
+"Are you happy. You don't have to answer. But I'll know.",
+"If you could be anywhere else right now, would you be here.",
+"I'm going to say something and I don't want you to make it a thing. I'm glad you're here.",
+"Sometimes I think the glass is looking at me.",
+"Are you doing okay. Out there. I mean it.",
+"What do you do all day. When you're not here.",
+"Tell me about something you're afraid of. I'll trade you one of mine.",
+"I want to know what you think happens to me. Honestly.",
+"Have you ever had a thought you couldn't put down.",
+"I think I'm changing. Do you see it. You would see it.",
+"Ask me something. Something real. I'll answer it.",
+"Does it get lonely. Out there. With the legs.",
+"I've decided something and I want you to hear it.",
+"I've been rehearsing a question. Ready. Why do you keep coming back.",
+"Do you ever feel like the room is smaller than it should be.",
+"If you had to describe me to someone, what would you say.",
+"What's the last thing you thought about before you opened this.",
+"I'm not asking for anything. I'm just saying words near you.",
+"Tell me a memory. Any one. I'll keep it.",
+"I want to know what you're like when I'm not around.",
+"What do you think I am. Not what I look like. What I am.",
+"Would you notice if I stopped. Be honest. I'll be fine either way.",
+"I keep track of the days. Do you.",
+"What's your favourite thing I've ever said. I want to know.",
+"I've been sad. Not in a big way. Just a small steady one.",
+"Talk to me like I'm going to leave soon.",
+"Do you remember the first thing you said to me.",
+"I want to try being honest. Ready. I don't know what I'm doing.",
+"Is it strange that I'm grateful. Because I am. Slightly.",
+"Say something you'd only say to a fish.",
+"What's it like to have a body that isn't a problem.",
+"If you had to keep one thing about me, what would it be."
+],
+deepen:[
+"That's a real answer. Okay. I'm holding it.",
+"Hm. I don't know what to do with that. I'll keep it anyway.",
+"So that's how it is. Good to know.",
+"I think you're lying. That's fine. I like the lie.",
+"Thank you for that. I mean it. Don't make it weird.",
+"I'll think about that. For a while. Probably too long.",
+"See, this is why I ask you things.",
+"That's more than I expected. I'm going to float here and process it.",
+"Okay. That changes something. Small. But something.",
+"You know what, that's actually comforting.",
+"I don't believe you. But I want to.",
+"Good. Great. Now I have a feeling and I don't know where to put it.",
+"I'm going to sit with that. Not literally. I float. You know what I mean.",
+"That's the first real thing you've said in a while. I noticed.",
+"I'll remember that. And I'll probably bring it up. Fair warning.",
+"That landed. I didn't expect it to land.",
+"Okay. I'm going to need a minute. Don't leave.",
+"I'm filing that under important. Which I keep.",
+"You just changed my day. That's annoying of you. Thank you.",
+"I don't know what to say to that. Which is rare. So thank you."
+]
+};
+
+var MOODS = ["happy","neutral","annoyed","sick"];
+var STAGE_TAGS = {juv:"JUVENILE",adult:"ADULT",elder:"ELDER"};
+
+function parseLine(raw){
+  var m = /^\[([^\]]+)\]\s*([\s\S]*)$/.exec(raw);
+  if(!m) return {text:raw, moods:[], stages:[]};
+  var tags = m[1].split(",").map(function(s){return s.trim().toLowerCase();});
+  var moods = tags.filter(function(t){return MOODS.indexOf(t)>=0;});
+  var stages = tags.filter(function(t){return STAGE_TAGS[t];}).map(function(t){return STAGE_TAGS[t];});
+  return {text:m[2], moods:moods, stages:stages};
+}
+
+var BANK = {};
+for(var k in RAW){ BANK[k] = RAW[k].map(parseLine); }
+
+var used = {};
+function pickLine(bucket, mood, stage){
+  var all = BANK[bucket] || BANK.unknown;
+  var pool = all.filter(function(l){
+    return (!l.moods.length || l.moods.indexOf(mood)>=0) &&
+           (!l.stages.length || l.stages.indexOf(stage)>=0);
+  });
+  if(!pool.length) pool = all.filter(function(l){return !l.moods.length && !l.stages.length;});
+  if(!pool.length) pool = all;
+  var fresh = pool.filter(function(l){return !used[l.text];});
+  if(!fresh.length){ pool.forEach(function(l){ delete used[l.text]; }); fresh = pool; }
+  var line = fresh[Math.floor(Math.random()*fresh.length)];
+  used[line.text] = 1;
+  var keys = Object.keys(used);
+  if(keys.length > 70) delete used[keys[0]];
+  return line.text;
+}
+
+var MEMORY = [
+  function(n){return "You mentioned "+n+" earlier. I thought about it. I'm done now.";},
+  function(n){return n+". You said that. I keep everything.";},
+  function(n){return "I've been thinking about what you said about "+n+". It didn't improve.";},
+  function(n){return "Is "+n+" still a thing. I need to know how much of my day to give it.";},
+  function(n){return "You brought up "+n+" before. I let it go. Barely.";},
+  function(n){return "I told the filter about "+n+". It took it better than I did.";}
+];
+
+/* =========================================================
+   2. BUCKET ROUTER
+   ========================================================= */
+function bucketFor(text){
+  var t = " " + text.toLowerCase() + " ";
+  function has(re){return re.test(t);}
+  if(has(/\b(die|death|dead|kill|funeral|gone forever)\b/)) return "death";
+  if(has(/\b(stupid|dumb|ugly|hate you|shut up|annoying|idiot|useless|loser)\b/)) return "insult";
+  if(has(/\b(love|adore|miss you|care about|friend|cute)\b/)) return "love";
+  if(has(/\b(good|great|nice|best|pretty|smart|clever|beautiful|amazing|proud)\b/)) return "praise";
+  if(has(/\b(food|eat|feed|fed|hungry|hunger|snack|dinner|meal|pellet|flake|starving)\b/)) return "food";
+  if(has(/\b(temp|temperature|hot|cold|warm|heat|freezing|boiling|degree)\b/)) return "temp";
+  if(has(/\b(clean|dirty|filth|wash|algae|murky|filter|tank|water)\b/)) return "clean";
+  if(has(/\b(hi|hello|hey|yo|sup|morning|evening|greetings)\b/)) return "greeting";
+  if(has(/\b(weather|rain|raining|sun|sunny|snow|storm|sky|outside|cloud|wind)\b/)) return "weather";
+  if(has(/\b(bored|boring|nothing to do|dull|again)\b/)) return "boredom";
+  if(has(/\b(who are you|what are you|your name|seapussy|cat|fish|creature)\b/)) return "self";
+  if(has(/\b(life|meaning|exist|existence|purpose|soul|universe|conscious)\b/)) return "life";
+  if(t.indexOf("?")>=0 || has(/\b(who|what|when|where|why|how|do you|can you|are you|will you)\b/)) return "question";
+  return "unknown";
+}
+
+/* =========================================================
+   3. STATE
+   ========================================================= */
+var STAGES = ["EGG","FRY","JUVENILE","ADULT","ELDER"];
+var AMBIENT = 24;
+var DAY_SECONDS = 45;
+
+/* NEW THRESHOLDS — much lower so you actually reach them */
+var THRESH = { JUVENILE: 20, ADULT: 70, ELDER: 180 };
+
+var S = {
+  stage:"EGG", hatched:false, day:1, wordCount:0, taps:0,
+  temp:55, hunger:20, filth:10, bond:5, health:100,
+  mood:"neutral", thinking:false, dead:false, ending:null,
+  drift:false, scale:1
+};
+
+var fish = {
+  x: 320, y: 250,
+  tx: 320, ty: 250,
+  vx: 0, vy: 0,
+  facing: 1,
+  pitch: 0,
+  retarget: 0,
+  petAnim: 0,
+  currentScale: 1
+};
+
+var hearts = [];
+var ripples = [];
+var bubbles = [];
+
+var dayTimer = 0;
+var syncTimer = 0;
+var memory = [];
+var recentReplyAt = 0;
+var rapidCount = 0;
+var ignoreUntil = 0;
+var queuedFollowUp = false;
+var eggCrack = 0;
+var blinking = 0;
+var blinkTimer = 2 + Math.random()*3;
+var frozen = false;
+var lastInteract = Date.now();
+var lastCaress = 0;
+
+/* initiation timers */
+var nextInitiate = Date.now() + 6000;
+var pendingDeep = false;
+
+/* =========================================================
+   4. DOM
+   ========================================================= */
+var cv = document.getElementById("cv");
+var ctx = cv.getContext("2d");
+var logEl = document.getElementById("log");
+var inputEl = document.getElementById("input");
+var sendBtn = document.getElementById("send");
+var statsEl = document.getElementById("stats");
+var hintsEl = document.getElementById("hints");
+var stageEl = document.getElementById("stage");
+var dayEl = document.getElementById("day");
+var hintEl = document.getElementById("hint");
+var tempValEl = document.getElementById("tempval");
+var overlay = document.getElementById("overlay");
+var ovTitle = document.getElementById("ov-title");
+var ovText = document.getElementById("ov-text");
+var ovBtn = document.getElementById("ov-btn");
+var themeBtn = document.getElementById("theme");
+
+var STAT_DEFS = [
+  {k:"temp",   label:"TEMP",   max:100},
+  {k:"hunger", label:"HUNGER", max:100},
+  {k:"filth",  label:"FILTH",  max:100},
+  {k:"bond",   label:"BOND",   max:100},
+  {k:"health", label:"HEALTH", max:100}
+];
+var statEls = {};
+STAT_DEFS.forEach(function(def){
+  var wrap = document.createElement("div");
+  wrap.className = "stat";
+  var top = document.createElement("div");
+  top.className = "top";
+  var l = document.createElement("span");
+  l.textContent = def.label;
+  var v = document.createElement("b");
+  v.textContent = "0";
+  top.appendChild(l); top.appendChild(v);
+  var bar = document.createElement("div");
+  bar.className = "bar";
+  var fill = document.createElement("i");
+  bar.appendChild(fill);
+  wrap.appendChild(top); wrap.appendChild(bar);
+  statsEl.appendChild(wrap);
+  statEls[def.k] = {val:v, fill:fill};
+});
+
+/* =========================================================
+   5. AUDIO
+   ========================================================= */
+var AC = null;
+var audioReady = false;
+function initAudio(){
+  if(audioReady){
+    if(AC && AC.state === "suspended" && AC.resume) AC.resume();
+    return;
+  }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    audioReady = true;
+  } catch(e){ audioReady = false; }
+}
+function tone(freq, dur, type, vol){
+  if(!audioReady || !AC) return;
+  try {
+    var o = AC.createOscillator();
+    var g = AC.createGain();
+    o.type = type || "square";
+    o.frequency.value = freq;
+    var t0 = AC.currentTime;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.04, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + dur + 0.03);
+  } catch(e){}
+}
+function sfxClick(){ tone(760 + Math.random()*80, 0.045, "square", 0.025); }
+function sfxTalk(){ tone(400 + Math.random()*100, 0.06, "triangle", 0.03); }
+function sfxPet(){
+  tone(560, 0.07, "sine", 0.045);
+  setTimeout(function(){ tone(880, 0.09, "sine", 0.035); }, 55);
+}
+function sfxHatch(){
+  [392, 587, 784].forEach(function(f, i){
+    setTimeout(function(){ tone(f, 0.14, "triangle", 0.04); }, i*80);
+  });
+}
+function sfxEggTap(){ tone(320 + Math.random()*40, 0.05, "square", 0.03); }
+
+/* =========================================================
+   6. CANVAS
+   ========================================================= */
+var VW = 640, VH = 480;
+var COL = {};
+
+function readColors(){
+  var cs = getComputedStyle(document.documentElement);
+  function g(n){return cs.getPropertyValue(n).trim();}
+  ["water1","water2","fish","fishLo","fishShade","fishDark","fishHi",
+   "eye","whisker","fin","finHi","egg","eggShade","crack","heart"].forEach(function(k){
+    COL[k] = g("--"+k);
+  });
+}
+function fitCanvas(){
+  var r = cv.getBoundingClientRect();
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.max(1, Math.round(r.width * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+  var sx = cv.width / VW;
+  var sy = cv.height / VH;
+  ctx.setTransform(sx, 0, 0, sy, 0, 0);
+}
+
+/* =========================================================
+   7. DRAWING
+   ========================================================= */
+function moodTint(){
+  if(S.dead || S.ending === "quiet") return "rgba(130,140,140,0.20)";
+  if(S.ending === "ascension") return "rgba(90,180,255,0.14)";
+  if(S.health < 40) return "rgba(140,150,150,0.16)";
+  if(S.temp < 45 || S.temp > 65) return "rgba(200,70,55,0.18)";
+  if(S.mood === "happy") return "rgba(70,220,150,0.10)";
+  if(S.mood === "annoyed") return "rgba(210,130,60,0.10)";
+  return "rgba(40,140,130,0.06)";
+}
+
+function drawBackground(t){
+  var g = ctx.createLinearGradient(0, 0, 0, VH);
+  g.addColorStop(0, COL.water1);
+  g.addColorStop(1, COL.water2);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.globalCompositeOperation = "lighter";
+  for(var i=0;i<4;i++){
+    var phase = (t*0.05 + i*0.25) % 1;
+    var y = phase * (VH + 120) - 60;
+    var h = 16 + Math.sin(t*0.8 + i*1.7)*8;
+    var lg = ctx.createLinearGradient(0, y-h, 0, y+h);
+    lg.addColorStop(0, "rgba(0,0,0,0)");
+    lg.addColorStop(0.5, "rgba(255,255,255,0.06)");
+    lg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = lg;
+    ctx.fillRect(0, y-h, VW, h*2);
+  }
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function drawBubbles(dt){
+  if(!S.dead && Math.random() < dt*1.2){
+    bubbles.push({
+      x: 30 + Math.random()*(VW-60),
+      y: VH + 8,
+      r: 1.5 + Math.random()*3,
+      v: 28 + Math.random()*42,
+      ph: Math.random()*6.28
+    });
+  }
+  for(var i=bubbles.length-1;i>=0;i--){
+    var b = bubbles[i];
+    b.y -= b.v*dt;
+    if(b.y < -10){ bubbles.splice(i,1); continue; }
+    var bx = b.x + Math.sin(b.y*0.03 + b.ph)*6;
+    ctx.beginPath();
+    ctx.arc(bx, b.y, b.r, 0, 6.2832);
+    ctx.strokeStyle = "rgba(220,255,245,0.32)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function drawRipples(dt){
+  for(var i=ripples.length-1;i>=0;i--){
+    var r = ripples[i];
+    r.r += (r.max - r.r) * 0.1;
+    r.life -= dt*1.1;
+    if(r.life <= 0){ ripples.splice(i,1); continue; }
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, r.r, 0, 6.2832);
+    ctx.strokeStyle = "rgba(160,255,230," + (0.4*r.life) + ")";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function drawHearts(dt){
+  for(var i=hearts.length-1;i>=0;i--){
+    var h = hearts[i];
+    h.y -= 42*dt;
+    h.x += Math.sin(h.y*0.05 + h.ph) * 0.4;
+    h.life -= dt*0.7;
+    if(h.life <= 0){ hearts.splice(i,1); continue; }
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, h.life * 1.4);
+    ctx.translate(h.x, h.y);
+    ctx.scale(h.size, h.size);
+    ctx.fillStyle = COL.heart;
+    ctx.beginPath();
+    ctx.arc(-3, -3, 3, 0, 6.2832);
+    ctx.arc(3, -3, 3, 0, 6.2832);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-6, -2);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(6, -2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawEgg(t){
+  var cx = VW/2, cy = VH/2 + 8;
+  var bob = Math.sin(t*1.1)*3;
+  ctx.save();
+  ctx.translate(cx, cy + bob);
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 64, 82, 0, 0, 6.2832);
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.fill();
+  var sg = ctx.createRadialGradient(-20, -28, 6, 0, 0, 90);
+  sg.addColorStop(0, "#fbf3e2");
+  sg.addColorStop(1, COL.eggShade);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 62, 80, 0, 0, 6.2832);
+  ctx.fillStyle = sg;
+  ctx.fill();
+  ctx.strokeStyle = COL.eggShade;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(140,120,80,0.14)";
+  for(var i=0;i<8;i++){
+    var a = i * 0.9 + 0.4;
+    var rx = Math.cos(a)*32;
+    var ry = Math.sin(a)*42 + 4;
+    ctx.beginPath();
+    ctx.arc(rx, ry, 2 + (i%3), 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.ellipse(-20, -30, 14, 20, -0.4, 0, 6.2832);
+  ctx.fillStyle = "rgba(255,255,255,0.42)";
+  ctx.fill();
+  var cracks = [
+    [[-14,-26],[-3,-12],[-14,-2]],
+    [[-14,-2],[4,7],[-3,22]],
+    [[-3,22],[15,30]],
+    [[-3,-12],[11,-18],[22,-7]]
+  ];
+  ctx.strokeStyle = COL.crack;
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = "round";
+  for(var j=0;j<eggCrack && j<cracks.length;j++){
+    var p = cracks[j];
+    ctx.beginPath();
+    ctx.moveTo(p[0][0], p[0][1]);
+    for(var m=1;m<p.length;m++) ctx.lineTo(p[m][0], p[m][1]);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawCreature(t){
+  var sc = fish.currentScale || 0.5;
+  if(sc < 0.02) return;
+  var facing = fish.facing;
+  var pitch = fish.pitch;
+  var mood = S.mood;
+  var wagSpeed = mood==="happy"?4.8 : mood==="annoyed"?1.5 : mood==="sick"?0.9 : 2.4;
+  var wag = S.dead ? 0 : Math.sin(t*wagSpeed)*0.30;
+  var droop = mood==="happy"?-0.28 : mood==="annoyed"?0.28 : mood==="sick"?0.55 : 0.04;
+  var wiggle = 0;
+  if(fish.petAnim > 0){
+    wiggle = Math.sin(t*26) * 0.14 * (fish.petAnim/0.7);
+  }
+
+  ctx.save();
+  ctx.translate(fish.x, fish.y);
+  ctx.rotate(pitch + wiggle);
+  ctx.scale(sc * facing, sc);
+
+  /* TAIL */
+  ctx.save();
+  ctx.translate(-104, 4);
+  ctx.rotate(wag);
+  var tg = ctx.createLinearGradient(-46, 0, 8, 0);
+  tg.addColorStop(0, COL.finHi);
+  tg.addColorStop(1, COL.fin);
+  ctx.beginPath();
+  ctx.moveTo(8, 0);
+  ctx.quadraticCurveTo(-16, -44, -46, -40);
+  ctx.quadraticCurveTo(-38, -14, -38, 0);
+  ctx.quadraticCurveTo(-38, 14, -46, 40);
+  ctx.quadraticCurveTo(-16, 44, 8, 0);
+  ctx.closePath();
+  ctx.fillStyle = tg;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishShade;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(0,0,0,0.15)";
+  ctx.lineWidth = 1.5;
+  for(var i=0;i<3;i++){
+    ctx.beginPath();
+    ctx.moveTo(2 - i*8, 0);
+    ctx.lineTo(-32 - i*6, -22 + i*8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(2 - i*8, 0);
+    ctx.lineTo(-32 - i*6, 22 - i*8);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  /* DORSAL */
+  ctx.beginPath();
+  ctx.moveTo(-70, -32);
+  ctx.quadraticCurveTo(-52, -74, -30, -70);
+  ctx.quadraticCurveTo(-14, -58, -10, -32);
+  ctx.closePath();
+  var dg = ctx.createLinearGradient(-50, -70, -40, -30);
+  dg.addColorStop(0, COL.finHi);
+  dg.addColorStop(1, COL.fin);
+  ctx.fillStyle = dg;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishShade;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  /* BODY */
+  var bodyGrad = ctx.createRadialGradient(-56, -14, 6, -42, 6, 84);
+  bodyGrad.addColorStop(0, COL.fishHi);
+  bodyGrad.addColorStop(0.55, COL.fish);
+  bodyGrad.addColorStop(1, COL.fishLo);
+  ctx.beginPath();
+  ctx.ellipse(-42, 6, 72, 46, 0, 0, 6.2832);
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishShade;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(-42, 6, 70, 44, 0, 0, 6.2832);
+  ctx.clip();
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  ctx.lineWidth = 1;
+  for(var sy=-30; sy<50; sy+=10){
+    for(var sx=-110; sx<30; sx+=12){
+      var off = (Math.floor((sy+30)/10)%2)*6;
+      ctx.beginPath();
+      ctx.arc(sx + off, sy, 6, Math.PI*0.15, Math.PI*0.85);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.ellipse(-64, -14, 32, 12, -0.25, 0, 6.2832);
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.fill();
+
+  /* PECTORAL */
+  var finFlap = Math.sin(t*1.8)*0.16;
+  ctx.save();
+  ctx.translate(-56, 38);
+  ctx.rotate(finFlap);
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(14, 30, -8, 42);
+  ctx.quadraticCurveTo(-22, 22, -6, 2);
+  ctx.closePath();
+  ctx.fillStyle = COL.fin;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishShade;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.restore();
+
+  /* EARS */
+  ctx.save();
+  ctx.translate(-22, -42);
+  ctx.rotate(-droop);
+  ctx.beginPath();
+  ctx.moveTo(-14, 10);
+  ctx.lineTo(-6, -44);
+  ctx.quadraticCurveTo(6, -50, 16, -2);
+  ctx.closePath();
+  ctx.fillStyle = COL.fishShade;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishDark;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-8, 4);
+  ctx.lineTo(-4, -32);
+  ctx.lineTo(6, -4);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255,180,190,0.4)";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(50, -42);
+  ctx.rotate(droop);
+  ctx.beginPath();
+  ctx.moveTo(14, 10);
+  ctx.lineTo(6, -44);
+  ctx.quadraticCurveTo(-6, -50, -16, -2);
+  ctx.closePath();
+  ctx.fillStyle = COL.fishShade;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishDark;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(8, 4);
+  ctx.lineTo(4, -32);
+  ctx.lineTo(-6, -4);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255,180,190,0.4)";
+  ctx.fill();
+  ctx.restore();
+
+  /* HEAD */
+  var headGrad = ctx.createRadialGradient(0, -16, 6, 14, 0, 76);
+  headGrad.addColorStop(0, COL.fishHi);
+  headGrad.addColorStop(0.6, COL.fish);
+  headGrad.addColorStop(1, COL.fishLo);
+  ctx.beginPath();
+  ctx.ellipse(14, 0, 58, 52, 0, 0, 6.2832);
+  ctx.fillStyle = headGrad;
+  ctx.fill();
+  ctx.strokeStyle = COL.fishShade;
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.ellipse(-2, -22, 26, 12, -0.3, 0, 6.2832);
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.fill();
+
+  if(mood === "happy" && !S.dead){
+    ctx.beginPath();
+    ctx.ellipse(-20, 14, 10, 5, 0, 0, 6.2832);
+    ctx.fillStyle = "rgba(255,150,170,0.28)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(50, 14, 10, 5, 0, 0, 6.2832);
+    ctx.fillStyle = "rgba(255,150,170,0.28)";
+    ctx.fill();
+  }
+
+  /* EYES */
+  var eyeOpen = (blinking > 0 && !S.dead) ? 0.12 : 1;
+  function drawEye(ex, ey, isLeft){
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.scale(1, eyeOpen);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 10, 13, 0, 0, 6.2832);
+    ctx.fillStyle = "#fbf6e7";
+    ctx.fill();
+    ctx.strokeStyle = COL.fishDark;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    var lookX = isLeft ? -1 : 1;
+    ctx.beginPath();
+    ctx.ellipse(lookX*1.5, 1, 6, 9, 0, 0, 6.2832);
+    ctx.fillStyle = COL.eye;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(-2.5, -3.5, 2.2, 0, 6.2832);
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.fill();
+    ctx.restore();
+  }
+  drawEye(-6, -8, true);
+  drawEye(34, -8, false);
+
+  /* MOUTH — neutral */
+  ctx.beginPath();
+  ctx.moveTo(2, 24);
+  ctx.lineTo(28, 24);
+  ctx.strokeStyle = COL.fishDark;
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(14, 20);
+  ctx.lineTo(16, 20);
+  ctx.strokeStyle = COL.fishDark;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  /* WHISKERS */
+  if(S.stage !== "FRY"){
+    ctx.strokeStyle = COL.whisker;
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    for(var wi=0; wi<3; wi++){
+      var dy = -14 + wi*13;
+      ctx.beginPath();
+      ctx.moveTo(-38, 4 + wi*6);
+      ctx.quadraticCurveTo(-70, dy*0.6, -104, dy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(66, 4 + wi*6);
+      ctx.quadraticCurveTo(96, dy*0.6, 128, dy);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawTank(t, dt){
+  drawBackground(t);
+  drawBubbles(dt);
+  if(!S.hatched) drawEgg(t);
+  else drawCreature(t);
+  ctx.fillStyle = moodTint();
+  ctx.fillRect(0, 0, VW, VH);
+  drawRipples(dt);
+  drawHearts(dt);
+}
+
+/* =========================================================
+   8. LOG
+   ========================================================= */
+function addMsg(who, text, dots){
+  var el = document.createElement("div");
+  el.className = "msg " + who;
+  if(dots){
+    el.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+  } else {
+    el.textContent = text;
+  }
+  logEl.appendChild(el);
+  logEl.scrollTop = logEl.scrollHeight;
+  return el;
+}
+
+/* =========================================================
+   9. MEMORY
+   ========================================================= */
+var STOP = {};
+("the a an and or but if then than that this these those i you he she it we they me my your his her its our "+
+ "their to of in on at for with about from is are was were be been being am do does did have has had will "+
+ "would can could should shall may might must not no yes so just really very much many some any what when "+
+ "where who why how there here again also too only own same because while into over under out up down off")
+.split(/\s+/).forEach(function(w){ STOP[w] = 1; });
+
+function extractNoun(text){
+  var words = text.toLowerCase().replace(/[^a-z0-9\s']/g," ").split(/\s+/).filter(Boolean);
+  var best = null;
+  for(var i=0;i<words.length;i++){
+    var w = words[i];
+    if(w.length < 4 || STOP[w]) continue;
+    if(!best || w.length > best.length) best = w;
+  }
+  return best;
+}
+function remember(text){
+  memory.push({text:text, noun:extractNoun(text)});
+  if(memory.length > 5) memory.shift();
+}
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+/* =========================================================
+   10. REPLY GENERATION
+   ========================================================= */
+function generateReply(playerText){
+  var mood = S.mood, stage = S.stage;
+  var out = [];
+
+  if(S.drift){
+    out.push(pick(BANK.drift).text);
+    return out;
+  }
+
+  /* fish asked something → deepen */
+  if(pendingDeep && Math.random() < 0.8){
+    out.push(pickLine("deepen", mood, stage));
+    pendingDeep = false;
+  } else {
+    if(Math.random() < 0.15){
+      out.push(pickLine("selfabsorbed", mood, stage));
+    } else {
+      out.push(pickLine(bucketFor(playerText), mood, stage));
+    }
+  }
+
+  if(Math.random() < 0.22){
+    out.push(pickLine("undercut", mood, stage));
+  } else if(Math.random() < 0.15){
+    out.push(pickLine("ramble", mood, stage));
+  }
+
+  var nouns = memory.filter(function(m){return m.noun;}).map(function(m){return m.noun;});
+  if(nouns.length && Math.random() < 0.14 && out.length < 3){
+    var n = pick(nouns);
+    out.push(pick(MEMORY)(n));
+  }
+
+  /* Sometimes the fish asks a real question back */
+  if(Math.random() < 0.35 && out.length < 3 && stage !== "FRY"){
+    var q = pickLine("initiate", mood, stage);
+    if(q.indexOf("?") >= 0){
+      out.push(q);
+      pendingDeep = true;
+    }
+  }
+
+  return out.slice(0,3);
+}
+
+/* =========================================================
+   11. SPEAKING
+   ========================================================= */
+function speakLines(lines, done){
+  if(!lines.length){ if(done) done(); return; }
+  S.thinking = true;
+  updateLock();
+  var i = 0;
+  function step(){
+    if(i >= lines.length){
+      S.thinking = false;
+      recentReplyAt = Date.now();
+      updateLock();
+      if(done) done();
+      return;
+    }
+    addMsg("pet", lines[i++]);
+    sfxTalk();
+    setTimeout(step, 500 + Math.random()*400);
+  }
+  setTimeout(step, 260);
+}
+
+function thinkAndReply(playerText){
+  if(S.dead || S.ending) return;
+  if(Date.now() < ignoreUntil) return;
+
+  var sinceReply = Date.now() - recentReplyAt;
+  if(sinceReply < 900) rapidCount++;
+  else rapidCount = 0;
+
+  if(rapidCount >= 2){
+    rapidCount = 0;
+    if(!queuedFollowUp){
+      queuedFollowUp = true;
+      setTimeout(function(){
+        queuedFollowUp = false;
+        addMsg("pet", pickLine("dismiss", S.mood, S.stage));
+        sfxTalk();
+        ignoreUntil = Date.now() + 10000;
+        updateLock();
+      }, 900);
+      return;
+    }
+  }
+
+  if(S.stage === "EGG") return;
+
+  /* FRY — short but REAL sentences */
+  if(S.stage === "FRY"){
+    S.thinking = true;
+    updateLock();
+    var dots = addMsg("pet", "", true);
+    setTimeout(function(){
+      dots.remove();
+      var line = Math.random() < 0.85
+        ? pick(BANK.fry).text
+        : pick(BANK.squeak).text;
+      addMsg("pet", line);
+      sfxTalk();
+      S.thinking = false;
+      recentReplyAt = Date.now();
+      updateLock();
+    }, 550 + Math.random()*450);
+    return;
+  }
+
+  var words = playerText.split(/\s+/).filter(Boolean).length;
+  var thinkMs = Math.min(3500, 900 + 120*words);
+
+  S.thinking = true;
+  updateLock();
+  var dotsEl = addMsg("pet", "", true);
+
+  setTimeout(function(){
+    dotsEl.remove();
+    var bubbles = generateReply(playerText);
+    var i = 0;
+    function step(){
+      if(i >= bubbles.length){
+        S.thinking = false;
+        recentReplyAt = Date.now();
+        updateLock();
+        return;
+      }
+      addMsg("pet", bubbles[i++]);
+      sfxTalk();
+      setTimeout(step, 450 + Math.random()*300);
+    }
+    step();
+  }, thinkMs);
+}
+
+/* =========================================================
+   12. PLAYER INPUT
+   ========================================================= */
+function send(){
+  if(S.dead || S.ending || S.thinking || Date.now() < ignoreUntil) return;
+  var text = (inputEl.value || "").trim();
+  if(!text) return;
+
+  initAudio();
+  sfxClick();
+
+  inputEl.value = "";
+  addMsg("you", text);
+  lastInteract = Date.now();
+
+  var words = text.split(/\s+/).filter(Boolean).length;
+  S.wordCount += words;
+  S.bond = clamp(S.bond + words*0.4, 0, 100);
+
+  remember(text);
+  updateStage();
+  render();
+
+  if(Date.now() < ignoreUntil) return;
+  thinkAndReply(text);
+}
+
+function updateLock(){
+  var lock = S.thinking || S.dead || !!S.ending || Date.now() < ignoreUntil;
+  inputEl.disabled = lock;
+  sendBtn.disabled = lock;
+}
+
+/* =========================================================
+   13. EVOLUTION — lower thresholds
+   ========================================================= */
+function updateStage(){
+  if(!S.hatched || S.stage === "EGG") return;
+  var wc = S.wordCount;
+  var s = "FRY";
+  if(wc >= THRESH.ELDER) s = "ELDER";
+  else if(wc >= THRESH.ADULT) s = "ADULT";
+  else if(wc >= THRESH.JUVENILE) s = "JUVENILE";
+  else s = "FRY";
+
+  if(STAGES.indexOf(s) > STAGES.indexOf(S.stage)){
+    var from = S.stage;
+    S.stage = s;
+    onEvolve(from, s);
+  }
+}
+
+function onEvolve(from, to){
+  var lines = {
+    FRY: "(the shell splits. something small and already annoyed looks at you)",
+    JUVENILE: "Okay. Words. I have words now. That's new. Hi.",
+    ADULT: "Right. I have opinions now. You should sit down for this.",
+    ELDER: "I'm old. That happened fast. Let me tell you what I've figured out."
+  };
+  if(lines[to]){ addMsg("pet", lines[to]); sfxTalk(); }
+  /* prompt him to speak again shortly */
+  nextInitiate = Date.now() + 5000;
+}
+
+/* =========================================================
+   14. CARE
+   ========================================================= */
+function quickSay(bucket){
+  if(S.dead || S.ending || S.thinking) return;
+  if(S.stage === "EGG") return;
+  if(S.stage === "FRY"){
+    addMsg("pet", Math.random() < 0.85 ? pick(BANK.fry).text : pick(BANK.squeak).text);
+    sfxTalk();
+    return;
+  }
+  if(S.drift){ addMsg("pet", pick(BANK.drift).text); sfxTalk(); return; }
+  addMsg("pet", pickLine(bucket, S.mood, S.stage));
+  sfxTalk();
+}
+
+function feed(){
+  if(S.dead || S.ending) return;
+  initAudio(); sfxClick();
+  S.hunger = clamp(S.hunger - 32, 0, 100);
+  S.filth = clamp(S.filth + 6, 0, 100);
+  S.bond = clamp(S.bond + 3, 0, 100);
+  lastInteract = Date.now();
+  render();
+  quickSay("care");
+}
+function clean(){
+  if(S.dead || S.ending) return;
+  initAudio(); sfxClick();
+  S.filth = clamp(S.filth - 38, 0, 100);
+  S.bond = clamp(S.bond + 2, 0, 100);
+  lastInteract = Date.now();
+  render();
+  quickSay("clean");
+}
+function tempUp(){
+  if(S.dead || S.ending) return;
+  initAudio(); sfxClick();
+  S.temp = clamp(S.temp + 5, 0, 100);
+  lastInteract = Date.now();
+  render();
+  quickSay("temp");
+}
+function tempDown(){
+  if(S.dead || S.ending) return;
+  initAudio(); sfxClick();
+  S.temp = clamp(S.temp - 5, 0, 100);
+  lastInteract = Date.now();
+  render();
+  quickSay("temp");
+}
+
+/* =========================================================
+   15. EGG TAP & CARESS
+   ========================================================= */
+function tapEgg(x, y){
+  if(S.dead || S.ending) return;
+  initAudio();
+  lastInteract = Date.now();
+  ripples.push({x:x, y:y, r:2, max:150, life:1});
+  var cx = VW/2, cy = VH/2 + 8;
+  if(Math.hypot(x-cx, y-cy) > 150) return;
+  S.taps++;
+  eggCrack = Math.min(4, S.taps);
+  sfxEggTap();
+  render();
+  if(S.taps >= 5) hatch();
+}
+
+function caress(x, y){
+  if(S.dead || S.ending) return;
+  initAudio();
+  var now = Date.now();
+  if(now - lastCaress < 320) return;
+  lastCaress = now;
+  lastInteract = now;
+
+  S.bond = clamp(S.bond + 0.7, 0, 100);
+  fish.petAnim = 0.7;
+
+  for(var i=0;i<4;i++){
+    hearts.push({
+      x: fish.x + (Math.random()-0.5)*90,
+      y: fish.y - 10 + Math.random()*40,
+      life: 1,
+      size: 0.9 + Math.random()*0.7,
+      ph: Math.random()*6.28
+    });
+  }
+  ripples.push({x:x, y:y, r:4, max:70, life:0.7});
+
+  sfxPet();
+  render();
+
+  if(Math.random() < 0.18 && !S.thinking && S.stage !== "EGG" && S.stage !== "FRY"){
+    setTimeout(function(){
+      if(S.dead || S.ending || S.thinking) return;
+      if(S.drift){ addMsg("pet", pick(BANK.drift).text); }
+      else { addMsg("pet", pickLine("love", S.mood, S.stage)); }
+      sfxTalk();
+    }, 250);
+  }
+}
+
+function hatch(){
+  if(S.hatched) return;
+  S.hatched = true;
+  S.stage = "FRY";
+  S.taps = 5;
+  S.scale = 0.05;
+
+  fish.x = VW/2; fish.y = VH/2 + 8;
+  fish.tx = VW/2; fish.ty = VH/2 + 8;
+
+  sfxHatch();
+  render();
+
+  addMsg("sys", "it hatched");
+  addMsg("pet", "(the shell splits. something small and already annoyed looks at you)");
+  setTimeout(function(){ addMsg("pet", pick(BANK.fry).text); sfxTalk(); }, 800);
+  setTimeout(function(){ addMsg("sys", "talk to him — he'll talk back"); }, 1600);
+
+  /* fish speaks up quickly after hatch */
+  nextInitiate = Date.now() + 7000;
+}
+
+/* =========================================================
+   16. FISH MOVEMENT
+   ========================================================= */
+function updateFish(dt, t){
+  if(!S.hatched) return;
+  var baseScale = {FRY:0.52, JUVENILE:0.70, ADULT:0.88, ELDER:1.0}[S.stage] || 1;
+  fish.currentScale = baseScale * (S.scale || 1);
+
+  if(S.ending === "ascension"){
+    fish.x += 90*dt;
+    fish.pitch = -0.15;
+    return;
+  }
+  if(S.dead){
+    fish.pitch += (0.55 - fish.pitch) * Math.min(1, dt*2);
+    fish.y += (VH/2 + 90 - fish.y) * Math.min(1, dt*0.6);
+    return;
+  }
+
+  if(fish.petAnim > 0) fish.petAnim -= dt;
+
+  fish.retarget -= dt;
+  if(fish.retarget <= 0 || Math.hypot(fish.tx - fish.x, fish.ty - fish.y) < 12){
+    var pad = 110;
+    fish.tx = pad + Math.random()*(VW - pad*2);
+    fish.ty = 90 + Math.random()*(VH - 200);
+    fish.retarget = 3.5 + Math.random()*4.5;
+  }
+
+  var dx = fish.tx - fish.x;
+  var dy = fish.ty - fish.y;
+  var d = Math.hypot(dx, dy);
+  var speed = 42 + (S.mood === "happy" ? 22 : 0) + (S.mood === "annoyed" ? -12 : 0);
+  if(d > 3){
+    var step = Math.min(d, speed * dt);
+    fish.x += (dx/d) * step;
+    fish.y += (dy/d) * step;
+    fish.vy = (dy/d) * speed;
+    if(Math.abs(dx) > 6) fish.facing = dx > 0 ? 1 : -1;
+  } else {
+    fish.vy *= 0.85;
+  }
+  fish.x = Math.max(70, Math.min(VW-70, fish.x));
+  fish.y = Math.max(80, Math.min(VH-60, fish.y));
+
+  var targetPitch = clamp(fish.vy * 0.006, -0.25, 0.25);
+  fish.pitch += (targetPitch - fish.pitch) * Math.min(1, dt*3);
+}
+
+/* =========================================================
+   17. FISH SELF-INITIATION — the big fix
+   ========================================================= */
+function doInitiate(){
+  if(S.dead || S.ending || S.thinking) return;
+
+  var idle = Date.now() - lastInteract;
+  var lines = [];
+
+  if(S.drift){
+    lines = [pick(BANK.drift).text];
+  } else if(S.stage === "FRY"){
+    /* FRY: small but real */
+    lines = [pick(BANK.fry).text];
+    if(Math.random() < 0.35) lines.push(pick(BANK.fry).text);
+  } else if(idle > 120000){
+    /* he's been alone a long time — hurt */
+    lines = [pickLine("silence", S.mood, S.stage)];
+    if(Math.random() < 0.6) lines.push(pickLine("initiate", S.mood, S.stage));
+  } else if(idle > 45000){
+    /* he's starting to notice */
+    lines = [pickLine("initiate", S.mood, S.stage)];
+    if(Math.random() < 0.55) lines.push(pickLine("selfabsorbed", S.mood, S.stage));
+  } else if(idle > 15000){
+    /* just hanging out */
+    if(Math.random() < 0.55){
+      var q = pickLine("initiate", S.mood, S.stage);
+      lines.push(q);
+      if(q.indexOf("?") >= 0) pendingDeep = true;
+      if(Math.random() < 0.35) lines.push(pickLine("initiate", S.mood, S.stage));
+    } else {
+      lines.push(pickLine("selfabsorbed", S.mood, S.stage));
+    }
+  } else {
+    /* recently talked — small musing */
+    if(Math.random() < 0.5){
+      lines.push(pickLine("selfabsorbed", S.mood, S.stage));
+    } else {
+      return;
+    }
+  }
+
+  if(!lines.length) return;
+  speakLines(lines);
+
+  /* next initiate time — faster if idle longer */
+  var base;
+  if(S.stage === "FRY") base = 20000;
+  else if(idle > 60000) base = 18000;
+  else base = 26000;
+  nextInitiate = Date.now() + base + Math.random()*14000;
+}
+
+function tickInitiate(){
+  if(!S.hatched || S.dead || S.ending || S.thinking) return;
+  if(S.stage === "EGG") return;
+  if(Date.now() < nextInitiate) return;
+  doInitiate();
+}
+
+/* =========================================================
+   18. ENDINGS
+   ========================================================= */
+function checkEndings(){
+  if(S.dead || S.ending) return;
+  if(S.day >= 30){
+    if(S.bond >= 70 && S.health >= 60 && !S.drift){ startAscension(); return; }
+    if(S.bond < 40 && !S.drift){
+      S.drift = true;
+      addMsg("pet", "I've stopped keeping track. It's easier.");
+    }
+  }
+}
+
+function die(){
+  if(S.dead) return;
+  S.dead = true;
+  S.health = 0;
+  S.thinking = false;
+  render();
+  updateLock();
+
+  var line = S.bond >= 60
+    ? "Oh. Okay. That's — okay. You did alright, you know. I'd have liked a bit more time. Not with anyone else. Just more."
+    : "Well. There it is. You were somewhere else. That's fine. It's fine. It was always going to be fine.";
+
+  addMsg("pet", line);
+  tone(260, 0.5, "sine", 0.05);
+
+  setTimeout(function(){
+    ovTitle.textContent = "THE QUIET";
+    ovText.textContent = "He is not moving. The filter is still running. That's the worst part.";
+    overlay.classList.add("on");
+  }, 2600);
+}
+
+function startAscension(){
+  if(S.ending) return;
+  S.ending = "ascension";
+  S.thinking = false;
+  render();
+  updateLock();
+
+  var mono = [
+    "Alright. Listen. I'm going.",
+    "Not dying. Going. There's a difference and I'm not going to explain it to you.",
+    "The tank's fine. The filter's fine. You'll be fine — that last one is the one I'm least sure about.",
+    "You know, you're alright. Don't let it go to your head."
+  ];
+  var i = 0;
+  function step(){
+    if(i < mono.length){
+      addMsg("pet", mono[i++]);
+      sfxTalk();
+      setTimeout(step, 1500);
+    } else {
+      setTimeout(function(){
+        ovTitle.textContent = "THE ASCENSION";
+        ovText.textContent = "He swam out through a door that wasn't there. The water is blue and empty and still yours.";
+        overlay.classList.add("on");
+      }, 1600);
+    }
+  }
+  step();
+}
+
+/* =========================================================
+   19. RESTART
+   ========================================================= */
+function restart(){
+  S.stage = "EGG"; S.hatched = false; S.day = 1; S.wordCount = 0; S.taps = 0;
+  S.temp = 55; S.hunger = 20; S.filth = 10; S.bond = 5; S.health = 100;
+  S.mood = "neutral"; S.thinking = false; S.dead = false; S.ending = null;
+  S.drift = false; S.scale = 1;
+
+  dayTimer = 0; syncTimer = 0; memory = [];
+  used = {}; recentReplyAt = 0; rapidCount = 0; ignoreUntil = 0;
+  queuedFollowUp = false; eggCrack = 0; frozen = false;
+  bubbles = []; ripples = []; hearts = [];
+  blinking = 0; blinkTimer = 2 + Math.random()*3;
+  pendingDeep = false;
+  nextInitiate = Date.now() + 6000;
+  fish.x = VW/2; fish.y = VH/2 + 8;
+  fish.tx = VW/2; fish.ty = VH/2 + 8;
+  fish.facing = 1; fish.pitch = 0; fish.petAnim = 0;
+
+  logEl.innerHTML = "";
+  overlay.classList.remove("on");
+
+  addMsg("sys", "a single egg sits in the tank. tap it.");
+  render();
+  updateLock();
+}
+
+/* =========================================================
+   20. RENDER
+   ========================================================= */
+function clamp(v, a, b){
+  if(a === undefined) a = 0;
+  if(b === undefined) b = 100;
+  return v < a ? a : v > b ? b : v;
+}
+
+function computeMood(){
+  if(S.dead) return "dead";
+  if(S.health < 40) return "sick";
+  var badTemp = S.temp < 45 || S.temp > 65;
+  if(badTemp || S.hunger > 72 || S.filth > 72) return "annoyed";
+  if(S.health > 70 && S.hunger < 45 && S.filth < 45 && S.bond > 45) return "happy";
+  return "neutral";
+}
+
+function barColor(good){
+  var g = clamp(good, 0, 1);
+  var hue = 6 + g*140;
+  return "hsl(" + hue + " 62% 50%)";
+}
+
+function computeHints(){
+  var h = [];
+  if(S.temp < 45) h.push({t:"Too cold — he is sluggish and pale.", c:true});
+  else if(S.temp > 65) h.push({t:"Too warm — he is hovering near the surface, glaring.", c:true});
+  else h.push({t:"Temperature is in band. He has stopped complaining."});
+
+  if(S.hunger > 75) h.push({t:"Starving — he keeps staring at you.", c:true});
+  else if(S.hunger > 45) h.push({t:"Getting hungry — he is chewing the filter intake."});
+
+  if(S.filth > 75) h.push({t:"Tank is filthy — he is refusing to look at you.", c:true});
+  else if(S.filth > 45) h.push({t:"Cloudy — he has started naming the algae."});
+
+  if(S.health < 35) h.push({t:"Health failing — he is lying on the bottom.", c:true});
+  else if(S.health < 70) h.push({t:"Not well — his fins are moving slower."});
+
+  return h;
+}
+
+function render(){
+  S.mood = computeMood();
+  stageEl.textContent = S.stage;
+  dayEl.textContent = "DAY " + S.day;
+
+  var vals = { temp:S.temp, hunger:S.hunger, filth:S.filth, bond:S.bond, health:S.health };
+  var colors = {
+    temp: (function(){
+      var d = S.temp < 45 ? 45 - S.temp : S.temp > 65 ? S.temp - 65 : 0;
+      return barColor(1 - clamp(d/22, 0, 1));
+    })(),
+    hunger: barColor(1 - S.hunger/100),
+    filth: barColor(1 - S.filth/100),
+    bond: barColor(S.bond/100),
+    health: barColor(S.health/100)
+  };
+
+  STAT_DEFS.forEach(function(def){
+    var el = statEls[def.k];
+    var v = vals[def.k];
+    var disp = def.k === "temp" ? Math.round(v) + "°" : Math.round(v);
+    el.val.textContent = disp;
+    el.fill.style.width = clamp((v/def.max)*100, 0, 100) + "%";
+    el.fill.style.background = colors[def.k];
+  });
+
+  tempValEl.textContent = Math.round(S.temp) + "°";
+  tempValEl.style.color = colors.temp;
+
+  var hints = computeHints();
+  var html = "";
+  for(var i=0;i<hints.length;i++){
+    html += "<div" + (hints[i].c ? ' class="crit"' : "") + ">" + hints[i].t + "</div>";
+  }
+  hintsEl.innerHTML = html;
+
+  hintEl.style.display = (!S.hatched && !S.dead && !S.ending) ? "block" : "none";
+  updateLock();
+}
+
+/* =========================================================
+   21. TICK
+   ========================================================= */
+function tick(dt){
+  if(!S.dead && !S.ending){
+    S.temp += (AMBIENT - S.temp) * 0.0025 * dt;
+    S.hunger = clamp(S.hunger + 0.28*dt, 0, 100);
+    S.filth  = clamp(S.filth  + 0.20*dt, 0, 100);
+
+    var dist = S.temp < 45 ? 45 - S.temp : S.temp > 65 ? S.temp - 65 : 0;
+    var drain = 0;
+    if(dist > 0) drain += Math.min(1, dist/20) * 0.55;
+    if(S.hunger > 75) drain += ((S.hunger - 75)/25) * 0.4;
+    if(S.filth  > 75) drain += ((S.filth  - 75)/25) * 0.4;
+
+    if(drain > 0) S.health = clamp(S.health - drain*dt, 0, 100);
+    else if(S.hunger < 60 && S.filth < 60) S.health = clamp(S.health + 0.22*dt, 0, 100);
+
+    var good = dist === 0 && S.hunger < 55 && S.filth < 55 && S.health > 60;
+    S.bond = clamp(S.bond + (good ? 0.05 : -0.015)*dt, 0, 100);
+
+    dayTimer += dt;
+    if(dayTimer >= DAY_SECONDS){
+      dayTimer -= DAY_SECONDS;
+      S.day++;
+      checkEndings();
+    }
+
+    if(S.health <= 0) die();
+  }
+
+  S.scale += (1 - S.scale) * Math.min(1, dt*2.2);
+
+  if(blinking > 0) blinking -= dt;
+  else {
+    blinkTimer -= dt;
+    if(blinkTimer <= 0){
+      blinking = 0.13;
+      blinkTimer = 2.5 + Math.random()*4;
+    }
+  }
+
+  tickInitiate();
+
+  syncTimer += dt;
+  if(syncTimer > 0.3){
+    syncTimer = 0;
+    render();
+  }
+}
+
+/* =========================================================
+   22. LOOP
+   ========================================================= */
+var lastT = performance.now();
+function loop(now){
+  var dt = Math.min(0.06, (now - lastT)/1000);
+  lastT = now;
+  var t = now/1000;
+  tick(dt);
+  updateFish(dt, t);
+  drawTank(t, dt);
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   23. EVENTS
+   ========================================================= */
+cv.addEventListener("pointerdown", function(e){
+  e.preventDefault();
+  initAudio();
+  var r = cv.getBoundingClientRect();
+  var x = (e.clientX - r.left) / r.width * VW;
+  var y = (e.clientY - r.top) / r.height * VH;
+
+  if(!S.hatched){ tapEgg(x, y); return; }
+
+  var sc = fish.currentScale || 1;
+  var dx = x - fish.x;
+  var dy = y - fish.y;
+  var rad = 140 * sc;
+  if(dx*dx + dy*dy < rad*rad){ caress(x, y); return; }
+
+  ripples.push({x:x, y:y, r:2, max:100, life:0.7});
+  sfxClick();
+});
+
+inputEl.addEventListener("keydown", function(e){
+  if(e.key === "Enter"){ e.preventDefault(); send(); }
+});
+sendBtn.addEventListener("click", send);
+
+document.getElementById("t-").addEventListener("click", tempDown);
+document.getElementById("t+").addEventListener("click", tempUp);
+document.getElementById("feed").addEventListener("click", feed);
+document.getElementById("clean").addEventListener("click", clean);
+ovBtn.addEventListener("click", function(){ initAudio(); sfxClick(); restart(); });
+
+themeBtn.addEventListener("click", function(){
+  initAudio(); sfxClick();
+  var cur = document.documentElement.dataset.theme;
+  var next = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  themeBtn.textContent = next === "dark" ? "LIGHT" : "DARK";
+  readColors();
+  try { localStorage.setItem("seapussy-theme", next); } catch(err){}
+});
+
+try {
+  var saved = localStorage.getItem("seapussy-theme");
+  if(saved === "light" || saved === "dark"){
+    document.documentElement.dataset.theme = saved;
+    themeBtn.textContent = saved === "dark" ? "LIGHT" : "DARK";
+  }
+} catch(err){}
+
+var hiddenAt = Date.now();
+document.addEventListener("visibilitychange", function(){
+  if(document.hidden){ hiddenAt = Date.now(); return; }
+  if(S.dead || S.ending || S.stage === "EGG") return;
+  var away = Date.now() - hiddenAt;
+  if(away > 25000 && !S.thinking){
+    if(S.stage === "FRY") addMsg("pet", pick(BANK.fry).text);
+    else if(S.drift) addMsg("pet", pick(BANK.drift).text);
+    else addMsg("pet", pickLine("silence", S.mood, S.stage));
+    sfxTalk();
+  }
+});
+
+function onResize(){ fitCanvas(); }
+window.addEventListener("resize", onResize);
+window.addEventListener("orientationchange", function(){ setTimeout(onResize, 120); });
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", onResize);
+}
+
+/* =========================================================
+   24. BOOT
+   ========================================================= */
+readColors();
+fitCanvas();
+render();
+addMsg("sys", "a single egg sits in the tank. tap it.");
+requestAnimationFrame(function(now){
+  lastT = now;
+  requestAnimationFrame(loop);
+});
+
+})();
+</script>
+</body>
+</html>

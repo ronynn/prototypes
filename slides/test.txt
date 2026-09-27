@@ -1,0 +1,33 @@
+# Scrollable Text with Image Example
+
+This slide demonstrates how long text scrolls on the left while the image stays fixed on the right side of the slide card.
+
+- First main point explaining the architectural layout behavior.
+  - Sub-bullet point detailing how vertical scrolling handles overflow.
+  - Additional sub-bullet to increase list height for testing.
+- Second main point about landscape screen support.
+  - Ensures text fits comfortably without pushing borders off screen.
+  - Scrollbar appears automatically inside the text box when needed.
+
+> "A quote block to verify quote borders and padding remain readable inside a scrollable container."
+
+Here is an additional paragraph to increase total content height. When text exceeds the viewport card height, the left column enables smooth vertical scrolling while maintaining rigid card borders.
+
+Another closing paragraph to push the content down further for complete scroll testing.
+
+![Sample Split Image](https://picsum.photos/800/600)
+
+---
+
+![Centered Image Example](https://picsum.photos/1000/700)
+
+---
+
+# Standard Text Slide
+
+## Layout Summary
+
+- Plaintext format parsed with strict triple dash dividers
+- Scrollable text container in split view
+- Centered image alignment when no text is present
+- Compact landscape controls at the bottom of the screen

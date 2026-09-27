@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BE NOT AFRAID</title>
+  <style>
+    body { margin: 0; background: #020003; color: #fff; font-family: monospace; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+    .container { position: relative; height: min(100vh, 133.33vw); aspect-ratio: 3 / 4; width: min(100vw, 75vh); }
+    canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <canvas id="gl" width="600" height="800"></canvas>
+    <canvas id="ui" width="600" height="800"></canvas>
+  </div>
+
+  <script src="lib/w.full.min.js"></script>
+  <script>
+    // Section - Main State Variables
+    let glCanvas = document.getElementById('gl')
+    let uiCanvas = document.getElementById('ui')
+    let ctx = uiCanvas.getContext('2d')
+
+    let gameState = 'start'
+    let score = 0
+    let highScore = 0
+
+    let birdY = 0
+    let birdVY = 0
+    let gravity = -18
+    let jumpForce = 6.2
+    let ringRot = 0
+
+    let pillarPool = []
+    let maxPillars = 3
+    let spawnTimer = 0
+    let spawnInterval = 1.7
+    let gameSpeed = 3.2
+
+    let bloodPool = []
+    let maxBlood = 4
+    let bloodSpawnTimer = 0
+
+    let bloodTexCanvas
+
+    let audioCtx
+    let droneOsc
+    let droneOsc2
+    let droneFilter
+    let noiseBuffer
+
+    // Section - Texture Generator
+    function createBloodTexture()
+    {
+      bloodTexCanvas = document.createElement('canvas')
+      bloodTexCanvas.width = 128
+      bloodTexCanvas.height = 128
+      let bctx = bloodTexCanvas.getContext('2d')
+
+      bctx.fillStyle = '#140305'
+      bctx.fillRect(0, 0, 128, 128)
+
+      for (let i = 0; i < 30; i++)
+      {
+        let x = Math.random() * 128
+        let y = Math.random() * 128
+        let r = Math.random() * 20 + 5
+        let grad = bctx.createRadialGradient(x, y, 0, x, y, r)
+        grad.addColorStop(0, '#e60000')
+        grad.addColorStop(0.5, '#770000')
+        grad.addColorStop(1, 'transparent')
+        bctx.fillStyle = grad
+        bctx.beginPath()
+        bctx.arc(x, y, r, 0, Math.PI * 2)
+        bctx.fill()
+      }
+    }
+
+    // Section - Audio Engine
+    function createNoiseBuffer()
+    {
+      let bufferSize = audioCtx.sampleRate * 0.5
+      let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate)
+      let output = buffer.getChannelData(0)
+      for (let i = 0; i < bufferSize; i++)
+      {
+        output[i] = Math.random() * 2 - 1
+      }
+      return buffer
+    }
+
+    function initAudio()
+    {
+      if (audioCtx)
+      {
+        return
+      }
+
+      let AudioContextClass = window.AudioContext || window.webkitAudioContext
+      audioCtx = new AudioContextClass()
+      noiseBuffer = createNoiseBuffer()
+
+      droneOsc = audioCtx.createOscillator()
+      droneOsc2 = audioCtx.createOscillator()
+      droneFilter = audioCtx.createBiquadFilter()
+      let droneGain = audioCtx.createGain()
+
+      droneOsc.type = 'sawtooth'
+      droneOsc.frequency.setValueAtTime(26, audioCtx.currentTime)
+
+      droneOsc2.type = 'square'
+      droneOsc2.frequency.setValueAtTime(28.5, audioCtx.currentTime)
+
+      droneFilter.type = 'lowpass'
+      droneFilter.frequency.setValueAtTime(85, audioCtx.currentTime)
+
+      droneGain.gain.setValueAtTime(0.3, audioCtx.currentTime)
+
+      droneOsc.connect(droneFilter)
+      droneOsc2.connect(droneFilter)
+      droneFilter.connect(droneGain)
+      droneGain.connect(audioCtx.destination)
+
+      droneOsc.start()
+      droneOsc2.start()
+    }
+
+    function playFlapSound()
+    {
+      if (!audioCtx)
+      {
+        return
+      }
+
+      let subOsc = audioCtx.createOscillator()
+      let subGain = audioCtx.createGain()
+      subOsc.type = 'sine'
+      subOsc.frequency.setValueAtTime(110, audioCtx.currentTime)
+      subOsc.frequency.exponentialRampToValueAtTime(18, audioCtx.currentTime + 0.25)
+
+      subGain.gain.setValueAtTime(1.0, audioCtx.currentTime)
+      subGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25)
+
+      subOsc.connect(subGain)
+      subGain.connect(audioCtx.destination)
+      subOsc.start()
+      subOsc.stop(audioCtx.currentTime + 0.25)
+
+      let noise = audioCtx.createBufferSource()
+      noise.buffer = noiseBuffer
+      let noiseFilter = audioCtx.createBiquadFilter()
+      noiseFilter.type = 'lowpass'
+      noiseFilter.frequency.setValueAtTime(300, audioCtx.currentTime)
+
+      let noiseGain = audioCtx.createGain()
+      noiseGain.gain.setValueAtTime(0.5, audioCtx.currentTime)
+      noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.18)
+
+      noise.connect(noiseFilter)
+      noiseFilter.connect(noiseGain)
+      noiseGain.connect(audioCtx.destination)
+
+      noise.start()
+      noise.stop(audioCtx.currentTime + 0.18)
+    }
+
+    function playScoreSound()
+    {
+      if (!audioCtx)
+      {
+        return
+      }
+
+      let o1 = audioCtx.createOscillator()
+      let o2 = audioCtx.createOscillator()
+      let gain = audioCtx.createGain()
+
+      o1.type = 'sawtooth'
+      o2.type = 'sawtooth'
+
+      o1.frequency.setValueAtTime(164.81, audioCtx.currentTime)
+      o2.frequency.setValueAtTime(233.08, audioCtx.currentTime)
+
+      gain.gain.setValueAtTime(0.25, audioCtx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7)
+
+      o1.connect(gain)
+      o2.connect(gain)
+      gain.connect(audioCtx.destination)
+
+      o1.start()
+      o2.start()
+      o1.stop(audioCtx.currentTime + 0.7)
+      o2.stop(audioCtx.currentTime + 0.7)
+    }
+
+    function playDeathSound()
+    {
+      if (!audioCtx)
+      {
+        return
+      }
+
+      let sub = audioCtx.createOscillator()
+      let subGain = audioCtx.createGain()
+      sub.type = 'sawtooth'
+      sub.frequency.setValueAtTime(160, audioCtx.currentTime)
+      sub.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 1.4)
+
+      subGain.gain.setValueAtTime(1.0, audioCtx.currentTime)
+      subGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.4)
+
+      sub.connect(subGain)
+      subGain.connect(audioCtx.destination)
+      sub.start()
+      sub.stop(audioCtx.currentTime + 1.4)
+
+      let screech = audioCtx.createOscillator()
+      let screechGain = audioCtx.createGain()
+      screech.type = 'sawtooth'
+      screech.frequency.setValueAtTime(1400, audioCtx.currentTime)
+      screech.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 1.0)
+
+      screechGain.gain.setValueAtTime(0.8, audioCtx.currentTime)
+      screechGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.0)
+
+      screech.connect(screechGain)
+      screechGain.connect(audioCtx.destination)
+
+      screech.start()
+      screech.stop(audioCtx.currentTime + 1.0)
+    }
+
+    // Section - 3D Scene Initialization
+    function init3D()
+    {
+      createBloodTexture()
+      W.reset(glCanvas)
+      W.clearColor('#030005')
+      W.ambient(0.4)
+      W.light({x: 1.5, y: 1.8, z: 2.2})
+      W.camera({x: 0, y: 0, z: 10, rx: 0, ry: 0, rz: 0, fov: 48})
+
+      W.group({n: 'bird', x: -1.8, y: 0, z: 0})
+      W.sphere({g: 'bird', n: 'sclera', size: 1.1, b: '#dedede'})
+      W.sphere({g: 'bird', n: 'iris', size: 0.55, x: 0, y: 0, z: 0.45, b: '#bb0000'})
+      W.sphere({g: 'bird', n: 'pupil', size: 0.25, x: 0, y: 0, z: 0.65, b: '#000000'})
+
+      W.group({g: 'bird', n: 'ringGroup', x: 0, y: 0, z: 0})
+      for (let i = 0; i < 8; i++)
+      {
+        let angle = (i / 8) * Math.PI * 2
+        let rx = Math.cos(angle) * 0.95
+        let ry = Math.sin(angle) * 0.95
+        let angleDeg = angle * 180 / Math.PI
+        W.cube({g: 'ringGroup', n: 'feather' + i, size: 0.22, x: rx, y: ry, z: 0, rz: angleDeg, b: '#771111'})
+      }
+
+      initDustGroup()
+      initPillarPool()
+      initBloodPool()
+    }
+
+    // Section - Dust Particles Group
+    function initDustGroup()
+    {
+      W.group({n: 'dustGroup', x: 0, y: 0, z: 0})
+      for (let i = 0; i < 12; i++)
+      {
+        let rx = (Math.random() - 0.5) * 14
+        let ry = (Math.random() - 0.5) * 14
+        let rz = (Math.random() - 0.5) * 4
+        W.billboard({g: 'dustGroup', n: 'dust_' + i, size: 0.08, x: rx, y: ry, z: rz, b: '#881111'})
+      }
+    }
+
+    // Section - Pillar Pooling
+    function initPillarPool()
+    {
+      for (let i = 0; i < maxPillars; i++)
+      {
+        let p = {
+          id: i,
+          x: 999,
+          gapY: 0,
+          gapSize: 3.3,
+          active: false,
+          passed: false
+        }
+        pillarPool.push(p)
+
+        W.cube({n: 'topP_' + i, w: 1.3, h: 10, d: 1.3, x: 999, y: 0, z: 0, t: bloodTexCanvas, b: '#aa1111', mix: 0.2})
+        W.cube({n: 'botP_' + i, w: 1.3, h: 10, d: 1.3, x: 999, y: 0, z: 0, t: bloodTexCanvas, b: '#aa1111', mix: 0.2})
+        W.pyramid({n: 'topSpike_' + i, size: 1.4, x: 999, y: 0, z: 0, rx: 180, b: '#dd0000'})
+        W.pyramid({n: 'botSpike_' + i, size: 1.4, x: 999, y: 0, z: 0, rx: 0, b: '#dd0000'})
+      }
+    }
+
+    function spawnPillarFromPool()
+    {
+      for (let i = 0; i < maxPillars; i++)
+      {
+        let p = pillarPool[i]
+        if (!p.active)
+        {
+          p.active = true
+          p.passed = false
+          p.x = 7.5
+          p.gapY = (Math.random() - 0.5) * 4.0
+          break
+        }
+      }
+    }
+
+    // Section - Blood Drops Pooling
+    function initBloodPool()
+    {
+      for (let i = 0; i < maxBlood; i++)
+      {
+        let b = {
+          id: i,
+          x: 999,
+          y: 0,
+          vy: 0,
+          active: false
+        }
+        bloodPool.push(b)
+        W.sphere({n: 'bdrop_' + i, size: 0.15, x: 999, y: 0, z: 0, b: '#cc0000'})
+      }
+    }
+
+    function spawnBloodDropFromPool()
+    {
+      for (let i = 0; i < maxBlood; i++)
+      {
+        let b = bloodPool[i]
+        if (!b.active)
+        {
+          b.active = true
+          b.x = -1.8 + (Math.random() - 0.5) * 0.3
+          b.y = birdY - 0.3
+          b.vy = -1.5 - Math.random() * 2.0
+          break
+        }
+      }
+    }
+
+    // Section - Gameplay Loop
+    function resetGame()
+    {
+      for (let i = 0; i < maxPillars; i++)
+      {
+        pillarPool[i].active = false
+        W.move({n: 'topP_' + i, x: 999})
+        W.move({n: 'botP_' + i, x: 999})
+        W.move({n: 'topSpike_' + i, x: 999})
+        W.move({n: 'botSpike_' + i, x: 999})
+      }
+
+      for (let i = 0; i < maxBlood; i++)
+      {
+        bloodPool[i].active = false
+        W.move({n: 'bdrop_' + i, x: 999})
+      }
+
+      birdY = 0
+      birdVY = 0
+      score = 0
+      spawnTimer = 0
+      gameState = 'playing'
+    }
+
+    function triggerJump()
+    {
+      initAudio()
+      if (gameState === 'start' || gameState === 'dead')
+      {
+        resetGame()
+      }
+      else if (gameState === 'playing')
+      {
+        birdVY = jumpForce
+        playFlapSound()
+      }
+    }
+
+    window.addEventListener('pointerdown', function()
+    {
+      triggerJump()
+    })
+
+    window.addEventListener('keydown', function(e)
+    {
+      if (e.code === 'Space')
+      {
+        triggerJump()
+      }
+    })
+
+    let lastTime = performance.now()
+    let dustRot = 0
+
+    function gameLoop(now)
+    {
+      let dt = (now - lastTime) / 1000
+      if (dt > 0.1)
+      {
+        dt = 0.1
+      }
+      lastTime = now
+
+      dustRot += dt * 8
+      W.move({n: 'dustGroup', rz: dustRot})
+
+      if (gameState === 'playing')
+      {
+        birdVY += gravity * dt
+        birdY += birdVY * dt
+
+        ringRot += dt * 180
+        W.move({n: 'ringGroup', rz: ringRot})
+
+        let tilt = Math.max(-35, Math.min(35, birdVY * 5))
+        W.move({n: 'bird', y: birdY, rz: tilt})
+
+        bloodSpawnTimer += dt
+        if (bloodSpawnTimer > 0.15)
+        {
+          bloodSpawnTimer = 0
+          spawnBloodDropFromPool()
+        }
+
+        for (let i = 0; i < maxBlood; i++)
+        {
+          let b = bloodPool[i]
+          if (b.active)
+          {
+            b.vy += gravity * 0.2 * dt
+            b.y += b.vy * dt
+            b.x -= gameSpeed * 0.3 * dt
+            W.move({n: 'bdrop_' + i, x: b.x, y: b.y})
+
+            if (b.y < -6.5)
+            {
+              b.active = false
+              W.move({n: 'bdrop_' + i, x: 999})
+            }
+          }
+        }
+
+        if (birdY > 5.2 || birdY < -5.2)
+        {
+          die()
+        }
+
+        spawnTimer += dt
+        if (spawnTimer >= spawnInterval)
+        {
+          spawnTimer = 0
+          spawnPillarFromPool()
+        }
+
+        for (let i = 0; i < maxPillars; i++)
+        {
+          let p = pillarPool[i]
+          if (p.active)
+          {
+            p.x -= gameSpeed * dt
+
+            let topY = p.gapY + (p.gapSize / 2) + 5
+            let botY = p.gapY - (p.gapSize / 2) - 5
+
+            W.move({n: 'topP_' + i, x: p.x, y: topY})
+            W.move({n: 'botP_' + i, x: p.x, y: botY})
+            W.move({n: 'topSpike_' + i, x: p.x, y: p.gapY + (p.gapSize / 2) + 0.6})
+            W.move({n: 'botSpike_' + i, x: p.x, y: p.gapY - (p.gapSize / 2) - 0.6})
+
+            if (!p.passed && p.x < -1.8)
+            {
+              p.passed = true
+              score++
+              if (score > highScore)
+              {
+                highScore = score
+              }
+              playScoreSound()
+            }
+
+            if (p.x < -1.1 && p.x > -2.5)
+            {
+              let safeTop = p.gapY + (p.gapSize / 2) - 0.45
+              let safeBot = p.gapY - (p.gapSize / 2) + 0.45
+              if (birdY > safeTop || birdY < safeBot)
+              {
+                die()
+              }
+            }
+
+            if (p.x < -7.5)
+            {
+              p.active = false
+              W.move({n: 'topP_' + i, x: 999})
+              W.move({n: 'botP_' + i, x: 999})
+              W.move({n: 'topSpike_' + i, x: 999})
+              W.move({n: 'botSpike_' + i, x: 999})
+            }
+          }
+        }
+      }
+
+      drawUI()
+      requestAnimationFrame(gameLoop)
+    }
+
+    function die()
+    {
+      if (gameState === 'dead')
+      {
+        return
+      }
+      gameState = 'dead'
+      playDeathSound()
+    }
+
+    // Section - UI Rendering
+    function drawUI()
+    {
+      ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
+
+      ctx.shadowColor = '#ff0000'
+      ctx.shadowBlur = 10
+      ctx.fillStyle = '#ffffff'
+      ctx.font = 'bold 26px monospace'
+
+      ctx.textAlign = 'left'
+      ctx.fillText('PTS: ' + score, 30, 55)
+
+      ctx.textAlign = 'right'
+      ctx.fillText('HI: ' + highScore, 570, 55)
+
+      ctx.shadowBlur = 0
+
+      if (gameState === 'start')
+      {
+        ctx.textAlign = 'center'
+        ctx.fillStyle = '#ff1133'
+        ctx.font = 'bold 42px monospace'
+        ctx.shadowColor = '#aa0000'
+        ctx.shadowBlur = 15
+        ctx.fillText('BE NOT AFRAID', 300, 380)
+
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '20px monospace'
+        ctx.fillText('TAP TO ASCEND', 300, 440)
+
+        ctx.fillStyle = '#886666'
+        ctx.font = '14px monospace'
+        ctx.fillText('NAVIGATE THE VOID', 300, 480)
+      }
+      else if (gameState === 'dead')
+      {
+        ctx.textAlign = 'center'
+        ctx.fillStyle = '#cc0000'
+        ctx.font = 'bold 40px monospace'
+        ctx.shadowColor = '#ff0000'
+        ctx.shadowBlur = 15
+        ctx.fillText('PERISHED IN DARKNESS', 300, 380)
+
+        ctx.shadowBlur = 0
+        ctx.fillStyle = '#ffffff'
+        ctx.font = '22px monospace'
+        ctx.fillText('TAP TO RETRY', 300, 440)
+      }
+    }
+
+    init3D()
+    requestAnimationFrame(gameLoop)
+  </script>
+
+</body>
+</html>
