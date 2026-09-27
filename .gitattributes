@@ -1,0 +1,6 @@
+
+code/lib/** linguist-vendored
+*/lib/** linguist-vendored
+
+# Lol, makes HTML appear as Rust on GitHub ----
+*.html linguist-language=Rust
