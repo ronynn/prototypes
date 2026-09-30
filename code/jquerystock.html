@@ -1,41 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stock Market Simulator</title>
-    <link rel="stylesheet" href="lib/uplot.min.css">
-    <style>
-        body { font-family: monospace; margin: 0; padding: 8px; background: #fff; color: #000; line-height: 1.4; }
-        .container { max-width: 700px; margin: 0 auto; }
-        .row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px dotted #ccc; }
-        .chart-box { height: 250px; margin: 8px 0; border: 1px solid #ccc; }
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #000; padding: 10px; z-index: 100; display: none; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
-        .modal.active { display: block; }
-        .modal.shifted { top: 30%; transform: translate(-50%, -50%); }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 90; display: none; }
-        .overlay.active { display: block; }
-        button { font-family: monospace; background: none; border: 1px solid #000; padding: 4px 8px; cursor: pointer; }
-        input { font-family: monospace; border: 1px solid #000; padding: 2px; width: 70px; }
-        .qty-btn { padding: 2px 6px; cursor: pointer; border: 1px solid #000; background: #f0f0f0; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .small { font-size: 0.8em; }
-        .green { color: green; }
-        .red { color: red; }
-        .section-title { font-weight: bold; margin-top: 12px; border-bottom: 1px solid #000; padding-bottom: 2px; }
-        #tooltip { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 6px 16px; border-radius: 4px; font-size: 0.8em; z-index: 200; display: none; }
-        .rank-box { margin: 10px 0; padding: 6px; border: 1px solid #000; }
-        .footer { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; font-size: 0.8em; }
-        .btn-row { display: flex; gap: 8px; margin-top: 10px; }
-        .buy-sell-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-        .buy-sell-row button { min-width: 40px; }
-        .buy-sell-row input { text-align: center; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stock Market Simulator</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css">
+<style>
+    body { font-family: monospace; margin: 0; padding: 8px; background: #fff; color: #000; line-height: 1.4; }
+    .container { max-width: 700px; margin: 0 auto; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px dotted #ccc; }
+    .chart-box { height: 250px; margin: 8px 0; border: 1px solid #ccc; }
+    .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; border: 1px solid #000; padding: 10px; z-index: 100; display: none; width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+    .modal.active { display: block; }
+    .modal.shifted { top: 30%; transform: translate(-50%, -50%); }
+    .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); z-index: 90; display: none; }
+    .overlay.active { display: block; }
+    button { font-family: monospace; background: none; border: 1px solid #000; padding: 4px 8px; cursor: pointer; }
+    input { font-family: monospace; border: 1px solid #000; padding: 2px; width: 70px; }
+    .qty-btn { padding: 2px 6px; cursor: pointer; border: 1px solid #000; background: #f0f0f0; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .small { font-size: 0.8em; }
+    .green { color: green; }
+    .red { color: red; }
+    .section-title { font-weight: bold; margin-top: 12px; border-bottom: 1px solid #000; padding-bottom: 2px; }
+    #tooltip { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 6px 16px; border-radius: 4px; font-size: 0.8em; z-index: 200; display: none; }
+    .rank-box { margin: 10px 0; padding: 6px; border: 1px solid #000; }
+    .footer { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; font-size: 0.8em; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .buy-sell-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .buy-sell-row button { min-width: 40px; }
+    .buy-sell-row input { text-align: center; }
+    #cm-chart { min-height: 180px; }
+</style>
 </head>
 <body>
 <div class="container">
-    <!-- Top metrics bar -->
     <div class="row">
         <span>CASH: <span id="header-cash">$10,000.00</span></span>
         <span>NET WORTH: <span id="header-networth">$10,000.00</span></span>
@@ -44,35 +44,29 @@
         <button id="btn-portfolio">Portfolio</button>
     </div>
 
-    <!-- Stock market index chart -->
     <div class="section-title">Stock Market Index</div>
     <div class="chart-box" id="market-chart"></div>
     <div id="company-list"></div>
 
-    <!-- Assets section -->
     <div class="section-title">Assets (Jewelry, Paintings, etc.)</div>
     <div class="chart-box" id="asset-market-chart"></div>
     <div id="asset-list"></div>
 
-    <!-- Net worth chart and ranking -->
     <h4>Net Worth Over Time</h4>
     <div class="chart-box" id="networth-chart"></div>
     <div id="ranking-box" class="rank-box"></div>
 
-    <!-- Bottom buttons -->
     <div class="btn-row">
         <button id="btn-history">History</button>
         <button id="btn-reset">Reset Game</button>
     </div>
 </div>
 
-<!-- Footer -->
 <div class="container footer">
     <p><strong>Loan Shark Story:</strong> You owe a dangerous loan shark $15,000. He has given you exactly 15 minutes to raise the money by trading stocks and assets. If you succeed, he takes his $15k and leaves you alone. If you fail, he takes everything you own and sends you to an old-age home. Good luck.</p>
     <p>© 2026 Made by Ronynn (bunch of math bugs still persist)</p>
 </div>
 
-<!-- Company/Asset Modal -->
 <div class="overlay" id="company-overlay"></div>
 <div class="modal" id="company-modal">
     <div><strong id="cm-ticker"></strong> <span id="cm-name"></span> <span id="cm-sector"></span> <span id="cm-category"></span></div>
@@ -96,7 +90,6 @@
     <button id="cm-close">Close</button>
 </div>
 
-<!-- Event Modal (New Company / Bankruptcy) -->
 <div class="overlay" id="event-overlay"></div>
 <div class="modal" id="event-modal">
     <div id="event-icon"></div>
@@ -105,7 +98,6 @@
     <button id="event-close">Dismiss</button>
 </div>
 
-<!-- Portfolio Modal -->
 <div class="overlay" id="portfolio-overlay"></div>
 <div class="modal" id="portfolio-modal">
     <h3>Portfolio</h3>
@@ -114,7 +106,6 @@
     <button id="portfolio-close">Close</button>
 </div>
 
-<!-- History Modal -->
 <div class="overlay" id="history-overlay"></div>
 <div class="modal" id="history-modal">
     <h3>Transaction History</h3>
@@ -123,7 +114,6 @@
     <button id="history-close">Close</button>
 </div>
 
-<!-- Game Over / Win Modal -->
 <div class="overlay" id="game-over-overlay"></div>
 <div class="modal" id="game-over-modal">
     <h3 id="game-over-title"></h3>
@@ -131,20 +121,18 @@
     <button id="game-over-close">Reset Game</button>
 </div>
 
-<!-- Tooltip -->
 <div id="tooltip"></div>
 
 <script src="lib/jquery.slim.min.js"></script>
-<script src="lib/uplot.iife.min.js"></script>
 <script type="module">
+import uPlot from 'https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.esm.js';
 import { signal, computed, effect, batch } from './lib/signals-core.module.js';
 
-// ========== CONFIGURATION ==========
+/* Configuration */
 const STARTING_CASH = 10000;
 const PRICE_UPDATE_MS = 2000;
 const NET_WORTH_RECORD_MS = 8000;
 const NEW_ITEM_CHECK_MS = 30000;
-const BANKRUPTCY_CHECK_MS = 4000;
 const HISTORY_LENGTH = 150;
 const NET_WORTH_HIST_LENGTH = 400;
 const BANKRUPTCY_PRICE_RATIO = 0.15;
@@ -153,8 +141,9 @@ const LOAN_SHARK_DEADLINE_SEC = 15 * 60;
 const LOAN_SHARK_TARGET = 15000;
 const LOAN_SHARK_TAKE = 15000;
 const SAVE_INTERVAL_MS = 10000;
+const SAVE_VERSION = 2;
 
-// ========== DATA ==========
+/* Initial data */
 const INITIAL_COMPANIES = [
     { name: 'Apple Inc.', ticker: 'AAPL', price: 187.52, volatility: 0.012, trend: 0.00025, sector: 'Technology' },
     { name: 'Microsoft Corp.', ticker: 'MSFT', price: 425.38, volatility: 0.010, trend: 0.00030, sector: 'Technology' },
@@ -190,9 +179,9 @@ const INITIAL_ASSETS = [
     { name: 'Picasso Sketch', ticker: 'PICSK', price: 55000, volatility: 0.017, trend: 0.00018, sector: 'Art', history: 'Original sketch' }
 ];
 
-// ========== SIGNALS ==========
+/* Signals */
 const cash = signal(STARTING_CASH);
-const holdings = signal({});            // { itemId: { shares, avgCost } }
+const holdings = signal({});
 const transactions = signal([]);
 const netWorthHistory = signal([]);
 const marketIndexHistory = signal([]);
@@ -201,12 +190,8 @@ const companies = signal([]);
 const assets = signal([]);
 const eventQueue = signal([]);
 const selectedItemId = signal(null);
-const gameState = signal({
-    status: 'active',       // 'active', 'won', 'lost'
-    elapsedSeconds: 0
-});
+const gameState = signal({ status: 'active', elapsedSeconds: 0 });
 
-// Computed values
 const currentNetWorth = computed(() => {
     let total = cash.value;
     for (const id in holdings.value) {
@@ -225,22 +210,44 @@ const ranking = computed(() => {
 });
 
 const timerDisplay = computed(() => {
-    const elapsed = gameState.value.elapsedSeconds;
+    const gs = gameState.value || { elapsedSeconds: 0 };
+    const elapsed = Math.max(0, Math.floor(num(gs.elapsedSeconds, 0)));
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
     return `Timer: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
 });
 
-// ========== UTILITY ==========
-function fmt(n) { if (Math.abs(n) >= 10000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 }); if (Math.abs(n) >= 100) return '$' + n.toFixed(2); if (Math.abs(n) >= 1) return '$' + n.toFixed(2); if (Math.abs(n) >= 0.01) return '$' + n.toFixed(4); if (Math.abs(n) >= 0.0001) return '$' + n.toFixed(6); return '$' + n.toFixed(8); }
-function fmtNum(n, digits) { if (digits === undefined) digits = 2; if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 }); return n.toFixed(digits); }
+/* Utilities */
+function fmt(n) {
+    if (Math.abs(n) >= 10000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    if (Math.abs(n) >= 100) return '$' + n.toFixed(2);
+    if (Math.abs(n) >= 1) return '$' + n.toFixed(2);
+    if (Math.abs(n) >= 0.01) return '$' + n.toFixed(4);
+    if (Math.abs(n) >= 0.0001) return '$' + n.toFixed(6);
+    return '$' + n.toFixed(8);
+}
+function fmtNum(n, digits) {
+    if (digits === undefined) digits = 2;
+    if (Math.abs(n) >= 1000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return n.toFixed(digits);
+}
 function pctChange(initial, current) { if (initial === 0) return 0; return ((current - initial) / initial) * 100; }
-function gaussianRandom() { let u = 0, v = 0; while (u === 0) u = Math.random(); while (v === 0) v = Math.random(); return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v); }
+function gaussianRandom() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
 function uniqueId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 4); }
 function getItemById(id) { return companies.value.find(c => c.id === id) || assets.value.find(a => a.id === id); }
-function showTooltip(msg) { const $tooltip = $('#tooltip'); $tooltip.text(msg).show(); setTimeout(() => $tooltip.hide(), 1500); }
+function showTooltip(msg) {
+    const $tooltip = $('#tooltip');
+    $tooltip.text(msg).show();
+    setTimeout(() => $tooltip.hide(), 1500);
+}
+function num(v, fallback) { return (typeof v === 'number' && isFinite(v)) ? v : fallback; }
 
-// ========== LIQUIDATION ==========
+/* Liquidation */
 function liquidateAll() {
     batch(() => {
         for (const id of Object.keys(holdings.value)) {
@@ -249,7 +256,6 @@ function liquidateAll() {
             const held = holdings.value[id];
             const proceeds = held.shares * item.price;
             cash.value += proceeds;
-            // record transaction
             transactions.value = [...transactions.value, {
                 id: uniqueId(),
                 type: 'LIQUIDATE',
@@ -266,32 +272,46 @@ function liquidateAll() {
     });
 }
 
-// ========== INITIALIZATION FUNCTIONS ==========
+/* Initialization helpers */
 function initCompanies() {
     const now = Date.now() / 1000;
     companies.value = INITIAL_COMPANIES.map((c, i) => {
-        let times = [], prices = [];
+        const times = [], prices = [];
         for (let j = 0; j < 50; j++) {
             times.push(now - (50 - j) * 3);
-            let noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
+            const noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
             prices.push(Math.max(0.000001, c.price + noise * (j / 50)));
         }
-        times.push(now); prices.push(c.price);
-        return { id: 'comp_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker, price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price, volatility: c.volatility, trend: c.trend, sector: c.sector, active: true, isNew: false, category: 'stock', historyTimes: times, historyPrices: prices };
+        times.push(now);
+        prices.push(c.price);
+        return {
+            id: 'comp_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker,
+            price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price,
+            volatility: c.volatility, trend: c.trend, sector: c.sector,
+            active: true, isNew: false, category: 'stock',
+            historyTimes: times, historyPrices: prices
+        };
     });
 }
 
 function initAssets() {
     const now = Date.now() / 1000;
     assets.value = INITIAL_ASSETS.map((c, i) => {
-        let times = [], prices = [];
+        const times = [], prices = [];
         for (let j = 0; j < 40; j++) {
             times.push(now - (40 - j) * 3);
-            let noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
+            const noise = (Math.random() - 0.5) * c.volatility * c.price * 2;
             prices.push(Math.max(0.000001, c.price + noise * (j / 40)));
         }
-        times.push(now); prices.push(c.price);
-        return { id: 'asset_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker, price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price, volatility: c.volatility, trend: c.trend, sector: c.sector, active: true, isNew: false, category: 'asset', history: c.history, historyTimes: times, historyPrices: prices };
+        times.push(now);
+        prices.push(c.price);
+        return {
+            id: 'asset_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker,
+            price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price,
+            volatility: c.volatility, trend: c.trend, sector: c.sector,
+            active: true, isNew: false, category: 'asset', history: c.history,
+            historyTimes: times, historyPrices: prices
+        };
     });
 }
 
@@ -307,20 +327,21 @@ function initMarketIndexHistory() {
 }
 
 function autoGenerateCompanyName() {
-    const prefix = ['Quantum','Nova','Apex','Zenith','Orion','Vortex','Silver','Golden','Prime','Cyber'];
-    const suffix = ['Tech','Dynamics','Industries','Systems','Corp','Labs','Enterprises','Holdings','Group','Partners'];
-    return prefix[Math.floor(Math.random()*prefix.length)] + suffix[Math.floor(Math.random()*suffix.length)] + ' Inc.';
+    const prefix = ['Quantum', 'Nova', 'Apex', 'Zenith', 'Orion', 'Vortex', 'Silver', 'Golden', 'Prime', 'Cyber'];
+    const suffix = ['Tech', 'Dynamics', 'Industries', 'Systems', 'Corp', 'Labs', 'Enterprises', 'Holdings', 'Group', 'Partners'];
+    return prefix[Math.floor(Math.random() * prefix.length)] + suffix[Math.floor(Math.random() * suffix.length)] + ' Inc.';
 }
 
 function autoGenerateAssetName() {
     const types = ['Painting', 'Sculpture', 'Watch', 'Ring', 'Vase', 'Coin', 'Book', 'Manuscript', 'Jewelry', 'Artifact'];
     const descriptors = ['Ancient', 'Rare', 'Vintage', 'Imperial', 'Golden', 'Royal', 'Mysterious', 'Colonial', 'Antique', 'Famous'];
-    return descriptors[Math.floor(Math.random()*descriptors.length)] + ' ' + types[Math.floor(Math.random()*types.length)];
+    return descriptors[Math.floor(Math.random() * descriptors.length)] + ' ' + types[Math.floor(Math.random() * types.length)];
 }
 
-// ========== PRICE SIMULATION ==========
+/* Price simulation */
 function updatePrices() {
     const now = Date.now() / 1000;
+
     companies.value = companies.value.map(comp => {
         if (!comp.active) return comp;
         const drift = comp.trend * comp.price;
@@ -332,6 +353,7 @@ function updatePrices() {
         if (historyTimes.length > HISTORY_LENGTH) { historyTimes.shift(); historyPrices.shift(); }
         return { ...comp, price: newPrice, highPrice: Math.max(comp.highPrice, newPrice), lowPrice: Math.min(comp.lowPrice, newPrice), historyTimes, historyPrices };
     });
+
     assets.value = assets.value.map(asset => {
         if (!asset.active) return asset;
         const drift = asset.trend * asset.price;
@@ -343,95 +365,121 @@ function updatePrices() {
         if (historyTimes.length > HISTORY_LENGTH) { historyTimes.shift(); historyPrices.shift(); }
         return { ...asset, price: newPrice, highPrice: Math.max(asset.highPrice, newPrice), lowPrice: Math.min(asset.lowPrice, newPrice), historyTimes, historyPrices };
     });
+
     const stockActive = companies.value.filter(c => c.active);
     if (stockActive.length > 0) {
         const sum = stockActive.reduce((acc, comp) => acc + comp.price / comp.initialPrice, 0);
-        marketIndexHistory.value = [...marketIndexHistory.value, { time: now, value: 100 * sum / stockActive.length }];
-        if (marketIndexHistory.value.length > HISTORY_LENGTH) marketIndexHistory.value.shift();
+        const next = [...marketIndexHistory.value, { time: now, value: 100 * sum / stockActive.length }];
+        if (next.length > HISTORY_LENGTH) next.shift();
+        marketIndexHistory.value = next;
     }
+
     const assetActive = assets.value.filter(a => a.active);
     if (assetActive.length > 0) {
         const sum = assetActive.reduce((acc, a) => acc + a.price / a.initialPrice, 0);
-        assetMarketIndexHistory.value = [...assetMarketIndexHistory.value, { time: now, value: 100 * sum / assetActive.length }];
-        if (assetMarketIndexHistory.value.length > HISTORY_LENGTH) assetMarketIndexHistory.value.shift();
+        const next = [...assetMarketIndexHistory.value, { time: now, value: 100 * sum / assetActive.length }];
+        if (next.length > HISTORY_LENGTH) next.shift();
+        assetMarketIndexHistory.value = next;
     }
 }
 
 function checkBankruptcies() {
-    let newCompanies = [...companies.value];
-    let newAssets = [...assets.value];
     let removed = false;
-    newCompanies = newCompanies.filter(comp => {
+    const newHoldings = { ...holdings.value };
+
+    const newCompanies = companies.value.filter(comp => {
         if (!comp.active) return false;
         if (comp.price / comp.initialPrice < BANKRUPTCY_PRICE_RATIO && Math.random() < BANKRUPTCY_CHANCE) {
             removed = true;
             const held = holdings.value[comp.id];
+            let lossAmount = 0, shareCount = 0, avgCost = 0;
             if (held) {
-                const loss = held.shares * held.avgCost;
-                const newHoldings = { ...holdings.value };
+                lossAmount = held.shares * held.avgCost;
+                shareCount = held.shares;
+                avgCost = held.avgCost;
                 delete newHoldings[comp.id];
-                holdings.value = newHoldings;
-                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: comp.id, ticker: comp.ticker, shares: held.shares, price: comp.price, total: 0, profit: -loss, timestamp: Date.now() }];
-                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: comp, lossAmount: loss, shareCount: held.shares, avgCost: held.avgCost }];
-            } else {
-                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: comp, lossAmount: 0, shareCount: 0, avgCost: 0 }];
+                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: comp.id, ticker: comp.ticker, shares: held.shares, price: comp.price, total: 0, profit: -lossAmount, timestamp: Date.now() }];
             }
+            eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: comp, lossAmount, shareCount, avgCost }];
             return false;
         }
         return true;
     });
-    newAssets = newAssets.filter(asset => {
+
+    const newAssets = assets.value.filter(asset => {
         if (!asset.active) return false;
         if (asset.price / asset.initialPrice < BANKRUPTCY_PRICE_RATIO && Math.random() < BANKRUPTCY_CHANCE) {
             removed = true;
             const held = holdings.value[asset.id];
+            let lossAmount = 0, shareCount = 0, avgCost = 0;
             if (held) {
-                const loss = held.shares * held.avgCost;
-                const newHoldings = { ...holdings.value };
+                lossAmount = held.shares * held.avgCost;
+                shareCount = held.shares;
+                avgCost = held.avgCost;
                 delete newHoldings[asset.id];
-                holdings.value = newHoldings;
-                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: asset.id, ticker: asset.ticker, shares: held.shares, price: asset.price, total: 0, profit: -loss, timestamp: Date.now() }];
-                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: asset, lossAmount: loss, shareCount: held.shares, avgCost: held.avgCost }];
-            } else {
-                eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: asset, lossAmount: 0, shareCount: 0, avgCost: 0 }];
+                transactions.value = [...transactions.value, { id: uniqueId(), type: 'BANKRUPT', companyId: asset.id, ticker: asset.ticker, shares: held.shares, price: asset.price, total: 0, profit: -lossAmount, timestamp: Date.now() }];
             }
+            eventQueue.value = [...eventQueue.value, { type: 'bankruptcy', item: asset, lossAmount, shareCount, avgCost }];
             return false;
         }
         return true;
     });
+
     if (removed) {
         companies.value = newCompanies;
         assets.value = newAssets;
+        holdings.value = newHoldings;
     }
 }
 
 function checkNewItems() {
     if (Math.random() > 0.35) return;
     const isStock = Math.random() < 0.6;
+    const now = Date.now() / 1000;
+
     if (isStock) {
         const name = autoGenerateCompanyName();
         const ticker = name.split(' ')[0].substring(0, 4).toUpperCase();
         const price = Math.random() * 100 + 10;
-        const comp = { id: 'comp_new_' + uniqueId(), name, ticker, price, initialPrice: price, highPrice: price, lowPrice: price, volatility: 0.02 + Math.random() * 0.03, trend: (Math.random() - 0.5) * 0.001, sector: 'Technology', active: true, isNew: true, category: 'stock', historyTimes: [], historyPrices: [] };
-        const now = Date.now() / 1000;
-        for (let j = 0; j < 30; j++) { comp.historyTimes.push(now - (30 - j) * 3); comp.historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * comp.volatility * price * 1.5)); }
-        comp.historyTimes.push(now); comp.historyPrices.push(price);
+        const historyTimes = [], historyPrices = [];
+        for (let j = 0; j < 30; j++) {
+            historyTimes.push(now - (30 - j) * 3);
+            historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * 0.03 * price * 1.5));
+        }
+        historyTimes.push(now);
+        historyPrices.push(price);
+        const comp = {
+            id: 'comp_new_' + uniqueId(), name, ticker, price, initialPrice: price,
+            highPrice: price, lowPrice: price, volatility: 0.02 + Math.random() * 0.03,
+            trend: (Math.random() - 0.5) * 0.001, sector: 'Technology',
+            active: true, isNew: true, category: 'stock', historyTimes, historyPrices
+        };
         companies.value = [...companies.value, comp];
         eventQueue.value = [...eventQueue.value, { type: 'new_company', item: comp }];
     } else {
         const name = autoGenerateAssetName();
         const ticker = name.split(' ').map(w => w[0]).join('').substring(0, 4).toUpperCase();
         const price = Math.random() * 5000 + 500;
-        const asset = { id: 'asset_new_' + uniqueId(), name, ticker, price, initialPrice: price, highPrice: price, lowPrice: price, volatility: 0.015 + Math.random() * 0.02, trend: (Math.random() - 0.5) * 0.0005, sector: 'Collectibles', active: true, isNew: true, category: 'asset', history: 'Recently discovered', historyTimes: [], historyPrices: [] };
-        const now = Date.now() / 1000;
-        for (let j = 0; j < 30; j++) { asset.historyTimes.push(now - (30 - j) * 3); asset.historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * asset.volatility * price)); }
-        asset.historyTimes.push(now); asset.historyPrices.push(price);
+        const historyTimes = [], historyPrices = [];
+        for (let j = 0; j < 30; j++) {
+            historyTimes.push(now - (30 - j) * 3);
+            historyPrices.push(Math.max(0.000001, price + (Math.random() - 0.5) * 0.02 * price));
+        }
+        historyTimes.push(now);
+        historyPrices.push(price);
+        const asset = {
+            id: 'asset_new_' + uniqueId(), name, ticker, price, initialPrice: price,
+            highPrice: price, lowPrice: price, volatility: 0.015 + Math.random() * 0.02,
+            trend: (Math.random() - 0.5) * 0.0005, sector: 'Collectibles',
+            active: true, isNew: true, category: 'asset', history: 'Recently discovered',
+            historyTimes, historyPrices
+        };
         assets.value = [...assets.value, asset];
         eventQueue.value = [...eventQueue.value, { type: 'new_company', item: asset }];
     }
 }
 
-// ========== TRADING ==========
+/* Trading */
 function buyStock(itemId, qty) {
     const item = getItemById(itemId);
     if (!item || !item.active || qty <= 0) return false;
@@ -466,45 +514,146 @@ function sellStock(itemId, qty) {
     return true;
 }
 
-// ========== SAVE / LOAD ==========
-function saveGame() {
-    const state = {
-        cash: cash.value,
-        holdings: holdings.value,
-        transactions: transactions.value,
-        netWorthHistory: netWorthHistory.value,
-        marketIndexHistory: marketIndexHistory.value,
-        assetMarketIndexHistory: assetMarketIndexHistory.value,
-        companies: companies.value,
-        assets: assets.value,
-        eventQueue: eventQueue.value,
-        gameState: gameState.value,
-        selectedItemId: selectedItemId.value
+/* Save / load */
+function sanitizeSeries(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(d => d && typeof d.time === 'number' && isFinite(d.time) && typeof d.value === 'number' && isFinite(d.value));
+}
+
+function sanitizeHoldings(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    for (const id in raw) {
+        const h = raw[id];
+        if (!h || typeof h !== 'object') continue;
+        const shares = num(h.shares, 0);
+        const avgCost = num(h.avgCost, 0);
+        if (shares > 0 && avgCost >= 0) out[id] = { shares, avgCost };
+    }
+    return out;
+}
+
+function sanitizeItem(raw, defaultCategory) {
+    if (!raw || typeof raw !== 'object') return null;
+    if (typeof raw.id !== 'string' || typeof raw.ticker !== 'string') return null;
+
+    const initialPrice = num(raw.initialPrice, num(raw.price, 1)) || 1;
+    const price = num(raw.price, initialPrice) || initialPrice;
+    const category = (raw.category === 'stock' || raw.category === 'asset')
+        ? raw.category
+        : (defaultCategory === 'asset' ? 'asset' : 'stock');
+
+    let times = Array.isArray(raw.historyTimes) ? raw.historyTimes.filter(t => num(t, null) !== null) : [];
+    let prices = Array.isArray(raw.historyPrices) ? raw.historyPrices.filter(p => num(p, null) !== null && p > 0) : [];
+    const n = Math.min(times.length, prices.length);
+    times = times.slice(-n);
+    prices = prices.slice(-n);
+    if (times.length < 2) {
+        const now = Date.now() / 1000;
+        times = [now - 3, now];
+        prices = [price, price];
+    }
+
+    return {
+        id: raw.id,
+        name: typeof raw.name === 'string' ? raw.name : raw.ticker,
+        ticker: raw.ticker,
+        price,
+        initialPrice,
+        highPrice: num(raw.highPrice, price),
+        lowPrice: num(raw.lowPrice, price) || price,
+        volatility: num(raw.volatility, 0.015),
+        trend: num(raw.trend, 0),
+        sector: typeof raw.sector === 'string' ? raw.sector : 'Unknown',
+        active: raw.active !== false,
+        isNew: !!raw.isNew,
+        category,
+        history: typeof raw.history === 'string' ? raw.history : 'Unknown provenance',
+        historyTimes: times,
+        historyPrices: prices
     };
-    localStorage.setItem('stockSimSave', JSON.stringify(state));
+}
+
+function saveGame() {
+    try {
+        const state = {
+            version: SAVE_VERSION,
+            cash: cash.value,
+            holdings: holdings.value,
+            transactions: transactions.value,
+            netWorthHistory: netWorthHistory.value,
+            marketIndexHistory: marketIndexHistory.value,
+            assetMarketIndexHistory: assetMarketIndexHistory.value,
+            companies: companies.value,
+            assets: assets.value,
+            eventQueue: eventQueue.value,
+            gameState: gameState.value,
+            selectedItemId: selectedItemId.value
+        };
+        localStorage.setItem('stockSimSave', JSON.stringify(state));
+    } catch (e) {
+        console.warn('Save failed', e);
+    }
 }
 
 function loadGame() {
     const saved = localStorage.getItem('stockSimSave');
     if (!saved) return false;
+
+    let s;
     try {
-        const s = JSON.parse(saved);
-        cash.value = s.cash;
-        holdings.value = s.holdings;
-        transactions.value = s.transactions;
-        netWorthHistory.value = s.netWorthHistory;
-        marketIndexHistory.value = s.marketIndexHistory;
-        assetMarketIndexHistory.value = s.assetMarketIndexHistory;
-        companies.value = s.companies;
-        assets.value = s.assets;
-        eventQueue.value = s.eventQueue;
-        gameState.value = s.gameState;
-        selectedItemId.value = s.selectedItemId;
-        return true;
+        s = JSON.parse(saved);
     } catch (e) {
-        console.log('load error', e);
+        console.warn('Corrupt save, starting fresh', e);
+        localStorage.removeItem('stockSimSave');
         return false;
     }
+
+    if (!s || typeof s !== 'object' || s.version !== SAVE_VERSION) {
+        localStorage.removeItem('stockSimSave');
+        return false;
+    }
+
+    const savedCompanies = Array.isArray(s.companies)
+        ? s.companies.map(c => sanitizeItem(c, 'stock')).filter(Boolean) : [];
+    const savedAssets = Array.isArray(s.assets)
+        ? s.assets.map(a => sanitizeItem(a, 'asset')).filter(Boolean) : [];
+
+    batch(() => {
+        cash.value = Math.max(0, num(s.cash, STARTING_CASH));
+        holdings.value = sanitizeHoldings(s.holdings);
+        transactions.value = Array.isArray(s.transactions)
+            ? s.transactions.filter(t => t && typeof t === 'object' && typeof t.type === 'string') : [];
+        netWorthHistory.value = sanitizeSeries(s.netWorthHistory);
+        marketIndexHistory.value = sanitizeSeries(s.marketIndexHistory);
+        assetMarketIndexHistory.value = sanitizeSeries(s.assetMarketIndexHistory);
+        companies.value = savedCompanies;
+        assets.value = savedAssets;
+        eventQueue.value = Array.isArray(s.eventQueue)
+            ? s.eventQueue.filter(e => e && typeof e.type === 'string' && e.item) : [];
+
+        const gs = s.gameState;
+        gameState.value = {
+            status: (gs && ['active', 'won', 'lost'].includes(gs.status)) ? gs.status : 'active',
+            elapsedSeconds: Math.max(0, Math.floor(num(gs && gs.elapsedSeconds, 0)))
+        };
+
+        selectedItemId.value = typeof s.selectedItemId === 'string' ? s.selectedItemId : null;
+    });
+
+    if (companies.value.length === 0) initCompanies();
+    if (assets.value.length === 0) initAssets();
+    if (netWorthHistory.value.length === 0) initNetWorthHistory();
+
+    if (marketIndexHistory.value.length === 0 || assetMarketIndexHistory.value.length === 0) {
+        const now = Date.now() / 1000;
+        if (marketIndexHistory.value.length === 0)
+            marketIndexHistory.value = [{ time: now - 3, value: 100 }, { time: now, value: 100 }];
+        if (assetMarketIndexHistory.value.length === 0)
+            assetMarketIndexHistory.value = [{ time: now - 3, value: 100 }, { time: now, value: 100 }];
+    }
+
+    return true;
 }
 
 function resetGame() {
@@ -527,39 +676,103 @@ function resetGame() {
     localStorage.removeItem('stockSimSave');
 }
 
-// ========== MODAL CONTROL ==========
+/* Charts */
+const charts = { market: null, assetMarket: null, netWorth: null, item: null, itemId: null };
+
+function makeChart(el, label, height) {
+    if (!el) return null;
+    const width = Math.max(120, el.clientWidth || el.offsetWidth || 300);
+    const opts = {
+        width,
+        height,
+        series: [
+            {},
+            { stroke: '#000', width: 2, label, fill: 'rgba(0,0,0,0.05)' }
+        ],
+        scales: { x: { time: true }, y: { auto: true } },
+        axes: [
+            { stroke: '#ccc', grid: { stroke: '#ddd' } },
+            { stroke: '#ccc', grid: { stroke: '#ddd' } }
+        ],
+        legend: { show: false }
+    };
+    return new uPlot(opts, [[], []], el);
+}
+
+function seriesToArrays(series) {
+    const n = series.length;
+    const times = new Array(n);
+    const values = new Array(n);
+    for (let i = 0; i < n; i++) {
+        times[i] = series[i].time;
+        values[i] = series[i].value;
+    }
+    return [times, values];
+}
+
+function renderIndexChart(key, selector, label, data) {
+    const el = document.querySelector(selector);
+    if (!el) return;
+    if (el.clientWidth === 0) return;
+    if (!data || data.length < 2) return;
+
+    if (!charts[key]) {
+        charts[key] = makeChart(el, label, 220);
+        if (!charts[key]) return;
+    }
+    charts[key].setData(seriesToArrays(data));
+}
+
+function destroyItemChart() {
+    if (charts.item) {
+        try { charts.item.destroy(); } catch (e) { /* ignore */ }
+        charts.item = null;
+    }
+    charts.itemId = null;
+}
+
+function updateItemChart() {
+    const itemId = selectedItemId.value;
+    if (!itemId) { destroyItemChart(); return; }
+
+    const item = getItemById(itemId);
+    if (!item) { destroyItemChart(); return; }
+
+    const el = document.querySelector('#cm-chart');
+    if (!el) return;
+    if (el.clientWidth === 0) return;
+
+    const times = item.historyTimes;
+    const prices = item.historyPrices;
+    if (!times || times.length < 2) return;
+
+    if (charts.item && charts.itemId === itemId) {
+        charts.item.setData([times.slice(), prices.slice()]);
+    } else {
+        destroyItemChart();
+        const opts = {
+            width: Math.max(120, el.clientWidth),
+            height: 180,
+            series: [
+                {},
+                { stroke: '#000', width: 2, label: item.ticker, fill: 'rgba(0,0,0,0.05)' }
+            ],
+            scales: { x: { time: true }, y: { auto: true } },
+            axes: [
+                { stroke: '#ccc', grid: { stroke: '#ddd' } },
+                { stroke: '#ccc', grid: { stroke: '#ddd' } }
+            ],
+            legend: { show: false }
+        };
+        charts.item = new uPlot(opts, [times.slice(), prices.slice()], el);
+        charts.itemId = itemId;
+    }
+}
+
+/* Modal control */
 function hideAllModals() {
     $('.modal').removeClass('active').removeClass('shifted');
     $('.overlay').removeClass('active');
-}
-
-function showItemModal(itemId) {
-    $('#portfolio-overlay').removeClass('active');
-    $('#portfolio-modal').removeClass('active');
-    selectedItemId.value = itemId;
-    const item = getItemById(itemId);
-    if (!item) return;
-    $('#cm-ticker').text(item.ticker);
-    $('#cm-name').text(item.name);
-    $('#cm-sector').text(item.sector);
-    $('#cm-category').text('(' + (item.category === 'asset' ? 'Asset' : 'Stock') + ')');
-    $('#cm-price').text(fmt(item.price));
-    const pct = pctChange(item.initialPrice, item.price);
-    $('#cm-change').text((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%').css('color', pct >= 0 ? 'green' : 'red');
-    updateHoldingsDisplay();
-    $('#buy-qty').val(1);
-    $('#sell-qty').val(1);
-    // Set sell max
-    const held = holdings.value[itemId];
-    if (held) {
-        $('#sell-qty').attr('max', held.shares);
-    } else {
-        $('#sell-qty').attr('max', 0);
-    }
-    $('#company-overlay').addClass('active');
-    $('#company-modal').addClass('active');
-    // Render chart after modal visible
-    setTimeout(() => { if (selectedItemId.value === itemId) renderItemChart(itemId); }, 150);
 }
 
 function updateHoldingsDisplay() {
@@ -577,9 +790,46 @@ function updateHoldingsDisplay() {
     }
 }
 
+function renderItemChartPriceText(itemId) {
+    const item = getItemById(itemId);
+    if (!item) return;
+    $('#cm-price').text(fmt(item.price));
+    const pct = pctChange(item.initialPrice, item.price);
+    $('#cm-change').text((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%').css('color', pct >= 0 ? 'green' : 'red');
+}
+
+function showItemModal(itemId) {
+    $('#portfolio-overlay').removeClass('active');
+    $('#portfolio-modal').removeClass('active');
+
+    const item = getItemById(itemId);
+    if (!item) return;
+
+    $('#cm-ticker').text(item.ticker);
+    $('#cm-name').text(item.name);
+    $('#cm-sector').text(item.sector);
+    $('#cm-category').text('(' + (item.category === 'asset' ? 'Asset' : 'Stock') + ')');
+    $('#cm-price').text(fmt(item.price));
+    const pct = pctChange(item.initialPrice, item.price);
+    $('#cm-change').text((pct >= 0 ? '+' : '') + pct.toFixed(2) + '%').css('color', pct >= 0 ? 'green' : 'red');
+    $('#buy-qty').val(1);
+    $('#sell-qty').val(1);
+
+    $('#company-overlay').addClass('active');
+    $('#company-modal').addClass('active');
+
+    selectedItemId.value = itemId;
+    updateHoldingsDisplay();
+
+    requestAnimationFrame(() => {
+        updateItemChart();
+        renderItemChartPriceText(itemId);
+    });
+}
+
 function hideItemModal() {
     selectedItemId.value = null;
-    if (window.itemChartInstance) { window.itemChartInstance.destroy(); window.itemChartInstance = null; }
+    destroyItemChart();
     $('#company-overlay').removeClass('active');
     $('#company-modal').removeClass('active').removeClass('shifted');
     processEventQueue();
@@ -675,21 +925,22 @@ function hideHistoryModal() {
 }
 
 function evaluateLoanShark() {
-    if (gameState.value.status !== 'active') return;
+    const gs = gameState.value;
+    if (!gs || gs.status !== 'active') return;
     const nw = currentNetWorth.value;
+
     if (nw >= LOAN_SHARK_TARGET) {
-        // liquidate all assets first
         liquidateAll();
         if (cash.value >= LOAN_SHARK_TAKE) {
             cash.value -= LOAN_SHARK_TAKE;
-            gameState.value = { ...gameState.value, status: 'won' };
+            gameState.value = { ...gs, status: 'won' };
             showWinModal();
         } else {
-            gameState.value = { ...gameState.value, status: 'lost' };
+            gameState.value = { ...gs, status: 'lost' };
             showGameOver('Loan shark cannot be paid!', 'You failed to pay the full amount. He takes everything.');
         }
     } else {
-        gameState.value = { ...gameState.value, status: 'lost' };
+        gameState.value = { ...gs, status: 'lost' };
         showGameOver('Game Over', 'You failed to reach $15,000. The loan shark takes all your possessions and sends you to an old-age home.');
     }
 }
@@ -711,80 +962,12 @@ function showGameOver(title, body) {
 function hideGameOverModal() {
     $('#game-over-overlay').removeClass('active');
     $('#game-over-modal').removeClass('active');
-    if (gameState.value.status === 'lost') {
+    if (gameState.value && gameState.value.status === 'lost') {
         resetGame();
     }
 }
 
-// ========== CHART INSTANCES ==========
-let marketChartInstance = null;
-let assetMarketChartInstance = null;
-let netWorthChartInstance = null;
-let itemChartInstance = null;
-
-function renderMarketChart() {
-    if (marketIndexHistory.value.length < 2) return;
-    const $container = $('#market-chart');
-    const times = marketIndexHistory.value.map(d => d.time);
-    const values = marketIndexHistory.value.map(d => d.value);
-    if (window.uPlot) {
-        if (marketChartInstance) marketChartInstance.setData([times, values]);
-        else {
-            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Stocks Index', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
-            marketChartInstance = new uPlot(opts, [times, values], $container[0]);
-        }
-    }
-}
-
-function renderAssetMarketChart() {
-    if (assetMarketIndexHistory.value.length < 2) return;
-    const $container = $('#asset-market-chart');
-    const times = assetMarketIndexHistory.value.map(d => d.time);
-    const values = assetMarketIndexHistory.value.map(d => d.value);
-    if (window.uPlot) {
-        if (assetMarketChartInstance) assetMarketChartInstance.setData([times, values]);
-        else {
-            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Assets Index', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
-            assetMarketChartInstance = new uPlot(opts, [times, values], $container[0]);
-        }
-    }
-}
-
-function renderNetWorthChart() {
-    if (netWorthHistory.value.length < 2) return;
-    const $container = $('#networth-chart');
-    const times = netWorthHistory.value.map(d => d.time);
-    const values = netWorthHistory.value.map(d => d.value);
-    if (window.uPlot) {
-        if (netWorthChartInstance) netWorthChartInstance.setData([times, values]);
-        else {
-            const opts = { width: $container.width(), height: 220, series: [{}, { stroke: '#000', width: 2, label: 'Net Worth', fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
-            netWorthChartInstance = new uPlot(opts, [times, values], $container[0]);
-        }
-    }
-}
-
-function renderItemChart(itemId) {
-    const item = getItemById(itemId);
-    if (!item) return;
-    const $container = $('#cm-chart');
-    // Ensure container has dimensions
-    if ($container.width() === 0 || $container.height() === 0) {
-        setTimeout(() => renderItemChart(itemId), 100);
-        return;
-    }
-    const times = item.historyTimes, prices = item.historyPrices;
-    if (times.length < 2) return;
-    if (window.uPlot) {
-        if (itemChartInstance) itemChartInstance.setData([times, prices]);
-        else {
-            const opts = { width: $container.width(), height: 180, series: [{}, { stroke: '#000', width: 2, label: item.ticker, fill: 'rgba(0,0,0,0.05)' }], scales: { x: { time: true }, y: { auto: true } }, axes: [{ stroke: '#ccc', grid: { stroke: '#ddd' } }, { stroke: '#ccc', grid: { stroke: '#ddd' } }] };
-            itemChartInstance = new uPlot(opts, [times, prices], $container[0]);
-        }
-    }
-}
-
-// ========== REACTIVE EFFECTS ==========
+/* Reactive effects */
 effect(() => {
     $('#header-cash').text(fmt(cash.value));
     $('#header-networth').text(fmt(currentNetWorth.value));
@@ -820,86 +1003,102 @@ effect(() => {
     }
 });
 
-effect(() => { renderMarketChart(); });
-effect(() => { renderAssetMarketChart(); });
-effect(() => { renderNetWorthChart(); });
-
-// Auto-update holdings display and sell max when holdings change or selected item changes
 effect(() => {
-    if (selectedItemId.value) {
-        updateHoldingsDisplay();
-        // Also enforce sell max
-        const held = holdings.value[selectedItemId.value];
-        const sellInput = $('#sell-qty');
-        if (held) {
-            sellInput.attr('max', held.shares);
-            let currentVal = parseFloat(sellInput.val());
-            if (currentVal > held.shares) sellInput.val(held.shares);
-        } else {
-            sellInput.attr('max', 0);
-            sellInput.val(0.001);
-        }
-    }
+    renderIndexChart('market', '#market-chart', 'Stocks Index', marketIndexHistory.value);
 });
 
-// ========== EVENT HANDLERS ==========
-$(document).on('click', '.item-row', function() { showItemModal($(this).data('id')); });
-$(document).on('click', '.portfolio-item', function() { showItemModal($(this).data('id')); });
+effect(() => {
+    renderIndexChart('assetMarket', '#asset-market-chart', 'Assets Index', assetMarketIndexHistory.value);
+});
+
+effect(() => {
+    renderIndexChart('netWorth', '#networth-chart', 'Net Worth', netWorthHistory.value);
+});
+
+effect(() => {
+    const itemId = selectedItemId.value;
+    if (!itemId) {
+        destroyItemChart();
+        return;
+    }
+    const item = getItemById(itemId);
+    if (!item) {
+        destroyItemChart();
+        return;
+    }
+    updateItemChart();
+    renderItemChartPriceText(itemId);
+    updateHoldingsDisplay();
+});
+
+/* Event handlers */
+$(document).on('click', '.item-row', function () { showItemModal($(this).data('id')); });
+$(document).on('click', '.portfolio-item', function () { showItemModal($(this).data('id')); });
+
 $('#cm-close').on('click', hideItemModal);
 $('#company-overlay').on('click', hideItemModal);
-$('#btn-buy').on('click', function() {
+
+$('#btn-buy').on('click', function () {
     if (!selectedItemId.value) return;
     const qty = parseFloat($('#buy-qty').val()) || 0;
     if (buyStock(selectedItemId.value, qty)) {
         showTooltip(`Bought ${qty} shares`);
+        updateHoldingsDisplay();
     } else {
         showTooltip('Buy failed');
     }
 });
-$('#btn-sell').on('click', function() {
+
+$('#btn-sell').on('click', function () {
     if (!selectedItemId.value) return;
     const qty = parseFloat($('#sell-qty').val()) || 0;
     if (sellStock(selectedItemId.value, qty)) {
         showTooltip(`Sold ${qty} shares`);
+        updateHoldingsDisplay();
     } else {
         showTooltip('Sell failed');
     }
 });
-$('#buy-plus').on('click', function() { $('#buy-qty').val(parseFloat($('#buy-qty').val() || 1) + 1); });
-$('#buy-minus').on('click', function() {
+
+$('#buy-plus').on('click', function () { $('#buy-qty').val(parseFloat($('#buy-qty').val() || 1) + 1); });
+$('#buy-minus').on('click', function () {
     const v = parseFloat($('#buy-qty').val() || 1);
     const newVal = Math.max(0.001, Math.round((v - 1) * 1000) / 1000);
     $('#buy-qty').val(newVal);
 });
-$('#sell-plus').on('click', function() {
+$('#sell-plus').on('click', function () {
     const max = parseFloat($('#sell-qty').attr('max')) || 0;
     const current = parseFloat($('#sell-qty').val()) || 0;
     const newVal = Math.min(max, current + 1);
     $('#sell-qty').val(newVal);
 });
-$('#sell-minus').on('click', function() {
+$('#sell-minus').on('click', function () {
     const v = parseFloat($('#sell-qty').val() || 1);
     const newVal = Math.max(0.001, Math.round((v - 1) * 1000) / 1000);
     $('#sell-qty').val(newVal);
 });
-// Input focus: shift modal up
-$('#buy-qty, #sell-qty').on('focus', function() {
+
+$('#buy-qty, #sell-qty').on('focus', function () {
     $('#company-modal').addClass('shifted');
-}).on('blur', function() {
+}).on('blur', function () {
     $('#company-modal').removeClass('shifted');
 });
+
 $('#event-close').on('click', hideEventModal);
 $('#event-overlay').on('click', hideEventModal);
+
 $('#btn-portfolio').on('click', showPortfolioModal);
 $('#portfolio-close').on('click', hidePortfolioModal);
 $('#portfolio-overlay').on('click', hidePortfolioModal);
+
 $('#btn-history').on('click', showHistoryModal);
 $('#history-close').on('click', hideHistoryModal);
 $('#history-overlay').on('click', hideHistoryModal);
+
 $('#btn-reset').on('click', resetGame);
 $('#game-over-close').on('click', hideGameOverModal);
 
-// ========== INITIALIZATION ==========
+/* Boot */
 function initializeGame() {
     const loaded = loadGame();
     if (!loaded) {
@@ -909,13 +1108,11 @@ function initializeGame() {
         initMarketIndexHistory();
         gameState.value = { status: 'active', elapsedSeconds: 0 };
     }
-    if (!assets.value || assets.value.length === 0) initAssets();
-    if (!assetMarketIndexHistory.value || assetMarketIndexHistory.value.length === 0) initMarketIndexHistory();
 }
 
 initializeGame();
 
-// ========== MAIN LOOPS ==========
+/* Main loops */
 setInterval(() => {
     updatePrices();
     checkBankruptcies();
@@ -924,8 +1121,9 @@ setInterval(() => {
 
 setInterval(() => {
     const now = Date.now() / 1000;
-    netWorthHistory.value = [...netWorthHistory.value, { time: now, value: currentNetWorth.value }];
-    if (netWorthHistory.value.length > NET_WORTH_HIST_LENGTH) netWorthHistory.value.shift();
+    const next = [...netWorthHistory.value, { time: now, value: currentNetWorth.value }];
+    if (next.length > NET_WORTH_HIST_LENGTH) next.shift();
+    netWorthHistory.value = next;
 }, NET_WORTH_RECORD_MS);
 
 setInterval(() => {
@@ -934,24 +1132,24 @@ setInterval(() => {
 }, NEW_ITEM_CHECK_MS);
 
 setInterval(() => {
-    gameState.value = { ...gameState.value, elapsedSeconds: gameState.value.elapsedSeconds + 1 };
-    if (gameState.value.elapsedSeconds >= LOAN_SHARK_DEADLINE_SEC && gameState.value.status === 'active') {
-        evaluateLoanShark();
-    }
+    const gs = gameState.value;
+    if (!gs || gs.status !== 'active') { saveGame(); return; }
+    const next = gs.elapsedSeconds + 1;
+    gameState.value = { ...gs, elapsedSeconds: next };
+    if (next >= LOAN_SHARK_DEADLINE_SEC) evaluateLoanShark();
     saveGame();
 }, 1000);
 
 setInterval(saveGame, SAVE_INTERVAL_MS);
 
-$(window).on('resize', function() {
-    if (marketChartInstance) marketChartInstance.setSize({ width: $('#market-chart').width(), height: 220 });
-    if (assetMarketChartInstance) assetMarketChartInstance.setSize({ width: $('#asset-market-chart').width(), height: 220 });
-    if (netWorthChartInstance) netWorthChartInstance.setSize({ width: $('#networth-chart').width(), height: 220 });
-    if (itemChartInstance && selectedItemId.value) itemChartInstance.setSize({ width: $('#cm-chart').width(), height: 180 });
+$(window).on('resize', function () {
+    if (charts.market) charts.market.setSize({ width: Math.max(120, $('#market-chart').width()), height: 220 });
+    if (charts.assetMarket) charts.assetMarket.setSize({ width: Math.max(120, $('#asset-market-chart').width()), height: 220 });
+    if (charts.netWorth) charts.netWorth.setSize({ width: Math.max(120, $('#networth-chart').width()), height: 220 });
+    if (charts.item) charts.item.setSize({ width: Math.max(120, $('#cm-chart').width()), height: 180 });
 });
 
 $(window).on('beforeunload', saveGame);
-
 </script>
 </body>
 </html>

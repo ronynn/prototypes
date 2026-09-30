@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Stock Market Simulator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      margin: 0; padding: 8px; background: #fff; color: #000; line-height: 1.4;
+    }
+    .container { max-width: 700px; margin: 0 auto; }
+    .row {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 6px; padding: 3px 0; border-bottom: 1px dotted #ccc;
+    }
+    .chart-box {
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+    }
+    .chart-box .uplot { font-family: inherit; }
+    .chart-box .u-wrap { width: 100%; height: 100%; }
+
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      z-index: 90;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px;
+    }
+    .overlay.shifted { align-items: flex-start; padding-top: 6vh; }
+    .modal {
+      background: #fff; border: 2px solid #000; border-radius: 4px;
+      padding: 16px; width: 100%; max-width: 440px; max-height: 84vh;
+      overflow-y: auto; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+    .modal h3 {
+      margin: 0 0 10px 0; font-size: 1.05em;
+      border-bottom: 1px solid #ccc; padding-bottom: 6px;
+    }
+    .modal > button:last-child { margin-top: 12px; }
+    button {
+      font-family: inherit; font-size: 1em; background: #fff;
+      border: 1px solid #000; padding: 4px 10px; cursor: pointer; border-radius: 3px;
+    }
+    button:hover { background: #f0f0f0; }
+    input {
+      font-family: inherit; font-size: 1em; border: 1px solid #000;
+      padding: 3px 4px; width: 82px; text-align: center; border-radius: 3px;
+    }
+    .qty-btn { padding: 2px 8px; border: 1px solid #000; background: #f5f5f5; border-radius: 3px; }
+    .text-right { text-align: right; }
+    .small { font-size: 0.82em; }
+    .green { color: #0a7a0a; }
+    .red { color: #b30000; }
+    .section-title {
+      font-weight: bold; margin-top: 14px;
+      border-bottom: 1px solid #000; padding-bottom: 3px;
+    }
+    #tooltip {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 6px 16px; border-radius: 4px;
+      font-size: 0.82em; z-index: 200; pointer-events: none;
+    }
+    .rank-box { margin: 10px 0; padding: 6px 8px; border: 1px solid #000; border-radius: 3px; }
+    .footer { margin-top: 20px; border-top: 1px solid #000; padding-top: 10px; font-size: 0.82em; }
+    .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+    .buy-sell-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .buy-sell-row button { min-width: 44px; }
+    .clickable { cursor: pointer; }
+    .clickable:hover { background: #f7f7f7; }
+    .cm-header { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-bottom: 4px; }
+    .cm-price { margin-bottom: 6px; }
+    .cm-holdings { margin: 6px 0; font-size: 0.9em; }
+    #boot-error {
+      color: #b30000; font-family: monospace; padding: 12px;
+      white-space: pre-wrap; font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">Loading…</div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "https://esm.sh/preact@10.23.1",
+      "preact/hooks": "https://esm.sh/preact@10.23.1/hooks"
+    }
+  }
+  </script>
+
+  <script type="module">
+    const rootEl = document.getElementById('root');
+    const fail = (msg) => {
+      rootEl.id = 'boot-error';
+      rootEl.textContent = 'Boot error:\n' + msg;
+      console.error('[stock-sim]', msg);
+    };
+
+    (async () => {
+      let h, Fragment, render, useState, useEffect, useRef, useCallback, uPlot;
+
+      // ---- Preact + hooks ----
+      let ns = null;
+      try {
+        ns = await import('./lib/preacthtmsignals.es.js');
+        console.log('[stock-sim] local preact bundle loaded. Exports:', Object.keys(ns).sort().join(', '));
+      } catch (e) {
+        console.warn('[stock-sim] local preact bundle failed:', e.message);
+      }
+
+      const need = ['h', 'Fragment', 'render', 'useState', 'useEffect', 'useRef', 'useCallback'];
+      const hasAll = ns && need.every(k => typeof ns[k] !== 'undefined');
+
+      if (hasAll) {
+        h = ns.h; Fragment = ns.Fragment; render = ns.render;
+        useState = ns.useState; useEffect = ns.useEffect;
+        useRef = ns.useRef; useCallback = ns.useCallback;
+        console.log('[stock-sim] using local preact bundle for everything');
+      } else {
+        if (ns) {
+          const missing = need.filter(k => typeof ns[k] === 'undefined');
+          console.warn('[stock-sim] local bundle missing:', missing.join(', '), '- falling back to esm.sh for preact + hooks');
+        }
+        try {
+          const preactMod = await import('preact');
+          const hooksMod = await import('preact/hooks');
+          h = preactMod.h; Fragment = preactMod.Fragment; render = preactMod.render;
+          useState = hooksMod.useState; useEffect = hooksMod.useEffect;
+          useRef = hooksMod.useRef; useCallback = hooksMod.useCallback;
+        } catch (e) {
+          return fail('Preact + hooks failed to load:\n' + (e.stack || e.message));
+        }
+      }
+
+      // ---- uPlot ----
+      const tryLoadUplot = async (url) => {
+        try {
+          const m = await import(url);
+          const U = m.default || m.uPlot || m;
+          if (typeof U === 'function') return U;
+          console.warn('[stock-sim] ' + url + ' has no constructor. Exports:', Object.keys(m));
+          return null;
+        } catch (e) {
+          console.warn('[stock-sim] ' + url + ' failed:', e.message);
+          return null;
+        }
+      };
+      uPlot = await tryLoadUplot('./lib/uplot.esm.js');
+      if (!uPlot) uPlot = await tryLoadUplot('https://esm.sh/uplot@1.6.31');
+      if (!uPlot) return fail('uPlot could not be loaded from ./lib/uplot.esm.js or CDN.');
+      console.log('[stock-sim] uPlot loaded');
+
+      // ---- Constants ----
+      const STARTING_CASH = 10000;
+      const PRICE_UPDATE_MS = 2000;
+      const NET_WORTH_RECORD_MS = 8000;
+      const NEW_ITEM_CHECK_MS = 30000;
+      const HISTORY_LENGTH = 150;
+      const NET_WORTH_HIST_LENGTH = 400;
+      const BANKRUPTCY_PRICE_RATIO = 0.15;
+      const BANKRUPTCY_CHANCE = 0.05;
+      const LOAN_SHARK_DEADLINE_SEC = 15 * 60;
+      const LOAN_SHARK_TARGET = 15000;
+      const LOAN_SHARK_TAKE = 15000;
+      const SAVE_INTERVAL_MS = 10000;
+      const SAVE_KEY = 'stockSimSave';
+      const SIM_INTERVAL_SEC = PRICE_UPDATE_MS / 1000;
+
+      const INITIAL_COMPANIES = [
+        { name: 'Apple Inc.',       ticker: 'AAPL',  price: 187.52, volatility: 0.012, trend:  0.00025, sector: 'Technology' },
+        { name: 'Microsoft Corp.',  ticker: 'MSFT',  price: 425.38, volatility: 0.010, trend:  0.00030, sector: 'Technology' },
+        { name: 'Alphabet Inc.',    ticker: 'GOOGL', price: 151.24, volatility: 0.013, trend:  0.00022, sector: 'Technology' },
+        { name: 'Amazon.com Inc.',  ticker: 'AMZN',  price: 182.60, volatility: 0.015, trend:  0.00018, sector: 'E-commerce' },
+        { name: 'Tesla Inc.',       ticker: 'TSLA',  price: 248.75, volatility: 0.025, trend: -0.00015, sector: 'Automotive' },
+        { name: 'NVIDIA Corp.',     ticker: 'NVDA',  price: 135.92, volatility: 0.020, trend:  0.00045, sector: 'Technology' },
+        { name: 'Meta Platforms',   ticker: 'META',  price: 510.35, volatility: 0.018, trend:  0.00020, sector: 'Technology' },
+        { name: 'Netflix Inc.',     ticker: 'NFLX',  price: 635.40, volatility: 0.016, trend:  0.00012, sector: 'Entertainment' },
+        { name: 'Walmart Inc.',     ticker: 'WMT',   price:  72.35, volatility: 0.008, trend:  0.00008, sector: 'Retail' },
+        { name: 'Coca-Cola Co.',    ticker: 'KO',    price:  63.10, volatility: 0.006, trend:  0.00005, sector: 'Beverages' },
+        { name: "McDonald's Corp.", ticker: 'MCD',   price: 295.70, volatility: 0.009, trend:  0.00010, sector: 'Restaurants' },
+        { name: 'Disney Co.',       ticker: 'DIS',   price:  94.32, volatility: 0.014, trend: -0.00010, sector: 'Entertainment' },
+        { name: 'JPMorgan Chase',   ticker: 'JPM',   price: 215.40, volatility: 0.011, trend:  0.00015, sector: 'Banking' },
+        { name: 'Visa Inc.',        ticker: 'V',     price: 278.90, volatility: 0.009, trend:  0.00020, sector: 'Financial' },
+        { name: 'Bitcoin',          ticker: 'BTC',   price: 67450,  volatility: 0.032, trend:  0.00035, sector: 'Crypto' },
+        { name: 'Ethereum',         ticker: 'ETH',   price: 3520,   volatility: 0.028, trend:  0.00028, sector: 'Crypto' },
+        { name: 'Solana',           ticker: 'SOL',   price: 152.30, volatility: 0.038, trend:  0.00020, sector: 'Crypto' },
+        { name: 'Cardano',          ticker: 'ADA',   price: 0.462,  volatility: 0.035, trend: -0.00008, sector: 'Crypto' },
+        { name: 'PayPal Holdings',  ticker: 'PYPL',  price:  66.80, volatility: 0.017, trend: -0.00020, sector: 'Financial' },
+        { name: 'Mastercard Inc.',  ticker: 'MA',    price: 468.20, volatility: 0.009, trend:  0.00022, sector: 'Financial' }
+      ];
+
+      const INITIAL_ASSETS = [
+        { name: 'Golden Pocket Watch',     ticker: 'GOLDW', price:  4500, volatility: 0.020, trend:  0.00010, sector: 'Jewelry',      history: 'Victorian era, belonged to a nobleman' },
+        { name: 'Diamond Necklace',        ticker: 'DIANE', price: 12000, volatility: 0.025, trend:  0.00005, sector: 'Jewelry',      history: 'Once worn by a Hollywood star' },
+        { name: 'Renaissance Painting',    ticker: 'RENPA', price: 85000, volatility: 0.015, trend:  0.00020, sector: 'Art',          history: 'Attributed to a master' },
+        { name: 'Ancient Coin Collection', ticker: 'ANCI',  price:  2200, volatility: 0.030, trend: -0.00010, sector: 'Collectibles', history: 'Roman era, well preserved' },
+        { name: 'Vintage Rolex',           ticker: 'ROLEX', price:  7800, volatility: 0.018, trend:  0.00015, sector: 'Luxury',       history: '1950s model, rare' },
+        { name: 'Chinese Porcelain Vase',  ticker: 'PORCE', price: 15000, volatility: 0.022, trend:  0.00008, sector: 'Art',          history: 'Qing dynasty, imperial' },
+        { name: 'First Edition Book',      ticker: 'FIRED', price:  9500, volatility: 0.020, trend:  0.00012, sector: 'Collectibles', history: 'Signed by author' },
+        { name: 'Emerald Ring',            ticker: 'EMRIN', price:  6200, volatility: 0.028, trend:  0.00005, sector: 'Jewelry',      history: 'Colombian emerald' },
+        { name: 'Picasso Sketch',          ticker: 'PICSK', price: 55000, volatility: 0.017, trend:  0.00018, sector: 'Art',          history: 'Original sketch' }
+      ];
+
+      const COMPANY_PREFIX = ['Quantum','Nova','Apex','Zenith','Orion','Vortex','Silver','Golden','Prime','Cyber'];
+      const COMPANY_SUFFIX = ['Tech','Dynamics','Industries','Systems','Corp','Labs','Enterprises','Holdings','Group','Partners'];
+      const ASSET_TYPES = ['Painting','Sculpture','Watch','Ring','Vase','Coin','Book','Manuscript','Jewelry','Artifact'];
+      const ASSET_DESC = ['Ancient','Rare','Vintage','Imperial','Golden','Royal','Mysterious','Colonial','Antique','Famous'];
+
+      const uniqueId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+      function gaussianRandom() {
+        let u = 0, v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+      }
+      function fmt(n) {
+        if (!isFinite(n)) return '$0.00';
+        const a = Math.abs(n);
+        if (a >= 10000) return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+        if (a >= 1) return '$' + n.toFixed(2);
+        if (a >= 0.01) return '$' + n.toFixed(4);
+        if (a >= 0.0001) return '$' + n.toFixed(6);
+        return '$' + n.toFixed(8);
+      }
+      function fmtNum(n, d) {
+        d = d === undefined ? 2 : d;
+        return Math.abs(n) >= 1000 ? n.toLocaleString('en-US', { maximumFractionDigits: 0 }) : n.toFixed(d);
+      }
+      function pctChange(a, b) { return a ? ((b - a) / a) * 100 : 0; }
+      function fmtElapsed(secs) {
+        const s = Math.max(0, Math.round(secs));
+        const m = Math.floor(s / 60);
+        return m + ':' + String(s % 60).padStart(2, '0');
+      }
+      function fmtAxis(v) {
+        const a = Math.abs(v);
+        if (a >= 1000) return v.toFixed(0);
+        if (a >= 10) return v.toFixed(1);
+        if (a >= 1) return v.toFixed(2);
+        if (a >= 0.01) return v.toFixed(3);
+        return v.toFixed(4);
+      }
+      function round3(n) { return Math.round(n * 1000) / 1000; }
+
+      function buildSeedHistory(basePrice, volatility, count, intervalSec) {
+        const times = [], prices = [];
+        for (let j = 0; j < count; j++) {
+          times.push(j * intervalSec);
+          const noise = (Math.random() - 0.5) * volatility * basePrice * 2;
+          prices.push(Math.max(0.000001, basePrice + noise * (j / count)));
+        }
+        return { times, prices };
+      }
+
+      function buildInitialCompanies() {
+        return INITIAL_COMPANIES.map((c, i) => {
+          const { times, prices } = buildSeedHistory(c.price, c.volatility, 50, SIM_INTERVAL_SEC);
+          return {
+            id: 'comp_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker,
+            price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price,
+            volatility: c.volatility, trend: c.trend, sector: c.sector,
+            active: true, isNew: false, category: 'stock',
+            historyTimes: times, historyPrices: prices
+          };
+        });
+      }
+      function buildInitialAssets() {
+        return INITIAL_ASSETS.map((c, i) => {
+          const { times, prices } = buildSeedHistory(c.price, c.volatility, 50, SIM_INTERVAL_SEC);
+          return {
+            id: 'asset_' + i + '_' + uniqueId(), name: c.name, ticker: c.ticker,
+            price: c.price, initialPrice: c.price, highPrice: c.price, lowPrice: c.price,
+            volatility: c.volatility, trend: c.trend, sector: c.sector,
+            active: true, isNew: false, category: 'asset', history: c.history,
+            historyTimes: times, historyPrices: prices
+          };
+        });
+      }
+      const SEED_SIM_TIME = 50 * SIM_INTERVAL_SEC;
+      function buildInitialMarketIndex() {
+        const arr = [];
+        for (let i = 0; i < 50; i++) arr.push({ time: i * SIM_INTERVAL_SEC, value: 100 });
+        return arr;
+      }
+      function buildInitialNetWorthHistory() {
+        const arr = [];
+        for (let i = 0; i < 30; i++) arr.push({ time: i * SIM_INTERVAL_SEC, value: STARTING_CASH });
+        return arr;
+      }
+
+      function buildInitialState() {
+        return {
+          cash: STARTING_CASH,
+          holdings: {},
+          transactions: [],
+          companies: buildInitialCompanies(),
+          assets: buildInitialAssets(),
+          marketIndexHistory: buildInitialMarketIndex(),
+          assetMarketIndexHistory: buildInitialMarketIndex(),
+          netWorthHistory: buildInitialNetWorthHistory(),
+          eventQueue: [],
+          simTime: SEED_SIM_TIME,
+          elapsedSeconds: 0,
+          selectedItemId: null,
+          showPortfolio: false,
+          showHistory: false,
+          gameOver: null,
+          gameStatus: 'active',
+          buyQtyStr: '1',
+          sellQtyStr: '1',
+          modalShifted: false
+        };
+      }
+
+      function getItemById(state, id) {
+        return state.companies.find(c => c.id === id) || state.assets.find(a => a.id === id);
+      }
+      function computeNetWorth(state) {
+        let total = state.cash;
+        for (const id in state.holdings) {
+          const item = getItemById(state, id);
+          if (item && item.active) total += state.holdings[id].shares * item.price;
+        }
+        return total;
+      }
+      function tickItem(item, t) {
+        if (!item.active) return item;
+        const newPrice = Math.max(0.0000001,
+          item.price + item.trend * item.price + item.volatility * item.price * gaussianRandom());
+        const hT = item.historyTimes.concat(t);
+        const hP = item.historyPrices.concat(newPrice);
+        if (hT.length > HISTORY_LENGTH) { hT.shift(); hP.shift(); }
+        return Object.assign({}, item, {
+          price: newPrice,
+          highPrice: Math.max(item.highPrice, newPrice),
+          lowPrice: Math.min(item.lowPrice, newPrice),
+          historyTimes: hT, historyPrices: hP
+        });
+      }
+
+      function tickGame(state) {
+        const t = state.simTime;
+        const nextCompanies = state.companies.map(c => tickItem(c, t));
+        const nextAssets = state.assets.map(a => tickItem(a, t));
+        const activeStocks = nextCompanies.filter(c => c.active);
+        const activeAssets = nextAssets.filter(a => a.active);
+        const stockIdx = activeStocks.length
+          ? 100 * activeStocks.reduce((s, c) => s + c.price / c.initialPrice, 0) / activeStocks.length
+          : 100;
+        const assetIdx = activeAssets.length
+          ? 100 * activeAssets.reduce((s, a) => s + a.price / a.initialPrice, 0) / activeAssets.length
+          : 100;
+        let mIdx = state.marketIndexHistory.concat({ time: t, value: stockIdx });
+        if (mIdx.length > HISTORY_LENGTH) mIdx = mIdx.slice(mIdx.length - HISTORY_LENGTH);
+        let aIdx = state.assetMarketIndexHistory.concat({ time: t, value: assetIdx });
+        if (aIdx.length > HISTORY_LENGTH) aIdx = aIdx.slice(aIdx.length - HISTORY_LENGTH);
+
+        const events = [], txList = [], deadIds = [];
+        const scan = (arr) => arr.filter(item => {
+          if (!item.active) return false;
+          if (item.price / item.initialPrice < BANKRUPTCY_PRICE_RATIO && Math.random() < BANKRUPTCY_CHANCE) {
+            deadIds.push(item.id);
+            const held = state.holdings[item.id];
+            if (held) {
+              const loss = held.shares * held.avgCost;
+              txList.push({
+                id: uniqueId(), type: 'BANKRUPT', companyId: item.id, ticker: item.ticker,
+                shares: held.shares, price: item.price, total: 0,
+                profit: -loss, timestamp: Date.now()
+              });
+              events.push({ type: 'bankruptcy', item, lossAmount: loss, shareCount: held.shares, avgCost: held.avgCost });
+            } else {
+              events.push({ type: 'bankruptcy', item, lossAmount: 0, shareCount: 0, avgCost: 0 });
+            }
+            return false;
+          }
+          return true;
+        });
+        const filteredCompanies = scan(nextCompanies);
+        const filteredAssets = scan(nextAssets);
+        let newHoldings = state.holdings;
+        let newTransactions = state.transactions;
+        if (deadIds.length) {
+          newHoldings = Object.assign({}, state.holdings);
+          for (const id of deadIds) delete newHoldings[id];
+          if (txList.length) newTransactions = state.transactions.concat(txList);
+        }
+        return Object.assign({}, state, {
+          companies: filteredCompanies,
+          assets: filteredAssets,
+          marketIndexHistory: mIdx,
+          assetMarketIndexHistory: aIdx,
+          holdings: newHoldings,
+          transactions: newTransactions,
+          eventQueue: events.length ? state.eventQueue.concat(events) : state.eventQueue,
+          simTime: t + SIM_INTERVAL_SEC
+        });
+      }
+
+      function maybeAddNewItem(state) {
+        if (Math.random() > 0.35) return state;
+        const t = state.simTime;
+        if (Math.random() < 0.6) {
+          const name = COMPANY_PREFIX[(Math.random() * COMPANY_PREFIX.length) | 0] +
+                       COMPANY_SUFFIX[(Math.random() * COMPANY_SUFFIX.length) | 0] + ' Inc.';
+          const ticker = name.split(' ')[0].substring(0, 4).toUpperCase();
+          const price = Math.random() * 100 + 10;
+          const { times, prices } = buildSeedHistory(price, 0.02 + Math.random() * 0.03, 30, SIM_INTERVAL_SEC);
+          const comp = {
+            id: 'comp_new_' + uniqueId(), name, ticker, price,
+            initialPrice: price, highPrice: price, lowPrice: price,
+            volatility: 0.02 + Math.random() * 0.03,
+            trend: (Math.random() - 0.5) * 0.001,
+            sector: 'Technology', active: true, isNew: true, category: 'stock',
+            historyTimes: times.map(x => x + t - 30 * SIM_INTERVAL_SEC),
+            historyPrices: prices
+          };
+          return Object.assign({}, state, {
+            companies: state.companies.concat(comp),
+            eventQueue: state.eventQueue.concat({ type: 'new_company', item: comp })
+          });
+        } else {
+          const name = ASSET_DESC[(Math.random() * ASSET_DESC.length) | 0] + ' ' +
+                       ASSET_TYPES[(Math.random() * ASSET_TYPES.length) | 0];
+          const ticker = name.split(' ').map(w => w[0]).join('').substring(0, 4).toUpperCase();
+          const price = Math.random() * 5000 + 500;
+          const { times, prices } = buildSeedHistory(price, 0.015 + Math.random() * 0.02, 30, SIM_INTERVAL_SEC);
+          const asset = {
+            id: 'asset_new_' + uniqueId(), name, ticker, price,
+            initialPrice: price, highPrice: price, lowPrice: price,
+            volatility: 0.015 + Math.random() * 0.02,
+            trend: (Math.random() - 0.5) * 0.0005,
+            sector: 'Collectibles', active: true, isNew: true, category: 'asset',
+            history: 'Recently discovered',
+            historyTimes: times.map(x => x + t - 30 * SIM_INTERVAL_SEC),
+            historyPrices: prices
+          };
+          return Object.assign({}, state, {
+            assets: state.assets.concat(asset),
+            eventQueue: state.eventQueue.concat({ type: 'new_company', item: asset })
+          });
+        }
+      }
+
+      function buyStock(state, itemId, qty) {
+        const item = getItemById(state, itemId);
+        if (!item || !item.active || !(qty > 0)) return state;
+        const totalCost = qty * item.price;
+        if (totalCost > state.cash) return state;
+        const cur = state.holdings[itemId] || { shares: 0, avgCost: 0 };
+        const newShares = cur.shares + qty;
+        const newAvg = (cur.shares * cur.avgCost + qty * item.price) / newShares;
+        const newHoldings = Object.assign({}, state.holdings, { [itemId]: { shares: newShares, avgCost: newAvg } });
+        const newTx = state.transactions.concat({
+          id: uniqueId(), type: 'BUY', companyId: itemId, ticker: item.ticker,
+          shares: qty, price: item.price, total: totalCost, profit: null, timestamp: Date.now()
+        });
+        return Object.assign({}, state, { cash: state.cash - totalCost, holdings: newHoldings, transactions: newTx });
+      }
+
+      function sellStock(state, itemId, qty) {
+        const item = getItemById(state, itemId);
+        if (!item || !item.active || !(qty > 0)) return state;
+        const held = state.holdings[itemId];
+        if (!held || held.shares + 1e-9 < qty) return state;
+        const proceeds = qty * item.price;
+        const profit = qty * (item.price - held.avgCost);
+        const newShares = held.shares - qty;
+        let newHoldings;
+        if (newShares <= 0.0000001) {
+          newHoldings = Object.assign({}, state.holdings);
+          delete newHoldings[itemId];
+        } else {
+          newHoldings = Object.assign({}, state.holdings, { [itemId]: { shares: newShares, avgCost: held.avgCost } });
+        }
+        const newTx = state.transactions.concat({
+          id: uniqueId(), type: 'SELL', companyId: itemId, ticker: item.ticker,
+          shares: qty, price: item.price, total: proceeds, profit, timestamp: Date.now()
+        });
+        return Object.assign({}, state, { cash: state.cash + proceeds, holdings: newHoldings, transactions: newTx });
+      }
+
+      function UPlotChart({ id, height, label, data }) {
+        const wrapRef = useRef(null);
+        const targetRef = useRef(null);
+        const chartRef = useRef(null);
+
+        useEffect(() => {
+          const wrap = wrapRef.current;
+          const target = targetRef.current;
+          if (!wrap || !target) return;
+
+          let cancelled = false;
+
+          const create = () => {
+            if (cancelled) return;
+            if (!wrap.isConnected || !target.isConnected) {
+              requestAnimationFrame(create);
+              return;
+            }
+            const width = wrap.clientWidth;
+            if (width < 40) {
+              requestAnimationFrame(create);
+              return;
+            }
+
+            const opts = {
+              width,
+              height,
+              padding: [8, 10, 0, 0],
+              series: [
+                {},
+                { stroke: '#222', width: 2, label, fill: 'rgba(0,0,0,0.05)' }
+              ],
+              scales: {
+                x: { time: false },
+                y: { auto: true }
+              },
+              axes: [
+                {
+                  stroke: '#555',
+                  grid: { stroke: '#eaeaea', width: 1 },
+                  ticks: { stroke: '#ccc', width: 1 },
+                  font: '10px monospace',
+                  size: 42,
+                  values: (u, vals) => vals.map(v => fmtElapsed(v))
+                },
+                {
+                  stroke: '#555',
+                  grid: { stroke: '#eaeaea', width: 1 },
+                  ticks: { stroke: '#ccc', width: 1 },
+                  font: '10px monospace',
+                  size: 56,
+                  values: (u, vals) => vals.map(v => fmtAxis(v))
+                }
+              ],
+              legend: { show: false },
+              cursor: { show: true }
+            };
+
+            try {
+              chartRef.current = new uPlot(opts, [[], []], target);
+            } catch (e) {
+              console.error('[uplot create]', id, e);
+            }
+          };
+          create();
+
+          const ro = new ResizeObserver(() => {
+            const c = chartRef.current;
+            if (!c || !wrap.isConnected) return;
+            const w = wrap.clientWidth;
+            if (w < 40) return;
+            try { c.setSize({ width: w, height }); } catch (e) {}
+          });
+          ro.observe(wrap);
+
+          return () => {
+            cancelled = true;
+            ro.disconnect();
+            if (chartRef.current) {
+              try { chartRef.current.destroy(); } catch (e) {}
+              chartRef.current = null;
+            }
+          };
+        }, []);
+
+        useEffect(() => {
+          const c = chartRef.current;
+          if (!c || !data || data.length < 2) return;
+          const xs = new Array(data.length);
+          const ys = new Array(data.length);
+          for (let i = 0; i < data.length; i++) {
+            xs[i] = data[i].time;
+            ys[i] = data[i].value;
+          }
+          try { c.setData([xs, ys]); } catch (e) { console.error('[uplot update]', id, e); }
+        }, [data]);
+
+        return h('div', {
+          ref: wrapRef,
+          class: 'chart-box',
+          style: { height: height + 'px' }
+        }, h('div', {
+          ref: targetRef,
+          style: { position: 'absolute', top: '0', left: '0', right: '0', bottom: '0' }
+        }));
+      }
+
+      function Header({ state }) {
+        const nw = computeNetWorth(state);
+        const hist = state.netWorthHistory;
+        const diff = hist.length > 1 ? nw - hist[0].value : 0;
+        const pct = hist.length > 1 && hist[0].value ? (diff / hist[0].value) * 100 : 0;
+        const cls = diff >= 0 ? 'green' : 'red';
+        return h('div', { class: 'row' }, [
+          h('span', { key: 'c' }, 'CASH: ' + fmt(state.cash)),
+          h('span', { key: 'n' }, 'NET WORTH: ' + fmt(nw)),
+          h('span', { key: 'd', class: 'small ' + cls },
+            (diff >= 0 ? '+' : '') + fmt(diff) + ' (' + (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%)'),
+          h('span', { key: 't', class: 'small' }, 'Timer: ' + fmtElapsed(state.elapsedSeconds)),
+          h('button', { key: 'p', onClick: () => window.__dispatch({ type: 'SHOW_PORTFOLIO' }) }, 'Portfolio')
+        ]);
+      }
+
+      function CompanyList({ state }) {
+        return h('div', null, state.companies.filter(c => c.active).map(comp => {
+          const pct = pctChange(comp.initialPrice, comp.price);
+          const cls = pct >= 0 ? 'green' : 'red';
+          return h('div', {
+            class: 'row clickable', key: comp.id,
+            onClick: () => window.__dispatch({ type: 'OPEN_ITEM', id: comp.id })
+          }, [
+            h('span', { key: 'l' }, [comp.ticker + ' ', h('span', { class: 'small' }, comp.name)]),
+            h('span', { key: 'r', class: 'text-right' }, [
+              fmt(comp.price) + ' ',
+              h('span', { class: cls }, (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%')
+            ])
+          ]);
+        }));
+      }
+
+      function AssetList({ state }) {
+        return h('div', null, state.assets.filter(a => a.active).map(asset => {
+          const pct = pctChange(asset.initialPrice, asset.price);
+          const cls = pct >= 0 ? 'green' : 'red';
+          return h('div', {
+            class: 'row clickable', key: asset.id,
+            onClick: () => window.__dispatch({ type: 'OPEN_ITEM', id: asset.id })
+          }, [
+            h('span', { key: 'l' }, [
+              asset.ticker + ' ',
+              h('span', { class: 'small' }, asset.name + ' '),
+              h('span', { class: 'small' }, '(' + asset.history + ')')
+            ]),
+            h('span', { key: 'r', class: 'text-right' }, [
+              fmt(asset.price) + ' ',
+              h('span', { class: cls }, (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%')
+            ])
+          ]);
+        }));
+      }
+
+      function Ranking({ state }) {
+        const nw = computeNetWorth(state);
+        let rank;
+        if (nw < 5000) rank = 'Level 1: Novice';
+        else if (nw < 20000) rank = 'Level 2: Trader';
+        else if (nw < 100000) rank = 'Level 3: Investor';
+        else rank = 'Level 4: Mogul';
+        return h('div', { class: 'rank-box' }, 'Ranking: ' + rank + ' | Net Worth: ' + fmt(nw));
+      }
+
+      function ItemModal({ state }) {
+        const id = state.selectedItemId;
+        if (!id) return null;
+        const item = getItemById(state, id);
+        if (!item) return null;
+        const held = state.holdings[id];
+        const pct = pctChange(item.initialPrice, item.price);
+        const pctCls = pct >= 0 ? 'green' : 'red';
+        const data = [];
+        for (let i = 0; i < item.historyTimes.length; i++) {
+          data.push({ time: item.historyTimes[i], value: item.historyPrices[i] });
+        }
+        const holdingsLine = held
+          ? 'You own ' + fmtNum(held.shares, 3) + ' shares · Avg cost ' + fmt(held.avgCost) + ' · Value ' + fmt(held.shares * item.price)
+          : 'You own no shares.';
+        const shift = state.modalShifted ? ' shifted' : '';
+        const d = window.__dispatch;
+
+        return h('div', {
+          class: 'overlay' + shift,
+          onClick: () => d({ type: 'CLOSE_ITEM' })
+        }, h('div', { class: 'modal', onClick: (e) => e.stopPropagation() }, [
+          h('div', { class: 'cm-header', key: 'title' }, [
+            h('strong', { key: 't' }, item.ticker),
+            h('span', { key: 'n' }, item.name),
+            h('span', { key: 's', class: 'small' }, item.sector),
+            h('span', { key: 'c', class: 'small' }, '(' + (item.category === 'asset' ? 'Asset' : 'Stock') + ')')
+          ]),
+          h('div', { class: 'cm-price', key: 'price' }, [
+            'Price: ' + fmt(item.price) + ' ',
+            h('span', { class: pctCls }, (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%')
+          ]),
+          h(UPlotChart, { key: 'chart-' + item.id, id: 'cm-chart', height: 180, label: item.ticker, data }),
+          h('div', { class: 'cm-holdings', key: 'own' }, holdingsLine),
+          h('div', { class: 'buy-sell-row', key: 'buy' }, [
+            h('span', { key: 'l' }, 'Buy:'),
+            h('button', { key: 'm', class: 'qty-btn', onClick: () => d({ type: 'DEC_BUY' }) }, '-'),
+            h('input', {
+              key: 'i', type: 'number', min: '0.001', step: '0.001',
+              value: state.buyQtyStr,
+              onInput: (e) => d({ type: 'SET_BUY', value: e.target.value }),
+              onFocus: () => d({ type: 'SHIFT_MODAL', value: true }),
+              onBlur: () => d({ type: 'SHIFT_MODAL', value: false })
+            }),
+            h('button', { key: 'p', class: 'qty-btn', onClick: () => d({ type: 'INC_BUY' }) }, '+'),
+            h('button', { key: 'b', onClick: () => d({ type: 'DO_BUY' }) }, 'Buy')
+          ]),
+          h('div', { class: 'buy-sell-row', key: 'sell' }, [
+            h('span', { key: 'l' }, 'Sell:'),
+            h('button', { key: 'm', class: 'qty-btn', onClick: () => d({ type: 'DEC_SELL' }) }, '-'),
+            h('input', {
+              key: 'i', type: 'number', min: '0.001', step: '0.001',
+              value: state.sellQtyStr,
+              onInput: (e) => d({ type: 'SET_SELL', value: e.target.value }),
+              onFocus: () => d({ type: 'SHIFT_MODAL', value: true }),
+              onBlur: () => d({ type: 'SHIFT_MODAL', value: false })
+            }),
+            h('button', { key: 'p', class: 'qty-btn', onClick: () => d({ type: 'INC_SELL' }) }, '+'),
+            h('button', { key: 's', onClick: () => d({ type: 'DO_SELL' }) }, 'Sell')
+          ]),
+          h('button', { key: 'close', onClick: () => d({ type: 'CLOSE_ITEM' }) }, 'Close')
+        ]));
+      }
+
+      function EventModal({ state }) {
+        if (state.selectedItemId || state.showPortfolio || state.showHistory || state.gameOver) return null;
+        if (!state.eventQueue.length) return null;
+        const ev = state.eventQueue[0];
+        let title, icon, body;
+        if (ev.type === 'new_company') {
+          const item = ev.item;
+          title = 'New Item Listed!';
+          icon = '🎉';
+          body = h('div', null, [
+            h('div', { key: 0 }, item.ticker + ' — ' + item.name),
+            h('div', { key: 1 }, 'Initial Price: ' + fmt(item.price)),
+            h('div', { key: 2 }, 'Sector: ' + (item.sector || 'Collectibles'))
+          ]);
+        } else {
+          const item = ev.item;
+          title = 'Bankruptcy!';
+          icon = '⚠️';
+          body = h('div', null, [
+            h('div', { key: 0 }, item.ticker + ' — ' + item.name),
+            h('div', { key: 1 }, 'Shares held: ' + fmtNum(ev.shareCount, 3)),
+            h('div', { key: 2 }, 'Avg cost/share: ' + fmt(ev.avgCost)),
+            h('div', { key: 3 }, 'Final price: ' + fmt(item.price)),
+            h('div', { key: 4 }, 'Total Loss: -' + fmt(ev.lossAmount))
+          ]);
+        }
+        const dismiss = () => window.__dispatch({ type: 'DISMISS_EVENT' });
+        return h('div', { class: 'overlay', onClick: dismiss },
+          h('div', { class: 'modal', onClick: (e) => e.stopPropagation() }, [
+            h('div', { key: 0, style: { fontSize: '1.6em' } }, icon),
+            h('h3', { key: 1 }, title),
+            h('div', { key: 2 }, body),
+            h('button', { key: 3, onClick: dismiss }, 'Dismiss')
+          ]));
+      }
+
+      function PortfolioModal({ state }) {
+        if (!state.showPortfolio) return null;
+        const rows = [];
+        let totalVal = 0;
+        for (const id in state.holdings) {
+          const item = getItemById(state, id);
+          if (!item || !item.active) continue;
+          const held = state.holdings[id];
+          const val = held.shares * item.price;
+          const pnl = held.shares * (item.price - held.avgCost);
+          totalVal += val;
+          rows.push(h('div', {
+            class: 'row clickable', key: id,
+            onClick: () => window.__dispatch({ type: 'OPEN_ITEM', id })
+          }, [
+            h('span', { key: 'l' }, item.ticker + ' (' + item.category + ')'),
+            h('span', { key: 'r', class: 'text-right' }, [
+              fmtNum(held.shares, 3) + ' shares · ' + fmt(val) + ' ',
+              h('span', { class: pnl >= 0 ? 'green' : 'red' },
+                '(' + (pnl >= 0 ? '+' : '') + fmt(pnl) + ')')
+            ])
+          ]));
+        }
+        const close = () => window.__dispatch({ type: 'CLOSE_PORTFOLIO' });
+        return h('div', { class: 'overlay', onClick: close },
+          h('div', { class: 'modal', onClick: (e) => e.stopPropagation() }, [
+            h('h3', { key: 0 }, 'Portfolio'),
+            h('div', { key: 1 }, [
+              h('div', { key: 'a' }, 'Cash: ' + fmt(state.cash)),
+              h('div', { key: 'b' }, 'Portfolio Value: ' + fmt(totalVal)),
+              h('div', { key: 'c' }, 'Total Net Worth: ' + fmt(state.cash + totalVal))
+            ]),
+            h('div', { key: 2, style: { marginTop: '8px' } },
+              rows.length ? rows : h('div', null, 'No holdings.')),
+            h('button', { key: 3, onClick: close }, 'Close')
+          ]));
+      }
+
+      function HistoryModal({ state }) {
+        if (!state.showHistory) return null;
+        const txs = state.transactions;
+        let totalProfit = 0, buys = 0, sells = 0, bankrupts = 0;
+        for (const tx of txs) {
+          if (tx.profit !== null && tx.profit !== undefined) totalProfit += tx.profit;
+          if (tx.type === 'BUY') buys++;
+          else if (tx.type === 'SELL') sells++;
+          else if (tx.type === 'BANKRUPT') bankrupts++;
+        }
+        const rows = [];
+        for (let i = txs.length - 1; i >= 0; i--) {
+          const tx = txs[i];
+          const hasProfit = tx.profit !== null && tx.profit !== undefined;
+          const profitStr = hasProfit ? (tx.profit >= 0 ? '+' : '') + fmt(tx.profit) : fmt(tx.total);
+          const cls = hasProfit ? (tx.profit >= 0 ? 'green' : 'red') : '';
+          rows.push(h('div', { class: 'row', key: tx.id || i }, [
+            h('span', { key: 'a' }, tx.type + ' ' + tx.ticker + ' ' + fmtNum(tx.shares, 3) + ' @ ' + fmt(tx.price)),
+            h('span', { key: 'b', class: cls }, profitStr),
+            h('span', { key: 'c', class: 'small' }, new Date(tx.timestamp).toLocaleTimeString())
+          ]));
+        }
+        const close = () => window.__dispatch({ type: 'CLOSE_HISTORY' });
+        return h('div', { class: 'overlay', onClick: close },
+          h('div', { class: 'modal', onClick: (e) => e.stopPropagation() }, [
+            h('h3', { key: 0 }, 'Transaction History'),
+            h('div', { key: 1, class: 'small', style: { marginBottom: '8px' } },
+              txs.length + ' tx · ' + buys + ' buys · ' + sells + ' sells · ' +
+              bankrupts + ' bankruptcies · P/L: ' +
+              (totalProfit >= 0 ? '+' : '') + fmt(totalProfit)),
+            h('div', { key: 2 }, rows.length ? rows : h('div', null, 'No transactions.')),
+            h('button', { key: 3, onClick: close }, 'Close')
+          ]));
+      }
+
+      function GameOverModal({ state }) {
+        if (!state.gameOver) return null;
+        const won = state.gameStatus === 'won';
+        const close = () => window.__dispatch({ type: 'CLOSE_GAME_OVER' });
+        return h('div', { class: 'overlay' },
+          h('div', { class: 'modal' }, [
+            h('h3', { key: 0 }, state.gameOver.title),
+            h('div', { key: 1 }, state.gameOver.body),
+            h('button', { key: 2, onClick: close }, won ? 'Continue' : 'Reset Game')
+          ]));
+      }
+
+      function Tooltip({ text }) {
+        if (!text) return null;
+        return h('div', { id: 'tooltip' }, text);
+      }
+
+      function Footer() {
+        return h('div', { class: 'container footer' }, [
+          h('p', { key: 0 }, [
+            h('strong', { key: 's' }, 'Loan Shark Story: '),
+            'You owe a dangerous loan shark $15,000. He has given you exactly 15 minutes to raise the money by trading stocks and assets. If you succeed, he takes his $15k and leaves you alone. If you fail, he takes everything you own and sends you to an old-age home. Good luck.'
+          ]),
+          h('p', { key: 1 }, '© 2026 Made by Ronynn (bunch of math bugs still persist)')
+        ]);
+      }
+
+      function reduce(state, action, showTooltip) {
+        switch (action.type) {
+          case 'TICK_PRICES': return tickGame(state);
+          case 'TICK_TIMER': {
+            const e = state.elapsedSeconds + 1;
+            if (state.gameStatus === 'active' && e >= LOAN_SHARK_DEADLINE_SEC) return evaluateGameEnd(state);
+            return Object.assign({}, state, { elapsedSeconds: e });
+          }
+          case 'RECORD_NET_WORTH': {
+            const nw = computeNetWorth(state);
+            let hh = state.netWorthHistory.concat({ time: state.simTime, value: nw });
+            if (hh.length > NET_WORTH_HIST_LENGTH) hh = hh.slice(hh.length - NET_WORTH_HIST_LENGTH);
+            return Object.assign({}, state, { netWorthHistory: hh });
+          }
+          case 'CHECK_NEW_ITEMS': return maybeAddNewItem(state);
+          case 'OPEN_ITEM': {
+            const held = state.holdings[action.id];
+            return Object.assign({}, state, {
+              showPortfolio: false,
+              selectedItemId: action.id,
+              buyQtyStr: '1',
+              sellQtyStr: held ? String(round3(Math.min(1, held.shares))) : '1',
+              modalShifted: false
+            });
+          }
+          case 'CLOSE_ITEM':
+            return Object.assign({}, state, { selectedItemId: null, modalShifted: false });
+          case 'SHIFT_MODAL':
+            return Object.assign({}, state, { modalShifted: action.value });
+          case 'SET_BUY': return Object.assign({}, state, { buyQtyStr: action.value });
+          case 'SET_SELL': return Object.assign({}, state, { sellQtyStr: action.value });
+          case 'INC_BUY': {
+            const v = (parseFloat(state.buyQtyStr) || 0) + 1;
+            return Object.assign({}, state, { buyQtyStr: String(round3(v)) });
+          }
+          case 'DEC_BUY': {
+            const v = Math.max(0.001, (parseFloat(state.buyQtyStr) || 1) - 1);
+            return Object.assign({}, state, { buyQtyStr: String(round3(v)) });
+          }
+          case 'INC_SELL': {
+            const held = state.selectedItemId ? state.holdings[state.selectedItemId] : null;
+            const max = held ? held.shares : 0;
+            const cur = parseFloat(state.sellQtyStr) || 0;
+            return Object.assign({}, state, { sellQtyStr: String(round3(Math.min(max, cur + 1))) });
+          }
+          case 'DEC_SELL': {
+            const v = Math.max(0.001, (parseFloat(state.sellQtyStr) || 1) - 1);
+            return Object.assign({}, state, { sellQtyStr: String(round3(v)) });
+          }
+          case 'DO_BUY': {
+            if (!state.selectedItemId) return state;
+            const qty = parseFloat(state.buyQtyStr);
+            if (!(qty > 0)) return state;
+            const ns = buyStock(state, state.selectedItemId, qty);
+            if (ns === state) showTooltip('Buy failed — not enough cash');
+            else showTooltip('Bought ' + fmtNum(qty, 3) + ' shares');
+            return ns;
+          }
+          case 'DO_SELL': {
+            if (!state.selectedItemId) return state;
+            const qty = parseFloat(state.sellQtyStr);
+            if (!(qty > 0)) return state;
+            const ns = sellStock(state, state.selectedItemId, qty);
+            if (ns === state) showTooltip('Sell failed — not enough shares');
+            else showTooltip('Sold ' + fmtNum(qty, 3) + ' shares');
+            return ns;
+          }
+          case 'SHOW_PORTFOLIO': return Object.assign({}, state, { showPortfolio: true, selectedItemId: null });
+          case 'CLOSE_PORTFOLIO': return Object.assign({}, state, { showPortfolio: false });
+          case 'SHOW_HISTORY': return Object.assign({}, state, { showHistory: true, selectedItemId: null });
+          case 'CLOSE_HISTORY': return Object.assign({}, state, { showHistory: false });
+          case 'DISMISS_EVENT': return Object.assign({}, state, { eventQueue: state.eventQueue.slice(1) });
+          case 'CLOSE_GAME_OVER': {
+            const wasLost = state.gameStatus === 'lost';
+            if (wasLost) return buildInitialState();
+            return Object.assign({}, state, { gameOver: null });
+          }
+          case 'RESET':
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+            return buildInitialState();
+          case 'SAVE': {
+            try {
+              localStorage.setItem(SAVE_KEY, JSON.stringify({
+                cash: state.cash, holdings: state.holdings, transactions: state.transactions,
+                netWorthHistory: state.netWorthHistory, marketIndexHistory: state.marketIndexHistory,
+                assetMarketIndexHistory: state.assetMarketIndexHistory, companies: state.companies,
+                assets: state.assets, eventQueue: state.eventQueue,
+                status: state.gameStatus, elapsedSeconds: state.elapsedSeconds, simTime: state.simTime
+              }));
+            } catch (e) {}
+            return state;
+          }
+          case '__HYDRATE': return action.state;
+          default: return state;
+        }
+      }
+
+      function evaluateGameEnd(state) {
+        const nw = computeNetWorth(state);
+        if (nw >= LOAN_SHARK_TARGET) {
+          let newState = state;
+          for (const id of Object.keys(newState.holdings)) {
+            const item = getItemById(newState, id);
+            if (!item || !item.active) continue;
+            const held = newState.holdings[id];
+            const proceeds = held.shares * item.price;
+            newState = Object.assign({}, newState, {
+              cash: newState.cash + proceeds,
+              holdings: Object.assign({}, newState.holdings),
+              transactions: newState.transactions.concat({
+                id: uniqueId(), type: 'LIQUIDATE', companyId: id, ticker: item.ticker,
+                shares: held.shares, price: item.price, total: proceeds,
+                profit: held.shares * (item.price - held.avgCost), timestamp: Date.now()
+              })
+            });
+            delete newState.holdings[id];
+          }
+          if (newState.cash >= LOAN_SHARK_TAKE) {
+            return Object.assign({}, newState, {
+              cash: newState.cash - LOAN_SHARK_TAKE,
+              gameStatus: 'won',
+              gameOver: { title: 'Loan Shark Paid!', body: 'You reached $15,000 and paid him off. All assets were liquidated to cash. You continue playing with your remaining cash.' }
+            });
+          } else {
+            return Object.assign({}, newState, {
+              gameStatus: 'lost',
+              gameOver: { title: 'Loan shark cannot be paid!', body: 'You failed to pay the full amount. He takes everything.' }
+            });
+          }
+        }
+        return Object.assign({}, state, {
+          gameStatus: 'lost',
+          gameOver: { title: 'Game Over', body: 'You failed to reach $15,000. The loan shark takes all your possessions and sends you to an old-age home.' }
+        });
+      }
+
+      function tryLoadSaved() {
+        let raw;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { return null; }
+        if (!raw) return null;
+        try {
+          const s = JSON.parse(raw);
+          if (!s || !Array.isArray(s.companies) || !s.companies.length) return null;
+          if (s.status && s.status !== 'active') return null;
+          const base = buildInitialState();
+          return Object.assign({}, base, {
+            cash: s.cash == null ? STARTING_CASH : s.cash,
+            holdings: s.holdings || {},
+            transactions: s.transactions || [],
+            netWorthHistory: s.netWorthHistory && s.netWorthHistory.length ? s.netWorthHistory : base.netWorthHistory,
+            marketIndexHistory: s.marketIndexHistory && s.marketIndexHistory.length ? s.marketIndexHistory : base.marketIndexHistory,
+            assetMarketIndexHistory: s.assetMarketIndexHistory && s.assetMarketIndexHistory.length ? s.assetMarketIndexHistory : base.assetMarketIndexHistory,
+            companies: s.companies,
+            assets: s.assets && s.assets.length ? s.assets : base.assets,
+            eventQueue: s.eventQueue || [],
+            elapsedSeconds: s.elapsedSeconds || 0,
+            simTime: s.simTime != null ? s.simTime : base.simTime
+          });
+        } catch (e) { return null; }
+      }
+
+      function App() {
+        const [state, setState] = useState(buildInitialState);
+        const [tooltip, setTooltip] = useState('');
+        const tooltipTimer = useRef(null);
+
+        const showTooltip = useCallback((msg) => {
+          setTooltip(msg);
+          if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+          tooltipTimer.current = setTimeout(() => setTooltip(''), 1600);
+        }, []);
+
+        const dispatch = useCallback((action) => {
+          setState(s => reduce(s, action, showTooltip));
+        }, [showTooltip]);
+
+        useEffect(() => {
+          window.__dispatch = dispatch;
+          return () => { delete window.__dispatch; };
+        }, [dispatch]);
+
+        useEffect(() => {
+          const id = setInterval(() => dispatch({ type: 'TICK_PRICES' }), PRICE_UPDATE_MS);
+          return () => clearInterval(id);
+        }, [dispatch]);
+
+        useEffect(() => {
+          const id = setInterval(() => dispatch({ type: 'TICK_TIMER' }), 1000);
+          return () => clearInterval(id);
+        }, [dispatch]);
+
+        useEffect(() => {
+          const id = setInterval(() => dispatch({ type: 'RECORD_NET_WORTH' }), NET_WORTH_RECORD_MS);
+          return () => clearInterval(id);
+        }, [dispatch]);
+
+        useEffect(() => {
+          const id = setInterval(() => dispatch({ type: 'CHECK_NEW_ITEMS' }), NEW_ITEM_CHECK_MS);
+          return () => clearInterval(id);
+        }, [dispatch]);
+
+        useEffect(() => {
+          const id = setInterval(() => dispatch({ type: 'SAVE' }), SAVE_INTERVAL_MS);
+          return () => clearInterval(id);
+        }, [dispatch]);
+
+        useEffect(() => {
+          const onUnload = () => dispatch({ type: 'SAVE' });
+          window.addEventListener('beforeunload', onUnload);
+          return () => window.removeEventListener('beforeunload', onUnload);
+        }, [dispatch]);
+
+        return h(Fragment, null, [
+          h('div', { class: 'container', key: 'main' }, [
+            h(Header, { key: 'h', state }),
+            h('div', { class: 'section-title', key: 's1' }, 'Stock Market Index'),
+            h(UPlotChart, { key: 'mc', id: 'market-chart', height: 220, label: 'Stocks Index', data: state.marketIndexHistory }),
+            h(CompanyList, { key: 'cl', state }),
+            h('div', { class: 'section-title', key: 's2' }, 'Assets (Jewelry, Paintings, etc.)'),
+            h(UPlotChart, { key: 'ac', id: 'asset-market-chart', height: 220, label: 'Assets Index', data: state.assetMarketIndexHistory }),
+            h(AssetList, { key: 'al', state }),
+            h('h4', { key: 'h4' }, 'Net Worth Over Time'),
+            h(UPlotChart, { key: 'nw', id: 'networth-chart', height: 220, label: 'Net Worth', data: state.netWorthHistory }),
+            h(Ranking, { key: 'rb', state }),
+            h('div', { class: 'btn-row', key: 'br' }, [
+              h('button', { key: 'h', onClick: () => dispatch({ type: 'SHOW_HISTORY' }) }, 'History'),
+              h('button', { key: 'r', onClick: () => dispatch({ type: 'RESET' }) }, 'Reset Game')
+            ])
+          ]),
+          h(Footer, { key: 'footer' }),
+          h(ItemModal, { key: 'item', state }),
+          h(EventModal, { key: 'event', state }),
+          h(PortfolioModal, { key: 'portfolio', state }),
+          h(HistoryModal, { key: 'history', state }),
+          h(GameOverModal, { key: 'gameover', state }),
+          h(Tooltip, { key: 'tooltip', text: tooltip })
+        ]);
+      }
+
+      try {
+        rootEl.textContent = '';
+        render(h(App), rootEl);
+        const saved = tryLoadSaved();
+        if (saved) {
+          setTimeout(() => {
+            if (window.__dispatch) window.__dispatch({ type: '__HYDRATE', state: saved });
+          }, 0);
+        }
+      } catch (e) {
+        fail('Render failed:\n' + (e.stack || e.message));
+      }
+    })();
+  </script>
+</body>
+</html>

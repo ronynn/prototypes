@@ -19,7 +19,7 @@ This is my tinkering folder so I don't feel like updating the readme that often.
 - [Yogake - Night Runner game using pixijs](https://ronynn.github.io/prototypes/code/pixirunner), performance is still finnicky on older devices so use this [canvas version](https://ronynn.github.io/prototypes/code/nolib/runner)
 - [Be Not Afraid - Flappy Bird using W lib](https://ronynn.github.io/prototypes/code/wflaphorror) and another [using ogl and custom shaders](https://ronynn.github.io/prototypes/code/oglflap)
 - [Eat the Blob game using canvas api](https://ronynn.github.io/prototypes/code/nolib/blob2) and another [using kaplayjs](https://ronynn.github.io/prototypes/code/nolib/blobkaplay)
-- [Dopewars clone game using canvas api](https://ronynn.github.io/prototypes/code/nolib/dopewars)
+- [Dopewars clone game](https://ronynn.github.io/prototypes/code/nolib/dopewars)
 - [jQuery Stock Market](https://ronynn.github.io/prototypes/code/jquerystock)
 - [Sweeper of Mines](https://ronynn.github.io/prototypes/code/nolib/sweeperofmines)
 - [Super tictactoe](https://ronynn.github.io/prototypes/code/nolib/supertictactoe)
