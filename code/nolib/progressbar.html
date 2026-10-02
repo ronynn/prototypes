@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shinten - Progress Bar</title>
+<script>
+(function(){
+  var themes = ['nord','themeforest-light','catppuccin-frappe','gruvbox','amoled'];
+  var fonts = ['sans','monospace','serif'];
+  var t = 'catppuccin-frappe', f = 'sans';
+  try { t = localStorage.getItem('progress-theme') || t; } catch(e){}
+  try { f = localStorage.getItem('progress-font') || f; } catch(e){}
+  if (themes.indexOf(t) === -1) t = 'catppuccin-frappe';
+  if (fonts.indexOf(f) === -1) f = 'sans';
+  var r = document.documentElement;
+  r.setAttribute('data-theme', t);
+  r.setAttribute('data-font', f);
+})();
+</script>
+<style>
+:root{
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+html[data-font="monospace"]{ --font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+html[data-font="serif"]{ --font: Georgia, Cambria, "Times New Roman", Times, serif; }
+
+html[data-theme="nord"]{
+  --bg:#2e3440; --panel:#3b4252; --panel2:#434c5e; --border:#4c566a;
+  --text:#eceff4; --muted:#a0aab8; --accent:#88c0d0; --accent2:#81a1c1;
+  --glow:136,192,208; --track:#3b4252; --danger:#bf616a;
+}
+html[data-theme="themeforest-light"]{
+  --bg:#f2f3f5; --panel:#e8ebee; --panel2:#dfe3e8; --border:#d0d6dd;
+  --text:#23282d; --muted:#7b858f; --accent:#16a085; --accent2:#f39c12;
+  --glow:22,160,133; --track:#dfe3e8; --danger:#d64545;
+}
+html[data-theme="catppuccin-frappe"]{
+  --bg:#303446; --panel:#414559; --panel2:#51576d; --border:#51576d;
+  --text:#c6d0f5; --muted:#a5adce; --accent:#ca9ee6; --accent2:#8caaee;
+  --glow:202,158,230; --track:#414559; --danger:#e78284;
+}
+html[data-theme="gruvbox"]{
+  --bg:#282828; --panel:#3c3836; --panel2:#504945; --border:#504945;
+  --text:#ebdbb2; --muted:#a89984; --accent:#fabd2f; --accent2:#fe8019;
+  --glow:250,189,47; --track:#3c3836; --danger:#fb4934;
+}
+html[data-theme="amoled"]{
+  --bg:#000000; --panel:#0e0e10; --panel2:#18181b; --border:#242428;
+  --text:#ffffff; --muted:#909090; --accent:#ffffff; --accent2:#c0c0c0;
+  --glow:255,255,255; --track:#141414; --danger:#ff4d6d;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{background:var(--bg);color:var(--text)}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:var(--font);
+  font-size:14px;line-height:1.45;
+  min-height:100vh;padding:18px 16px 40px;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+
+fieldset{
+  border:1px solid var(--border);
+  background:var(--bg);
+  border-radius:4px;
+  padding:14px 12px 12px;
+  margin:0;
+  min-width:0;
+}
+legend{
+  font-size:10px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.18em;
+  color:var(--muted);padding:0 7px;margin-left:4px;
+}
+
+.title{
+  font-size:17px;letter-spacing:.24em;text-transform:uppercase;
+  font-weight:600;margin:0;
+}
+/*.title b{color:var(--accent);--text-shadow:0 0 12px rgba(var(--glow),.75)}*/
+.sub{margin:5px 0 0;color:var(--muted);font-size:12px}
+
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row + .row{margin-top:8px}
+
+.btn{
+  font:inherit;font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:9px 14px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--text);
+  transition:border-color .16s,box-shadow .16s,background-color .16s,color .16s,text-shadow .16s;
+}
+.btn:hover{border-color:rgba(var(--glow),.65);box-shadow:0 0 10px rgba(var(--glow),.28)}
+.btn:active{transform:translateY(1px)}
+
+.ubtn{
+  font:inherit;font-size:11px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+  padding:9px 13px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--border);
+  background:var(--panel);color:var(--muted);
+  transition:border-color .18s,box-shadow .18s,background-color .18s,color .18s,text-shadow .18s;
+}
+.ubtn.on{
+  color:var(--text);
+  border-color:rgba(var(--glow),.8);
+  background:rgba(var(--glow),.13);
+  box-shadow:
+    0 0 6px rgba(var(--glow),.55),
+    0 0 20px rgba(var(--glow),.30),
+    inset 0 0 12px rgba(var(--glow),.14);
+  text-shadow:0 0 9px rgba(var(--glow),.85);
+}
+.ubtn:hover{border-color:rgba(var(--glow),.6)}
+
+.btn.del{
+  padding:5px 10px;font-size:10px;
+  color:var(--danger);
+  border-color:rgba(255,255,255,.10);
+  background:transparent;
+}
+.btn.del:hover{
+  border-color:var(--danger);
+  box-shadow:0 0 12px rgba(255,80,80,.28);
+}
+
+.events{display:flex;flex-direction:column;gap:9px}
+.card{
+  border:1px solid var(--border);
+  border-left:3px solid var(--src,var(--accent));
+  background:var(--bg);
+  border-radius:4px;
+  padding:11px 12px;
+  display:flex;flex-direction:column;gap:9px;
+}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ev-name{font-size:14px;font-weight:600;letter-spacing:.02em}
+.ev-right{display:flex;gap:9px;align-items:baseline;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.ev-pct{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  display:flex;align-items:baseline;gap:5px;
+  padding:4px 9px;border:1px solid var(--border);
+  border-radius:3px;background:var(--panel);
+}
+.chip b{font-size:15px;font-variant-numeric:tabular-nums;font-weight:600;line-height:1.1}
+.chip i{
+  font-style:normal;font-size:9px;text-transform:uppercase;
+  letter-spacing:.12em;color:var(--muted);
+}
+
+progress.bar{
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;height:10px;
+  border:1px solid var(--border);
+  border-radius:3px;
+  background:var(--track);
+  overflow:hidden;
+  display:block;
+}
+progress.bar::-webkit-progress-bar{
+  background:var(--track);
+  border-radius:2px;
+}
+progress.bar::-webkit-progress-value{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  box-shadow:0 0 14px rgba(var(--glow),.65);
+  border-radius:2px;
+}
+progress.bar::-moz-progress-bar{
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  box-shadow:0 0 14px rgba(var(--glow),.65);
+  border-radius:2px;
+}
+
+.ev-meta{font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+.src{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;border:1px solid var(--border);
+  background:var(--panel);border-radius:3px;
+}
+.src + .src{margin-top:6px}
+.src .dot{width:9px;height:9px;border-radius:2px;background:var(--src,var(--accent));flex:none}
+.src .fname{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src .count{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+
+.empty{color:var(--muted);font-size:12px;padding:5px 2px}
+
+html.theming,
+html.theming body,
+html.theming fieldset,
+html.theming .card,
+html.theming .chip,
+html.theming .src,
+html.theming .btn,
+html.theming .ubtn{
+  transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <fieldset>
+    <legend>Progress</legend>
+    <h1 class="title"> 進展 (shinten) <b></b></h1>
+    <p class="sub">Import CSV files with columns: event, startdate, enddate, starttime, endtime</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Units</legend>
+    <div class="row" id="unitBtns"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Import</legend>
+    <div class="row">
+      <button class="btn" id="fileBtn">Import CSV File</button>
+      <button class="btn" id="folderBtn">Import Folder</button>
+      <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden>
+      <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Events</legend>
+    <div class="events" id="eventList"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Sources</legend>
+    <div id="sourceList"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Theme</legend>
+    <div class="row" id="themeBtns"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Font</legend>
+    <div class="row" id="fontBtns"></div>
+  </fieldset>
+
+</div>
+
+<script>
+(function(){
+'use strict';
+
+let activeEffect = null;
+
+function signal(initial){
+  const subs = new Set();
+  return {
+    get value(){
+      if (activeEffect) subs.add(activeEffect);
+      return initial;
+    },
+    set value(next){
+      if (Object.is(next, initial)) return;
+      initial = next;
+      for (const fn of Array.from(subs)) fn();
+    },
+    peek(){ return initial; }
+  };
+}
+
+function effect(fn){
+  const run = () => {
+    const prev = activeEffect;
+    activeEffect = run;
+    try { fn(); } finally { activeEffect = prev; }
+  };
+  run();
+  return run;
+}
+
+let seq = 0;
+function uid(){ return 'id' + (++seq) + '_' + Date.now().toString(36); }
+
+const UNIT_ORDER = ['years','months','weeks','days','hours','minutes','seconds'];
+const UNIT_LABEL = {
+  years:'year', months:'month', weeks:'week', days:'day',
+  hours:'hour', minutes:'minute', seconds:'second'
+};
+const PALETTE = ['#5e81ac','#a3be8c','#b48ead','#d08770','#ebcb8b','#88c0d0','#bf616a','#8fbcbb'];
+
+const units = signal({
+  years:true, months:true, weeks:true, days:true,
+  hours:true, minutes:true, seconds:true
+});
+const events = signal([]);
+const sources = signal([]);
+const now = signal(Date.now());
+
+const theme = signal(document.documentElement.getAttribute('data-theme') || 'catppuccin-frappe');
+const font = signal(document.documentElement.getAttribute('data-font') || 'sans');
+
+setInterval(() => { now.value = Date.now(); }, 1000);
+
+function addMonths(date, n){
+  const d = new Date(date.getTime());
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + n);
+  const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, dim));
+  return d;
+}
+function addYears(date, n){ return addMonths(date, n * 12); }
+
+function decompose(from, to, u){
+  let a = from, b = to;
+  if (b.getTime() < a.getTime()){ const t = a; a = b; b = t; }
+  const out = [];
+  let cursor = new Date(a.getTime());
+
+  if (u.years){
+    let y = b.getFullYear() - cursor.getFullYear();
+    let c = addYears(cursor, y);
+    if (c.getTime() > b.getTime()){ y -= 1; c = addYears(cursor, y); }
+    if (y < 0){ y = 0; c = cursor; }
+    out.push({ key:'years', value:y });
+    cursor = c;
+  }
+  if (u.months){
+    let m = (b.getFullYear() - cursor.getFullYear()) * 12 + (b.getMonth() - cursor.getMonth());
+    let c = addMonths(cursor, m);
+    if (c.getTime() > b.getTime()){ m -= 1; c = addMonths(cursor, m); }
+    if (m < 0){ m = 0; c = cursor; }
+    out.push({ key:'months', value:m });
+    cursor = c;
+  }
+
+  let secs = Math.max(0, Math.floor((b.getTime() - cursor.getTime()) / 1000));
+
+  if (u.weeks){ const w = Math.floor(secs / 604800); out.push({ key:'weeks', value:w }); secs -= w * 604800; }
+  if (u.days){ const d = Math.floor(secs / 86400); out.push({ key:'days', value:d }); secs -= d * 86400; }
+  if (u.hours){ const h = Math.floor(secs / 3600); out.push({ key:'hours', value:h }); secs -= h * 3600; }
+  if (u.minutes){ const mi = Math.floor(secs / 60); out.push({ key:'minutes', value:mi }); secs -= mi * 60; }
+  if (u.seconds){ out.push({ key:'seconds', value:secs }); }
+
+  return out;
+}
+
+function computeEvent(ev, nowMs, u){
+  const nowDate = new Date(nowMs);
+  let from, to, label, pct = null;
+
+  if (ev.start && ev.end){
+    const s = ev.start.getTime();
+    const e = ev.end.getTime();
+    const total = e - s;
+    pct = total > 0 ? Math.min(100, Math.max(0, ((nowMs - s) / total) * 100)) : 100;
+    if (nowMs < s){ from = nowDate; to = ev.start; label = 'starts in'; }
+    else if (nowMs > e){ from = ev.end; to = nowDate; label = 'ended'; }
+    else { from = nowDate; to = ev.end; label = 'remaining'; }
+  } else if (ev.start){
+    from = ev.start; to = nowDate; label = 'elapsed';
+  } else {
+    from = nowDate; to = ev.end; label = 'remaining';
+  }
+
+  const parts = decompose(from, to, u);
+
+  let shown = parts.filter(p => p.value > 0);
+  if (!shown.length) shown = parts.slice(-1);
+  if (!shown.length) shown = [{ key:'seconds', value:0 }];
+
+  const chips = shown.map(p => {
+    const lbl = p.value === 1 ? UNIT_LABEL[p.key] : UNIT_LABEL[p.key] + 's';
+    return '<span class="chip"><b>' + p.value + '</b><i>' + lbl + '</i></span>';
+  }).join('');
+
+  return { chips:chips, label:label, pct:pct };
+}
+
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+function fmtDate(d){
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (inQ){
+      if (c === '"'){
+        if (text[i + 1] === '"'){ field += '"'; i++; }
+        else inQ = false;
+      } else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ','){ row.push(field); field = ''; }
+      else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r'){ }
+      else field += c;
+    }
+  }
+  if (field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+
+function parseDatePart(s){
+  if (!s) return null;
+  s = String(s).trim();
+  let m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(s);
+  if (m) return { y:+m[1], mo:+m[2] - 1, d:+m[3] };
+  m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(s);
+  if (m) return { y:+m[3], mo:+m[2] - 1, d:+m[1] };
+  const t = Date.parse(s);
+  if (!isNaN(t)){
+    const d = new Date(t);
+    return { y:d.getFullYear(), mo:d.getMonth(), d:d.getDate() };
+  }
+  return null;
+}
+
+function parseTimePart(s){
+  if (!s) return { h:0, mi:0, s:0 };
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(String(s).trim());
+  if (!m) return { h:0, mi:0, s:0 };
+  let h = +m[1];
+  if (m[4]){
+    const ap = m[4].toLowerCase();
+    if (ap === 'pm' && h < 12) h += 12;
+    if (ap === 'am' && h === 12) h = 0;
+  }
+  return { h:h, mi:+m[2], s:m[3] ? +m[3] : 0 };
+}
+
+function combine(dateStr, timeStr){
+  const d = parseDatePart(dateStr);
+  if (!d) return null;
+  const t = parseTimePart(timeStr);
+  return new Date(d.y, d.mo, d.d, t.h, t.mi, t.s, 0);
+}
+
+function buildEventsFromCSV(text){
+  const rows = parseCSV(text);
+  if (!rows.length) return [];
+
+  const header = rows[0].map(h => String(h).trim().toLowerCase());
+  const idx = {};
+  ['event','startdate','enddate','starttime','endtime'].forEach(k => { idx[k] = header.indexOf(k); });
+  const hasHeader = idx.event !== -1 || idx.startdate !== -1 || idx.enddate !== -1;
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+
+  const get = (r, k, pos) => {
+    const i = hasHeader ? idx[k] : pos;
+    return (i >= 0 && r[i] != null) ? String(r[i]).trim() : '';
+  };
+
+  const out = [];
+  dataRows.forEach((r, n) => {
+    const name = get(r, 'event', 0) || ('Row ' + (n + 1));
+    const start = combine(get(r, 'startdate', 1), get(r, 'starttime', 3));
+    const end = combine(get(r, 'enddate', 2), get(r, 'endtime', 4));
+    if (!start && !end) return;
+    out.push({ id: uid(), name: name, start: start, end: end });
+  });
+  return out;
+}
+
+const unitBtnsEl = document.getElementById('unitBtns');
+const themeBtnsEl = document.getElementById('themeBtns');
+const fontBtnsEl = document.getElementById('fontBtns');
+const eventList = document.getElementById('eventList');
+const sourceList = document.getElementById('sourceList');
+const fileInput = document.getElementById('fileInput');
+const folderInput = document.getElementById('folderInput');
+
+UNIT_ORDER.forEach(key => {
+  const b = document.createElement('button');
+  b.className = 'ubtn';
+  b.textContent = UNIT_LABEL[key] + 's';
+  b.dataset.key = key;
+  b.addEventListener('click', () => {
+    const cur = units.peek();
+    const enabledCount = UNIT_ORDER.filter(k => cur[k]).length;
+    if (cur[key] && enabledCount === 1) return;
+    const next = Object.assign({}, cur);
+    next[key] = !cur[key];
+    units.value = next;
+  });
+  unitBtnsEl.appendChild(b);
+});
+
+effect(() => {
+  const u = units.value;
+  Array.from(unitBtnsEl.children).forEach(b => {
+    b.classList.toggle('on', !!u[b.dataset.key]);
+  });
+});
+
+const THEMES = [
+  { key:'nord', label:'Nord' },
+  { key:'themeforest-light', label:'ThemeForest Light' },
+  { key:'catppuccin-frappe', label:'Catppuccin Frappe' },
+  { key:'gruvbox', label:'Gruvbox' },
+  { key:'amoled', label:'Amoled' }
+];
+
+const FONTS = [
+  { key:'sans', label:'Sans' },
+  { key:'monospace', label:'Monospace' },
+  { key:'serif', label:'Serif' }
+];
+
+THEMES.forEach(t => {
+  const b = document.createElement('button');
+  b.className = 'ubtn';
+  b.textContent = t.label;
+  b.dataset.key = t.key;
+  b.addEventListener('click', () => { theme.value = t.key; });
+  themeBtnsEl.appendChild(b);
+});
+
+FONTS.forEach(f => {
+  const b = document.createElement('button');
+  b.className = 'ubtn';
+  b.textContent = f.label;
+  b.dataset.key = f.key;
+  b.addEventListener('click', () => { font.value = f.key; });
+  fontBtnsEl.appendChild(b);
+});
+
+effect(() => {
+  const t = theme.value;
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('progress-theme', t); } catch(e){}
+  Array.from(themeBtnsEl.children).forEach(b => {
+    b.classList.toggle('on', b.dataset.key === t);
+  });
+});
+
+effect(() => {
+  const f = font.value;
+  document.documentElement.setAttribute('data-font', f);
+  try { localStorage.setItem('progress-font', f); } catch(e){}
+  Array.from(fontBtnsEl.children).forEach(b => {
+    b.classList.toggle('on', b.dataset.key === f);
+  });
+});
+
+fileInput.addEventListener('change', () => {
+  handleFiles(fileInput.files);
+  fileInput.value = '';
+});
+folderInput.addEventListener('change', () => {
+  handleFiles(folderInput.files);
+  folderInput.value = '';
+});
+document.getElementById('fileBtn').addEventListener('click', () => fileInput.click());
+document.getElementById('folderBtn').addEventListener('click', () => folderInput.click());
+
+async function handleFiles(list){
+  const files = Array.from(list || []).filter(f => /\.csv$/i.test(f.name));
+  for (const f of files){
+    let text = '';
+    try { text = await f.text(); } catch(e){ continue; }
+    const parsed = buildEventsFromCSV(text);
+    const color = PALETTE[sources.peek().length % PALETTE.length];
+    const src = { id: uid(), name: f.name, count: parsed.length, color: color };
+    sources.value = sources.value.concat(src);
+    events.value = events.value.concat(parsed.map(e => ({
+      id: e.id, name: e.name, start: e.start, end: e.end,
+      srcId: src.id, color: color
+    })));
+  }
+}
+
+let cardEntries = [];
+
+function buildCard(ev){
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.style.setProperty('--src', ev.color || 'var(--accent)');
+
+  const head = document.createElement('div');
+  head.className = 'card-head';
+  const name = document.createElement('span');
+  name.className = 'ev-name';
+  name.textContent = ev.name;
+  const right = document.createElement('span');
+  right.className = 'ev-right';
+  const label = document.createElement('span');
+  label.className = 'ev-label';
+  const pct = document.createElement('span');
+  pct.className = 'ev-pct';
+  right.appendChild(label);
+  right.appendChild(pct);
+  head.appendChild(name);
+  head.appendChild(right);
+
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+
+  const bar = document.createElement('progress');
+  bar.className = 'bar';
+  bar.max = 100;
+  bar.value = 0;
+
+  const meta = document.createElement('div');
+  meta.className = 'ev-meta';
+  meta.textContent = (ev.start ? fmtDate(ev.start) : 'now') + ' \u2192 ' + (ev.end ? fmtDate(ev.end) : 'now');
+
+  el.appendChild(head);
+  el.appendChild(chips);
+  el.appendChild(bar);
+  el.appendChild(meta);
+
+  return { el: el, refs: { name, label, pct, chips, bar, meta } };
+}
+
+function updateCard(ev, refs, nowMs, u){
+  const r = computeEvent(ev, nowMs, u);
+  refs.chips.innerHTML = r.chips;
+  refs.label.textContent = r.label;
+  if (r.pct == null){
+    refs.bar.style.display = 'none';
+    refs.pct.textContent = '';
+  } else {
+    refs.bar.style.display = '';
+    refs.bar.value = r.pct;
+    refs.pct.textContent = r.pct.toFixed(1) + '%';
+  }
+}
+
+function updateAll(nowMs, u){
+  for (let i = 0; i < cardEntries.length; i++){
+    updateCard(cardEntries[i].ev, cardEntries[i].refs, nowMs, u);
+  }
+}
+
+effect(() => {
+  const list = events.value;
+  eventList.innerHTML = '';
+  cardEntries = [];
+
+  if (!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No events yet. Import a CSV to get started.';
+    eventList.appendChild(empty);
+  } else {
+    for (const ev of list){
+      const built = buildCard(ev);
+      eventList.appendChild(built.el);
+      cardEntries.push({ ev: ev, refs: built.refs });
+    }
+  }
+  updateAll(now.peek(), units.peek());
+});
+
+effect(() => {
+  const n = now.value;
+  const u = units.value;
+  updateAll(n, u);
+});
+
+effect(() => {
+  const list = sources.value;
+  sourceList.innerHTML = '';
+
+  if (!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = 'No CSV imported yet.';
+    sourceList.appendChild(empty);
+    return;
+  }
+
+  list.forEach(src => {
+    const row = document.createElement('div');
+    row.className = 'src';
+    row.style.setProperty('--src', src.color);
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+
+    const name = document.createElement('span');
+    name.className = 'fname';
+    name.textContent = src.name;
+
+    const count = document.createElement('span');
+    count.className = 'count';
+    count.textContent = src.count + (src.count === 1 ? ' event' : ' events');
+
+    const del = document.createElement('button');
+    del.className = 'btn del';
+    del.textContent = 'Delete';
+    del.addEventListener('click', () => {
+      sources.value = sources.value.filter(s => s.id !== src.id);
+      events.value = events.value.filter(e => e.srcId !== src.id);
+    });
+
+    row.appendChild(dot);
+    row.appendChild(name);
+    row.appendChild(count);
+    row.appendChild(del);
+    sourceList.appendChild(row);
+  });
+});
+
+})();
+</script>
+</body>
+</html>

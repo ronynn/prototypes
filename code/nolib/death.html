@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shinigami</title>
+<style>
+:root {
+  --bg: #282828;
+  --bg1: #3c3836;
+  --bg2: #504945;
+  --fg: #ebdbb2;
+  --fg-dim: #a89984;
+  --accent: #83a598;
+  --border: #665c54;
+  --red: #fb4934;
+  --green: #b8bb26;
+  --yellow: #fabd2f;
+  --blue: #83a598;
+  --purple: #d3869b;
+  --aqua: #8ec07c;
+  --orange: #fe8019;
+  --warn: #fb4934;
+  --ok: #b8bb26;
+}
+[data-theme="gruvbox-light"] {
+  --bg: #fbf1c7;
+  --bg1: #ebdbb2;
+  --bg2: #d5c4a1;
+  --fg: #3c3836;
+  --fg-dim: #7c6f64;
+  --accent: #076678;
+  --border: #bdae93;
+  --red: #9d0006;
+  --green: #79740e;
+  --yellow: #b57614;
+  --blue: #076678;
+  --purple: #8f3f71;
+  --aqua: #427b58;
+  --orange: #af3a03;
+  --warn: #9d0006;
+  --ok: #79740e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  padding: 1rem;
+  max-width: 860px;
+  margin: 0 auto;
+  transition: background 0.2s, color 0.2s;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 1px; }
+h1 .skull { color: var(--red); }
+button {
+  background: var(--bg1);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+button:hover { background: var(--bg2); }
+fieldset {
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 0.9rem;
+  margin-bottom: 0.9rem;
+  background: var(--bg1);
+}
+legend {
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.row > * { flex: 1 1 130px; }
+label { font-size: 0.8rem; display: block; margin-bottom: 0.1rem; opacity: 0.8; }
+input, select {
+  width: 100%;
+  padding: 0.35rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+.result-card {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 0.6rem;
+  text-align: center;
+}
+.result-card .value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+.result-card .label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; }
+.result-card.big .value { font-size: 2.2rem; }
+.score-good .value { color: var(--green); }
+.score-ok .value { color: var(--yellow); }
+.score-bad .value { color: var(--red); }
+.hint { font-size: 0.72rem; opacity: 0.55; margin-top: 0.3rem; }
+.file-list {
+  font-size: 0.72rem;
+  opacity: 0.75;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+.file-list div { padding: 0.1rem 0; }
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-top: 0.4rem;
+}
+.cmp-table th, .cmp-table td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+.cmp-table th {
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+.cmp-table td.good { color: var(--ok); }
+.cmp-table td.bad { color: var(--warn); }
+#chart {
+  width: 100%;
+  height: 240px;
+  display: block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+}
+.chart-legend span { display: inline-flex; align-items: center; gap: 0.3rem; }
+.chart-legend .swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+.rank-label {
+  margin-top: 0.6rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="skull"></span> Shinigami</h1>
+  <button id="themeToggle">Theme</button>
+</header>
+
+<fieldset>
+  <legend>Config</legend>
+  <div class="row" style="flex-wrap:wrap;">
+    <button id="importConfigBtn" style="flex:0 0 auto;">Import JSON</button>
+    <button id="templateConfigBtn" style="flex:0 0 auto;">Download Template</button>
+  </div>
+  <input type="file" id="configInput" accept=".json" hidden>
+  <p class="hint" id="configStatus">Defaults: 30M Indian, 185cm, 85kg, waist 91cm, no smoke/alcohol.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Daily Log</legend>
+  <div class="row" style="flex-wrap:wrap;">
+    <button id="importCsvBtn" style="flex:0 0 auto;">Import CSV</button>
+    <button id="importFolderBtn" style="flex:0 0 auto;">Import Folder</button>
+    <button id="clearLogsBtn" style="flex:0 0 auto;">Clear</button>
+  </div>
+  <input type="file" id="csvInput" accept=".csv,.json" hidden>
+  <input type="file" id="folderInput" webkitdirectory mozdirectory hidden>
+  <p class="hint" id="logStatus">No daily data loaded.</p>
+  <div class="file-list" id="fileList" style="display:none;"></div>
+</fieldset>
+
+<fieldset>
+  <legend>Achievement</legend>
+  <div class="grid2">
+    <div class="result-card big" id="lifeScoreCard">
+      <div class="value" id="lifeScore">—</div>
+      <div class="label">Life Score</div>
+    </div>
+    <div class="result-card">
+      <div class="value" id="streak">—</div>
+      <div class="label">Day Streak (score ≥ 60)</div>
+    </div>
+  </div>
+  <div class="rank-label" id="rankLabel">—</div>
+</fieldset>
+
+<fieldset>
+  <legend>Last 30 Days — Living Good</legend>
+  <canvas id="chart"></canvas>
+  <div class="chart-legend" id="chartLegend"></div>
+  <p class="hint">Each line is a metric normalized to 0–100. Screen &amp; Anxiety are inverted (lower is better).</p>
+</fieldset>
+
+<fieldset>
+  <legend>Estimate</legend>
+  <div class="row">
+    <button id="calcBtn" style="flex:0 0 auto;">Calculate</button>
+    <span class="hint" id="calcStatus"></span>
+  </div>
+  <div class="grid2" style="margin-top:0.6rem;">
+    <div class="result-card"><div class="value" id="estAge">—</div><div class="label">Death Age</div></div>
+    <div class="result-card"><div class="value" id="remYears">—</div><div class="label">Years Left</div></div>
+    <div class="result-card"><div class="value" id="baselineAge">—</div><div class="label">Baseline</div></div>
+    <div class="result-card"><div class="value" id="multiplier">—</div><div class="label">Hazard ×</div></div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Time Till Healthy Life</legend>
+  <div class="grid2">
+    <div class="result-card"><div class="value" id="healthyAge">—</div><div class="label">Healthy Life Age</div></div>
+    <div class="result-card"><div class="value" id="healthyYears">—</div><div class="label">Healthy Years Left</div></div>
+  </div>
+  <p class="hint">Gap between Death Age and Healthy Life Age = sick years. Fix habits to shrink it.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Daily Averages</legend>
+  <div class="grid3">
+    <div class="result-card"><div class="value" id="avgSteps">—</div><div class="label">Steps</div></div>
+    <div class="result-card"><div class="value" id="avgSleep">—</div><div class="label">Sleep h</div></div>
+    <div class="result-card"><div class="value" id="avgExercise">—</div><div class="label">Ex min</div></div>
+    <div class="result-card"><div class="value" id="avgScreen">—</div><div class="label">Screen h</div></div>
+    <div class="result-card"><div class="value" id="avgStudy">—</div><div class="label">Study h</div></div>
+    <div class="result-card"><div class="value" id="avgAnxiety">—</div><div class="label">Anxiety</div></div>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Chuando Tan Comparison</legend>
+  <table class="cmp-table">
+    <thead>
+      <tr><th>Metric</th><th>You</th><th>Chuando</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Sleep (h)</td><td id="cmpSleepYou">—</td><td>7.5</td><td id="cmpSleepStatus">—</td></tr>
+      <tr><td>Exercise (min/day)</td><td id="cmpExYou">—</td><td>90</td><td id="cmpExStatus">—</td></tr>
+      <tr><td>Steps/day</td><td id="cmpStepsYou">—</td><td>8000</td><td id="cmpStepsStatus">—</td></tr>
+      <tr><td>Screen (h/day)</td><td id="cmpScreenYou">—</td><td>1.0</td><td id="cmpScreenStatus">—</td></tr>
+      <tr><td>Anxiety (0-10)</td><td id="cmpAnxYou">—</td><td>3</td><td id="cmpAnxStatus">—</td></tr>
+    </tbody>
+  </table>
+  <p class="hint">Chuando Tan: age 60, lean, no smoking/alcohol, prioritizes diet + sleep + swimming.</p>
+</fieldset>
+
+<script>
+const BUILT_IN = {
+  age: 38,
+  sex: "male",
+  heightCm: 185,
+  weightKg: 85,
+  waistCm: 91,
+  country: "India",
+  smoker: false,
+  cigarettesPerDay: 0,
+  alcoholDrinksPerDay: 0,
+  familyHistoryHeart: true,
+  familyHistoryCancer: true,
+  familyHistoryLongevity: true,
+  dietQuality: 8,
+  anxietyLevel: 7,
+  sittingHoursBase: 10
+};
+
+const CHUANDO = {
+  sleepHours: 7.5,
+  exerciseMinutes: 90,
+  steps: 8000,
+  screenHours: 1.0,
+  anxietyLevel: 3
+};
+
+const METRICS = [
+  { key: "steps",          label: "Steps",    color: "--blue",   fn: v => Math.min(100, (v / 10000) * 100) },
+  { key: "sleepHours",     label: "Sleep",    color: "--green",  fn: v => Math.max(0, 100 - Math.abs(7.5 - v) * 25) },
+  { key: "exerciseMinutes",label: "Exercise", color: "--yellow", fn: v => Math.min(100, (v / 90) * 100) },
+  { key: "screenHours",    label: "Screen",   color: "--red",    fn: v => Math.max(0, 100 - (v / 10) * 100) },
+  { key: "studyHours",     label: "Study",    color: "--purple", fn: v => Math.min(100, (v / 6) * 100) },
+  { key: "anxietyLevel",   label: "Anxiety",  color: "--orange", fn: v => Math.max(0, 100 - v * 10) }
+];
+
+let currentConfig = { ...BUILT_IN };
+let dailyLogs = [];
+let loadedFiles = [];
+
+const $ = id => document.getElementById(id);
+
+function safeNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function avgOf(logs, key) {
+  if (!Array.isArray(logs) || logs.length === 0) return null;
+  const vals = logs.map(d => d ? safeNum(d[key]) : null).filter(v => v !== null);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+$("themeToggle").addEventListener("click", () => {
+  const root = document.documentElement;
+  const isLight = root.getAttribute("data-theme") === "gruvbox-light";
+  root.setAttribute("data-theme", isLight ? "" : "gruvbox-light");
+  try { localStorage.setItem("theme", isLight ? "" : "gruvbox-light"); } catch (e) {}
+  drawChart();
+});
+
+try {
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+} catch (e) {}
+
+function parseCSV(text) {
+  if (!text || typeof text !== "string") return [];
+  const clean = text.replace(/^\uFEFF/, "");
+  const lines = clean.trim().split(/\r?\n/).filter(l => l.trim() !== "");
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(",").map(h => h.trim());
+  const out = [];
+  for (let i = 1; i < lines.length; i++) {
+    const vals = lines[i].split(",").map(v => v.trim());
+    const obj = {};
+    let hasData = false;
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      let v = vals[idx];
+      if (v === "" || v === undefined) { obj[h] = null; return; }
+      if (v === "true" || v === "false") { obj[h] = v === "true"; hasData = true; return; }
+      const n = Number(v);
+      if (!isNaN(n)) { obj[h] = n; hasData = true; }
+      else { obj[h] = v; hasData = true; }
+    });
+    if (hasData) out.push(obj);
+  }
+  return out;
+}
+
+function parseJSON(text) {
+  try {
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) return data.filter(d => d && typeof d === "object");
+    if (data && typeof data === "object") return [data];
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function loadConfig(json) {
+  if (!json || typeof json !== "object") return;
+  currentConfig = { ...BUILT_IN, ...json };
+  currentConfig.cigarettesPerDay = 0;
+  currentConfig.alcoholDrinksPerDay = 0;
+  currentConfig.smoker = false;
+  $("configStatus").textContent = `Loaded: age ${currentConfig.age}, sex ${currentConfig.sex}, waist ${currentConfig.waistCm}cm.`;
+  refresh();
+}
+
+function renderFileList() {
+  const el = $("fileList");
+  if (!loadedFiles.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+  el.style.display = "block";
+  el.innerHTML = loadedFiles.map(f => `<div>✓ ${f.name} — ${f.rows} row(s)</div>`).join("");
+}
+
+function loadLogs(logs, filesMeta) {
+  dailyLogs = Array.isArray(logs) ? logs : [];
+  if (filesMeta) loadedFiles = filesMeta;
+  $("logStatus").textContent = dailyLogs.length
+    ? `${dailyLogs.length} day(s) loaded from ${loadedFiles.length} file(s).`
+    : "No valid rows found in import.";
+  renderFileList();
+  refresh();
+}
+
+function computeAverages() {
+  const keys = [
+    { key: "steps", el: "avgSteps" },
+    { key: "sleepHours", el: "avgSleep" },
+    { key: "exerciseMinutes", el: "avgExercise" },
+    { key: "screenHours", el: "avgScreen" },
+    { key: "studyHours", el: "avgStudy" },
+    { key: "anxietyLevel", el: "avgAnxiety" }
+  ];
+  keys.forEach(({ key, el }) => {
+    const v = avgOf(dailyLogs, key);
+    const node = $(el);
+    if (node) node.textContent = v !== null ? Number(v).toFixed(1) : "—";
+  });
+}
+
+function remainingLifeExpectancy(age, A, B, c) {
+  const mu = x => A + B * Math.exp(c * x);
+  const dt = 0.1;
+  let cumulativeHazard = 0;
+  let sum = 0;
+  for (let t = 0; t < 600; t += dt) {
+    const S = Math.exp(-cumulativeHazard);
+    if (S < 1e-12) break;
+    sum += S * dt;
+    cumulativeHazard += mu(age + t) * dt;
+  }
+  return sum;
+}
+
+function hazardMultiplier(cfg, avg) {
+  let m = 1.0;
+
+  const steps = avg.steps !== null ? avg.steps : 5000;
+  if (steps < 4000) m *= 1.35;
+  else if (steps < 6000) m *= 1.15;
+  else if (steps < 8000) m *= 1.00;
+  else m *= 0.90;
+
+  const sleep = avg.sleepHours !== null ? avg.sleepHours : 6;
+  if (sleep < 6) m *= 1.20;
+  else if (sleep < 7) m *= 1.14;
+  else if (sleep <= 9) m *= 0.95;
+  else m *= 1.34;
+
+  const screen = avg.screenHours !== null ? avg.screenHours : 6;
+  if (screen > 8) m *= 1.35;
+  else if (screen > 4) m *= 1.20;
+  else if (screen > 2) m *= 1.05;
+  else m *= 0.95;
+
+  const ex = avg.exerciseMinutes !== null ? avg.exerciseMinutes : 0;
+  if (ex < 5) m *= 1.20;
+  else if (ex < 20) m *= 1.05;
+  else if (ex < 40) m *= 0.98;
+  else m *= 0.90;
+
+  const waist = avg.waistCm !== null ? avg.waistCm : (cfg.waistCm || 91);
+  if (waist > 100) m *= 1.25;
+  else if (waist > 90) m *= 1.10;
+  else if (waist > 85) m *= 1.03;
+
+  const study = avg.studyHours !== null ? avg.studyHours : 2;
+  if (study > 4) m *= 0.95;
+  else if (study < 1) m *= 1.05;
+
+  const anx = avg.anxietyLevel !== null ? avg.anxietyLevel : (cfg.anxietyLevel || 5);
+  if (anx >= 9) m *= 1.20;
+  else if (anx >= 7) m *= 1.15;
+  else if (anx >= 5) m *= 1.05;
+
+  if (cfg.familyHistoryHeart) m *= 1.10;
+  if (cfg.familyHistoryCancer) m *= 1.05;
+  if (cfg.familyHistoryLongevity) m *= 0.95;
+
+  return m;
+}
+
+function estimateHealthyLife(cfg, avg) {
+  let risk = 1.0;
+
+  const waist = avg.waistCm !== null ? avg.waistCm : (cfg.waistCm || 91);
+  if (waist > 100) risk += 0.25;
+  else if (waist > 90) risk += 0.12;
+  else if (waist > 85) risk += 0.05;
+
+  const sleep = avg.sleepHours !== null ? avg.sleepHours : 6;
+  if (sleep < 6) risk += 0.15;
+  else if (sleep < 7) risk += 0.08;
+
+  const screen = avg.screenHours !== null ? avg.screenHours : 6;
+  if (screen > 8) risk += 0.20;
+  else if (screen > 4) risk += 0.12;
+
+  const ex = avg.exerciseMinutes !== null ? avg.exerciseMinutes : 0;
+  if (ex < 5) risk += 0.15;
+  else if (ex < 20) risk += 0.05;
+
+  const study = avg.studyHours !== null ? avg.studyHours : 2;
+  if (study < 1) risk += 0.05;
+
+  const anx = avg.anxietyLevel !== null ? avg.anxietyLevel : (cfg.anxietyLevel || 5);
+  if (anx > 7) risk += 0.10;
+
+  const baseLE = remainingLifeExpectancy(cfg.age, 0.001, 0.00003, 0.09);
+  const adjLE = baseLE / risk;
+  return { healthyDeathAge: cfg.age + adjLE, healthyLE: adjLE };
+}
+
+function renderComparison(avg) {
+  const rows = [
+    { you: avg.sleepHours, chu: CHUANDO.sleepHours, youId: "cmpSleepYou", stId: "cmpSleepStatus", higherBetter: true },
+    { you: avg.exerciseMinutes, chu: CHUANDO.exerciseMinutes, youId: "cmpExYou", stId: "cmpExStatus", higherBetter: true },
+    { you: avg.steps, chu: CHUANDO.steps, youId: "cmpStepsYou", stId: "cmpStepsStatus", higherBetter: true },
+    { you: avg.screenHours, chu: CHUANDO.screenHours, youId: "cmpScreenYou", stId: "cmpScreenStatus", higherBetter: false },
+    { you: avg.anxietyLevel, chu: CHUANDO.anxietyLevel, youId: "cmpAnxYou", stId: "cmpAnxStatus", higherBetter: false }
+  ];
+  rows.forEach(r => {
+    const youEl = $(r.youId);
+    const stEl = $(r.stId);
+    if (!youEl || !stEl) return;
+    if (r.you === null || r.you === undefined || !isFinite(r.you)) {
+      youEl.textContent = "—";
+      stEl.textContent = "—";
+      stEl.className = "";
+      return;
+    }
+    youEl.textContent = Number(r.you).toFixed(1);
+    const diff = r.you - r.chu;
+    const isBetter = r.higherBetter ? diff >= 0 : diff <= 0;
+    if (isBetter) {
+      stEl.textContent = "OK";
+      stEl.className = "good";
+    } else {
+      const pct = ((diff / r.chu) * 100).toFixed(0);
+      stEl.textContent = `Off ${pct > 0 ? "+" : ""}${pct}%`;
+      stEl.className = "bad";
+    }
+  });
+}
+
+function dailyScore(d) {
+  if (!d || typeof d !== "object") return null;
+  let sum = 0, count = 0;
+  METRICS.forEach(m => {
+    const v = safeNum(d[m.key]);
+    if (v !== null) { sum += m.fn(v); count++; }
+  });
+  return count ? sum / count : null;
+}
+
+function rankFor(score) {
+  if (score === null) return { label: "No data", cls: "" };
+  if (score >= 90) return { label: "★ Immortal Path", cls: "score-good" };
+  if (score >= 75) return { label: "◆ Shinigami Approved", cls: "score-good" };
+  if (score >= 60) return { label: "▲ Good Living", cls: "score-ok" };
+  if (score >= 40) return { label: "▼ Slipping", cls: "score-bad" };
+  if (score >= 20) return { label: "✖ Danger Zone", cls: "score-bad" };
+  return { label: "☠ Death's Door", cls: "score-bad" };
+}
+
+function computeAchievement() {
+  const sorted = [...dailyLogs]
+    .filter(d => d && d.date)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+
+  if (!sorted.length) {
+    $("lifeScore").textContent = "—";
+    $("streak").textContent = "—";
+    $("rankLabel").textContent = "Import daily logs to see your rank.";
+    $("rankLabel").className = "rank-label";
+    $("lifeScoreCard").className = "result-card big";
+    return;
+  }
+
+  const scores = sorted.map(d => dailyScore(d)).filter(s => s !== null);
+  const latest = scores.length ? scores[scores.length - 1] : null;
+  const avg = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+
+  const displayScore = latest !== null ? latest : avg;
+  $("lifeScore").textContent = displayScore !== null ? displayScore.toFixed(1) : "—";
+
+  let streak = 0;
+  for (let i = scores.length - 1; i >= 0; i--) {
+    if (scores[i] >= 60) streak++;
+    else break;
+  }
+  $("streak").textContent = streak || "0";
+
+  const rank = rankFor(displayScore);
+  $("rankLabel").textContent = rank.label;
+  $("rankLabel").className = "rank-label";
+  $("lifeScoreCard").className = "result-card big " + rank.cls;
+}
+
+function drawChart() {
+  const canvas = $("chart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const border = cssVar("--border");
+  const fg = cssVar("--fg");
+  const fgDim = cssVar("--fg-dim");
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 12, right: 12, bottom: 26, left: 32 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 0.5;
+  ctx.fillStyle = fgDim;
+  ctx.font = "9px system-ui";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (plotH * i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(pad.left + plotW, y);
+    ctx.stroke();
+    ctx.fillText(String(100 - i * 25), pad.left - 4, y);
+  }
+
+  const sorted = [...dailyLogs]
+    .filter(d => d && d.date)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))
+    .slice(-30);
+
+  if (sorted.length < 2) {
+    ctx.fillStyle = fg;
+    ctx.font = "12px system-ui";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Need at least 2 days of data to draw chart", W / 2, H / 2);
+    return;
+  }
+
+  const n = sorted.length;
+  const stepX = plotW / (n - 1);
+
+  METRICS.forEach(m => {
+    ctx.strokeStyle = cssVar(m.color);
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    let started = false;
+    sorted.forEach((d, i) => {
+      const v = safeNum(d[m.key]);
+      if (v === null) { started = false; return; }
+      const score = m.fn(v);
+      const x = pad.left + i * stepX;
+      const y = pad.top + plotH - (score / 100) * plotH;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = fgDim;
+  ctx.font = "9px system-ui";
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  ctx.fillText(String(sorted[0].date).slice(5), pad.left, pad.top + plotH + 6);
+  ctx.textAlign = "right";
+  ctx.fillText(String(sorted[n - 1].date).slice(5), pad.left + plotW, pad.top + plotH + 6);
+}
+
+function renderChartLegend() {
+  const el = $("chartLegend");
+  el.innerHTML = METRICS.map(m =>
+    `<span><span class="swatch" style="background:var(${m.color})"></span>${m.label}</span>`
+  ).join("");
+}
+
+function estimate() {
+  const cfg = currentConfig;
+  const avg = {
+    steps: avgOf(dailyLogs, "steps"),
+    sleepHours: avgOf(dailyLogs, "sleepHours"),
+    exerciseMinutes: avgOf(dailyLogs, "exerciseMinutes"),
+    screenHours: avgOf(dailyLogs, "screenHours"),
+    studyHours: avgOf(dailyLogs, "studyHours"),
+    anxietyLevel: avgOf(dailyLogs, "anxietyLevel"),
+    waistCm: null
+  };
+
+  const A = 0.001, B = 0.00003, c = 0.09;
+
+  const baseLE = remainingLifeExpectancy(cfg.age, A, B, c);
+  const baseDeathAge = cfg.age + baseLE;
+
+  const mult = hazardMultiplier(cfg, avg);
+  const adjLE = remainingLifeExpectancy(cfg.age, A * mult, B * mult, c);
+  const adjDeathAge = cfg.age + adjLE;
+
+  $("estAge").textContent = isFinite(adjDeathAge) ? adjDeathAge.toFixed(1) : "—";
+  $("remYears").textContent = isFinite(adjLE) ? adjLE.toFixed(1) : "—";
+  $("baselineAge").textContent = isFinite(baseDeathAge) ? baseDeathAge.toFixed(1) : "—";
+  $("multiplier").textContent = isFinite(mult) ? mult.toFixed(2) : "—";
+
+  const hl = estimateHealthyLife(cfg, avg);
+  $("healthyAge").textContent = isFinite(hl.healthyDeathAge) ? hl.healthyDeathAge.toFixed(1) : "—";
+  $("healthyYears").textContent = isFinite(hl.healthyLE) ? hl.healthyLE.toFixed(1) : "—";
+
+  renderComparison(avg);
+
+  $("calcStatus").textContent = dailyLogs.length
+    ? `Based on ${dailyLogs.length} day(s).`
+    : `No daily data — using config defaults.`;
+}
+
+function refresh() {
+  computeAverages();
+  computeAchievement();
+  estimate();
+  drawChart();
+}
+
+$("importConfigBtn").addEventListener("click", () => $("configInput").click());
+$("configInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try { loadConfig(JSON.parse(ev.target.result)); }
+    catch (err) { $("configStatus").textContent = "Invalid JSON: " + err.message; }
+  };
+  reader.readAsText(file);
+});
+
+$("importCsvBtn").addEventListener("click", () => $("csvInput").click());
+$("csvInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = ev.target.result;
+    const logs = file.name.endsWith(".json") ? parseJSON(text) : parseCSV(text);
+    loadLogs(logs, [{ name: file.name, rows: logs.length }]);
+  };
+  reader.readAsText(file);
+});
+
+$("importFolderBtn").addEventListener("click", () => $("folderInput").click());
+$("folderInput").addEventListener("change", e => {
+  const files = Array.from(e.target.files || []).filter(f => f.name.endsWith(".csv") || f.name.endsWith(".json"));
+  if (!files.length) { $("logStatus").textContent = "No CSV/JSON files found."; return; }
+  let done = 0;
+  const allLogs = [];
+  const meta = [];
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const logs = file.name.endsWith(".json") ? parseJSON(ev.target.result) : parseCSV(ev.target.result);
+        allLogs.push(...logs);
+        meta.push({ name: file.name, rows: logs.length });
+      } catch (err) { console.warn("Skip", file.name); }
+      done++;
+      if (done === files.length) loadLogs(allLogs, meta);
+    };
+    reader.onerror = () => {
+      done++;
+      if (done === files.length) loadLogs(allLogs, meta);
+    };
+    reader.readAsText(file);
+  });
+});
+
+$("clearLogsBtn").addEventListener("click", () => {
+  dailyLogs = [];
+  loadedFiles = [];
+  $("logStatus").textContent = "Cleared.";
+  $("fileList").style.display = "none";
+  $("fileList").innerHTML = "";
+  refresh();
+});
+
+$("templateConfigBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(BUILT_IN, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "shinigami-config.json"; a.click();
+  URL.revokeObjectURL(url);
+});
+
+$("calcBtn").addEventListener("click", estimate);
+
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(drawChart, 120);
+});
+
+renderChartLegend();
+refresh();
+</script>
+</body>
+</html>
