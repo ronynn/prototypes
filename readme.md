@@ -11,7 +11,10 @@ This is my tinkering folder so I don't feel like updating the readme that often.
 - [Rekishi - Historical Calendar](https://ronynn.github.io/prototypes/code/daily/rekishi)
 - [Shintaku](https://ronynn.github.io/prototypes/code/demos/shintaku)
 - [Kisoku - Breathing App](https://ronynn.github.io/prototypes/code/demos/kisoku)
-- [wttr-Dash](https://ronynn.github.io/prototypes/code/daily/dash)
+- [wttr-Dash - Now supports OpenWeather and OpenMeteo API](https://ronynn.github.io/prototypes/code/daily/dash)
+- [Rin- Music Player](https://ronynn.github.io/prototypes/code/daily/music)
+- [Oboeru - Anki Clone](https://ronynn.github.io/prototypes/code/daily/anki)
+- [Shinten - Progressbar App](https://ronynn.github.io/prototypes/code/daily/progressbar)
 
 ### Games
 
