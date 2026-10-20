@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Sweeper of Mines</title>
+<style>
+@font-face {
+    font-family: "C800";
+    src: url("./C800.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    background: #000;
+    margin: 0;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "C800", monospace;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Fixed 3:4 box that always fits inside the viewport,
+   so the canvas is never stretched by a non-integer factor. */
+.wrapper {
+    width:  min(75vh, 100vw, 480px);
+    height: min(100vh, 133.3333vw, 640px);
+    width:  min(75dvh, 100vw, 480px);
+    height: min(100dvh, 133.3333vw, 640px);
+    position: relative;
+    background: #000;
+    overflow: hidden;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+    <canvas id="game" width="480" height="640"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+/* ===============================================================
+   1. CRISP CANVAS SIZING
+   Backing store = CSS size × devicePixelRatio, so 1 canvas pixel
+   maps to exactly 1 physical pixel. Everything is drawn in a
+   fixed 480×640 logical space and scaled by the transform.
+================================================================ */
+const VIEW_W = 480, VIEW_H = 640;
+let scaleX = 1, scaleY = 1;
+
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(rect.width  * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+        canvas.width  = w;
+        canvas.height = h;
+    }
+    ctx.imageSmoothingEnabled = false;   // reset whenever width/height change
+    scaleX = w / VIEW_W;
+    scaleY = h / VIEW_H;
+}
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+
+/* ===============================================================
+   2. ONE TEXT HELPER — declares the font once, snaps to whole pixels
+================================================================ */
+const FONT_STACK = '"C800", "Courier New", monospace';
+const font = (px) => `${px}px ${FONT_STACK}`;
+
+function text(str, x, y, size, color, baseline = "alphabetic", align = "center") {
+    ctx.font = font(size);
+    ctx.fillStyle = color;
+    ctx.textBaseline = baseline;
+    ctx.textAlign = align;
+    ctx.fillText(str, Math.round(x), Math.round(y));
+}
+
+/* ===============================================================
+   3. INTEGER GRID GEOMETRY
+   480/14 = 34.2857… so naive tile rects land on fractional pixels
+   and get antialiased. Snap each edge to an integer instead.
+================================================================ */
+const COLS = 14, ROWS = 14;
+const GRID_W = 480, GRID_H = 480;
+const TILE_W = GRID_W / COLS;
+const TILE_H = GRID_H / ROWS;
+const GRID_Y = 90;
+
+const cellX = (c) => Math.round(c * TILE_W);
+const cellY = (r) => GRID_Y + Math.round(r * TILE_H);
+const cellW = (c) => Math.round((c + 1) * TILE_W) - Math.round(c * TILE_W);
+const cellH = (r) => Math.round((r + 1) * TILE_H) - Math.round(r * TILE_H);
+
+/* =============================================================== */
+
+const THEMES = {
+    gruvbox:     { bg:"#282828", hide:"#3c3836", rev:"#ebdbb2", act:"#fe8019", text:"#fbf1c7", mine:"#fb4934", num:["#458588","#b8bb26","#fabd2f","#d3869b"] },
+    nord:        { bg:"#2e3440", hide:"#434c5e", rev:"#d8dee9", act:"#88c0d0", text:"#eceff4", mine:"#bf616a", num:["#81a1c1","#a3be8c","#ebcb8b","#b48ead"] },
+    catppuccin:  { bg:"#303446", hide:"#414559", rev:"#c6d0f5", act:"#ea999c", text:"#c6d0f5", mine:"#e78284", num:["#8ca0f3","#a6d189","#e5c890","#ca9ee6"] },
+    monokai:     { bg:"#272822", hide:"#3e3d32", rev:"#f92672", act:"#a6e22e", text:"#f8f8f2", mine:"#f92672", num:["#66d9ef","#a6e22e","#fd971f","#ae81ff"] },
+    dracula:     { bg:"#282a36", hide:"#44475a", rev:"#f8f8f2", act:"#bd93f9", text:"#f8f8f2", mine:"#ff5555", num:["#8be9fd","#50fa7b","#ffb86c","#ff79c6"] },
+    themeforest: { bg:"#212121", hide:"#333333", rev:"#ffffff", act:"#82b440", text:"#ffffff", mine:"#ff3d00", num:["#00b0ff","#82b440","#ff9100","#e040fb"] }
+};
+let curTheme = "gruvbox";
+let T = THEMES[curTheme];
+
+const STATE_TITLE = 0, STATE_INTRO = 1, STATE_PLAY = 2, STATE_GAMEOVER = 3,
+      STATE_DEAD_TEXT1 = 4, STATE_DEAD_TEXT2 = 5, STATE_WIN = 6, STATE_STATS = 7;
+let gameState = STATE_TITLE;
+
+const DIFF_MODES = ["EASY", "NORMAL", "HARD"];
+const DIFF_MINES = [15, 48, 70];
+let diffIdx = 1;
+
+let grid = [], cursor = { x: 7, y: 7 }, flagsCount = 0, firstMove = true;
+let introText = "THE WAR WAS LONG OVER.\n\nBUT SOMEONE NEEDED\n\nTO CLEAR THE MINES...";
+let introChars = 0, introTicker = 0;
+let gameStartTime = 0, gameFinalTime = 0;
+let shakeTime = 0;
+
+let stats = JSON.parse(localStorage.getItem("mines_stats_v5")) || {
+    EASY:   { played: 0, wins: 0, totalTime: 0 },
+    NORMAL: { played: 0, wins: 0, totalTime: 0 },
+    HARD:   { played: 0, wins: 0, totalTime: 0 }
+};
+function saveStats() { localStorage.setItem("mines_stats_v5", JSON.stringify(stats)); }
+
+/* ---------------- audio ---------------- */
+let audioCtx = null;
+function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function tone(freq, dur, type = "square", vol = 0.1) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + dur);
+}
+function noise(dur, vol = 0.1) {
+    if (!audioCtx) return;
+    const n = audioCtx.sampleRate * dur;
+    const buffer = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = Math.random() * 2 - 1;
+    const src = audioCtx.createBufferSource(); src.buffer = buffer;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    src.connect(g); g.connect(audioCtx.destination); src.start();
+}
+
+/* ---------------- board ---------------- */
+function resetBoard() {
+    grid = []; flagsCount = 0; firstMove = true;
+    gameStartTime = 0; gameFinalTime = 0;
+    for (let r = 0; r < ROWS; r++) {
+        grid[r] = [];
+        for (let c = 0; c < COLS; c++)
+            grid[r][c] = { mine:false, revealed:false, flagged:false, count:0 };
+    }
+}
+
+function newGame() {
+    resetBoard();
+    stats[DIFF_MODES[diffIdx]].played++;
+    saveStats();
+}
+
+function placeMines(ex, ey) {
+    const totalMines = DIFF_MINES[diffIdx];
+    let placed = 0, guard = 0;
+    while (placed < totalMines && guard++ < 5000) {
+        const r = Math.floor(Math.random() * ROWS), c = Math.floor(Math.random() * COLS);
+        if (!grid[r][c].mine && (Math.abs(r - ey) > 1 || Math.abs(c - ex) > 1)) {
+            grid[r][c].mine = true; placed++;
+        }
+    }
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (grid[r][c].mine) continue;
+            let count = 0;
+            for (let dr = -1; dr <= 1; dr++)
+                for (let dc = -1; dc <= 1; dc++)
+                    if (grid[r+dr] && grid[r+dr][c+dc] && grid[r+dr][c+dc].mine) count++;
+            grid[r][c].count = count;
+        }
+    }
+}
+
+function reveal(x, y) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    let cell = grid[y][x];
+    if (cell.revealed || cell.flagged) return;
+
+    if (firstMove) {
+        firstMove = false;
+        gameStartTime = Date.now();
+        placeMines(x, y);
+        cell = grid[y][x];
+    }
+
+    cell.revealed = true;
+
+    if (cell.mine) {
+        gameFinalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+        shakeTime = 25;
+        gameState = STATE_GAMEOVER;
+        noise(0.8, 0.4); tone(50, 0.6, "sawtooth", 0.5);
+        return;
+    }
+
+    tone(180 + Math.random() * 40, 0.04, "triangle", 0.12);
+
+    if (cell.count === 0) {
+        for (let dr = -1; dr <= 1; dr++)
+            for (let dc = -1; dc <= 1; dc++) reveal(x + dc, y + dr);
+    }
+    checkWin();
+}
+
+function toggleFlag(x, y) {
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    const cell = grid[y][x];
+    if (cell.revealed) return;
+    cell.flagged = !cell.flagged;
+    flagsCount += cell.flagged ? 1 : -1;
+    tone(cell.flagged ? 400 : 280, 0.06, "square", 0.08);
+}
+
+function checkWin() {
+    if (gameState !== STATE_PLAY) return;
+    for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+            if (!grid[r][c].mine && !grid[r][c].revealed) return;
+
+    gameFinalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+    const m = DIFF_MODES[diffIdx];
+    stats[m].wins++;
+    stats[m].totalTime += gameFinalTime;
+    saveStats();
+    gameState = STATE_WIN;
+    tone(300, 0.1, "sine");
+    setTimeout(() => tone(400, 0.1, "sine"), 80);
+    setTimeout(() => tone(500, 0.1, "sine"), 160);
+}
+
+/* ---------------- input ---------------- */
+function getCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left) * (VIEW_W / rect.width),
+        y: (e.clientY - rect.top)  * (VIEW_H / rect.height)
+    };
+}
+
+let touchTimer = null, isLongPress = false, touchStartX = 0, touchStartY = 0;
+
+function handleStart(e) {
+    initAudio();
+    const c = getCoords(e);
+    touchStartX = c.x; touchStartY = c.y; isLongPress = false;
+
+    if (gameState === STATE_PLAY) {
+        const cx = Math.floor(c.x / TILE_W), cy = Math.floor((c.y - GRID_Y) / TILE_H);
+        if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) {
+            cursor.x = cx; cursor.y = cy;
+            touchTimer = setTimeout(() => { isLongPress = true; toggleFlag(cx, cy); }, 400);
+        }
+    }
+}
+
+function handleEnd(e) {
+    if (touchTimer) clearTimeout(touchTimer);
+    if (isLongPress) return;
+    const c = getCoords(e);
+
+    if (gameState !== STATE_PLAY) {
+        if (gameState === STATE_TITLE) {
+            if (c.y >= 130 && c.y <= 175) {
+                if (c.x >= 100 && c.x <= 150) { diffIdx = (diffIdx - 1 + 3) % 3; tone(200, 0.05); return; }
+                if (c.x >= 330 && c.x <= 380) { diffIdx = (diffIdx + 1) % 3;     tone(200, 0.05); return; }
+            }
+            if (c.y >= 190 && c.y <= 226 && c.x >= 140 && c.x <= 340) {
+                gameState = STATE_INTRO; introChars = 0; introTicker = 0; tone(440, 0.1); return;
+            }
+            if (c.y >= 250 && c.y <= 286 && c.x >= 140 && c.x <= 340) {
+                gameState = STATE_STATS; tone(440, 0.1); return;
+            }
+            const keys = Object.keys(THEMES);
+            const tTop = 338;
+            if (c.y >= tTop && c.y <= tTop + keys.length * 25) {
+                const idx = Math.floor((c.y - tTop) / 25);
+                if (keys[idx]) { curTheme = keys[idx]; tone(320, 0.05, "sine"); return; }
+            }
+        } else if (gameState === STATE_INTRO) {
+            if (introChars < introText.length) introChars = introText.length;
+            else { newGame(); gameState = STATE_PLAY; tone(440, 0.1); }
+        } else if (gameState === STATE_GAMEOVER) {
+            gameState = STATE_DEAD_TEXT1; tone(220, 0.1);
+        } else if (gameState === STATE_DEAD_TEXT1) {
+            gameState = STATE_DEAD_TEXT2; tone(220, 0.1);
+        } else if (gameState === STATE_DEAD_TEXT2 || gameState === STATE_WIN || gameState === STATE_STATS) {
+            gameState = STATE_TITLE; tone(220, 0.1);
+        }
+        return;
+    }
+
+    if (Math.hypot(c.x - touchStartX, c.y - touchStartY) > 15) return;
+
+    const cx = Math.floor(c.x / TILE_W), cy = Math.floor((c.y - GRID_Y) / TILE_H);
+    if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS) reveal(cx, cy);
+}
+
+window.addEventListener("pointerdown", handleStart);
+window.addEventListener("pointerup", handleEnd);
+
+window.addEventListener("keydown", (e) => {
+    initAudio();
+    const k = e.key.toLowerCase();
+    if (gameState === STATE_TITLE) {
+        if (e.key === "ArrowLeft")  { diffIdx = (diffIdx - 1 + 3) % 3; tone(200, 0.05); }
+        if (e.key === "ArrowRight") { diffIdx = (diffIdx + 1) % 3;     tone(200, 0.05); }
+        if (e.key === "Enter" || k === "z") { gameState = STATE_INTRO; introChars = 0; introTicker = 0; tone(440, 0.1); }
+    } else if (gameState === STATE_INTRO) {
+        if (introChars < introText.length) introChars = introText.length;
+        else { newGame(); gameState = STATE_PLAY; tone(440, 0.1); }
+    } else if (gameState === STATE_GAMEOVER) {
+        gameState = STATE_DEAD_TEXT1; tone(220, 0.1);
+    } else if (gameState === STATE_DEAD_TEXT1) {
+        gameState = STATE_DEAD_TEXT2; tone(220, 0.1);
+    } else if (gameState === STATE_DEAD_TEXT2 || gameState === STATE_WIN || gameState === STATE_STATS) {
+        if (k === "z" || e.key === "Enter") { gameState = STATE_TITLE; tone(220, 0.1); }
+    } else if (gameState === STATE_PLAY) {
+        if (e.key === "ArrowUp"    && cursor.y > 0)        cursor.y--;
+        if (e.key === "ArrowDown"  && cursor.y < ROWS - 1) cursor.y++;
+        if (e.key === "ArrowLeft"  && cursor.x > 0)        cursor.x--;
+        if (e.key === "ArrowRight" && cursor.x < COLS - 1) cursor.x++;
+        if (k === "z") reveal(cursor.x, cursor.y);
+        if (k === "x") toggleFlag(cursor.x, cursor.y);
+    }
+});
+
+/* ---------------- render ---------------- */
+const pad3    = (n) => String(Math.max(0, n)).padStart(3, "0");
+const fmtTime = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+function panel(x, y, w, h, label, size) {
+    ctx.fillStyle = T.hide;
+    ctx.fillRect(x, y, w, h);
+    text(label, x + w / 2, y + h / 2 + 1, size, T.text, "middle");
+}
+
+function draw() {
+    T = THEMES[curTheme];
+
+    // Base transform: logical 480×640 → physical pixels, 1:1, no filtering.
+    ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+    ctx.save();
+
+    if (shakeTime > 0) {
+        ctx.translate(Math.round((Math.random() - 0.5) * 12),
+                      Math.round((Math.random() - 0.5) * 12));
+        shakeTime--;
+    }
+
+    ctx.fillStyle = T.bg;
+    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+
+    if (gameState === STATE_TITLE) {
+        text("SWEEPER OF MINES", 240, 60, 22, T.act);
+
+        text("DIFFICULTY:", 240, 115, 11, T.text);
+        text("<", 115, 147, 11, T.text);
+        text(">", 355, 147, 11, T.text);
+        text(DIFF_MODES[diffIdx], 240, 147, 11, T.text);
+
+        panel(140, 190, 200, 36, "START GAME", 11);
+        panel(140, 250, 200, 36, "STATISTICS", 11);
+
+        text("THEMES:", 240, 320, 10, T.text);
+        Object.keys(THEMES).forEach((k, i) => {
+            text((curTheme === k ? "> " : "") + k.toUpperCase(),
+                 240, 350 + i * 25, 10, curTheme === k ? T.act : T.hide);
+        });
+
+    } else if (gameState === STATE_INTRO) {
+        introTicker++;
+        if (introTicker % 2 === 0 && introChars < introText.length) {
+            introChars++;
+            if (introChars % 3 === 0) tone(600, 0.01, "sine", 0.02);
+        }
+        introText.substring(0, introChars).split("\n").forEach((l, i) => {
+            text(l, 240, 220 + i * 28, 12, T.text);
+        });
+        if (introChars === introText.length) {
+            text("TAP OR PRESS Z TO CONTINUE", 240, 480, 10, T.act);
+        }
+
+    } else if (gameState === STATE_GAMEOVER) {
+        text("GAME OVER", 240, 280, 28, T.mine);
+        text("TAP SCREEN TO CONTINUE", 240, 360, 10, T.text);
+
+    } else if (gameState === STATE_DEAD_TEXT1) {
+        text("YOU DIED TRYING TO MAKE", 240, 260, 12, T.text);
+        text("COUNTLESS LIVES SAFER.",   240, 300, 12, T.text);
+        text("TAP SCREEN TO CONTINUE",   240, 420, 10, T.act);
+
+    } else if (gameState === STATE_DEAD_TEXT2) {
+        text("EVERY YEAR, OVER 5,000",   240, 220, 12, T.text);
+        text("PEOPLE ARE KILLED OR",     240, 260, 12, T.text);
+        text("MAIMED BY DECADE-OLD",     240, 300, 12, T.text);
+        text("LANDMINES LEFT BEHIND.",   240, 340, 12, T.text);
+        text("TAP SCREEN TO RETURN",     240, 460, 10, T.act);
+
+    } else if (gameState === STATE_WIN) {
+        text("VICTORY!", 240, 200, 32, T.act);
+        text(`TIME: ${gameFinalTime}s`, 240, 280, 14, T.text);
+        text("THE SECTOR IS RENDERED SECURE.", 240, 340, 10, T.text);
+        text("TAP SCREEN TO CONTINUE", 240, 440, 10, T.act);
+
+    } else if (gameState === STATE_STATS) {
+        text("STATISTICS", 240, 80, 20, T.act);
+        let yy = 150;
+        DIFF_MODES.forEach(m => {
+            const s = stats[m];
+            const avg  = s.wins > 0 ? Math.floor(s.totalTime / s.wins) : 0;
+            const rate = s.played > 0 ? Math.round((s.wins / s.played) * 100) : 0;
+            text(`--- ${m} ---`, 240, yy, 10, T.act);
+            text(`PLAYED: ${s.played}`, 240, yy + 20, 10, T.text);
+            text(`WINS: ${s.wins}  (${rate}%)`, 240, yy + 40, 10, T.text);
+            text(`AVG TIME: ${avg}s`, 240, yy + 60, 10, T.text);
+            yy += 100;
+        });
+        text("TAP TO RETURN", 240, 560, 10, T.act);
+
+    } else {
+        /* ---- header ---- */
+        const totalMines = DIFF_MINES[diffIdx];
+        const elapsed = gameStartTime ? Math.floor((Date.now() - gameStartTime) / 1000) : 0;
+        text(`MINES ${pad3(totalMines - flagsCount)}`, 24, 46, 14,
+             flagsCount > totalMines ? T.mine : T.act, "middle", "left");
+        text(fmtTime(elapsed), 240, 46, 16, T.text, "middle", "center");
+        text(DIFF_MODES[diffIdx], 456, 46, 12, T.act, "middle", "right");
+
+        /* ---- grid ---- */
+        for (let r = 0; r < ROWS; r++) {
+            const y = cellY(r), h = cellH(r) - 1;
+            for (let c = 0; c < COLS; c++) {
+                const x = cellX(c), w = cellW(c) - 1;
+                const cell = grid[r][c];
+
+                if (!cell.revealed) {
+                    ctx.fillStyle = T.hide;
+                    ctx.fillRect(x, y, w, h);
+                    if (cell.flagged) {
+                        ctx.fillStyle = T.mine;
+                        const fw = 12, fh = 12;
+                        ctx.fillRect(x + ((w - fw) >> 1), y + ((h - fh) >> 1), fw, fh);
+                    }
+                } else {
+                    ctx.fillStyle = T.rev;
+                    ctx.fillRect(x, y, w, h);
+                    if (cell.mine) {
+                        ctx.fillStyle = T.mine;
+                        const mw = 14, mh = 14;
+                        ctx.fillRect(x + ((w - mw) >> 1), y + ((h - mh) >> 1), mw, mh);
+                    } else if (cell.count > 0) {
+                        text(cell.count,
+                             x + Math.round(w / 2),
+                             y + Math.round(h / 2) + 1,
+                             14, T.num[cell.count - 1] || T.text, "middle");
+                    }
+                }
+
+                if (cursor.x === c && cursor.y === r) {
+                    ctx.strokeStyle = T.act;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+                }
+            }
+        }
+
+        text("TAP = OPEN     HOLD = FLAG", 240, 610, 10, T.act);
+    }
+
+    ctx.restore();
+    requestAnimationFrame(draw);
+}
+
+/* ---------------- boot ---------------- */
+resetBoard();
+gameState = STATE_TITLE;
+resizeCanvas();
+
+if (document.fonts && document.fonts.load) {
+    Promise.race([
+        document.fonts.load('16px "C800"'),
+        new Promise(res => setTimeout(res, 2000))
+    ]).then(() => requestAnimationFrame(draw));
+} else {
+    requestAnimationFrame(draw);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Rekishi Teki (Histori-Cal)</title>
+    <style>
+      :root {
+        --bg:#282828; --surface:#3c3836; --border:#d79921; --line:#504945;
+        --text:#ebdbb2; --accent:#fabd2f; --accent-txt:#282828; --gray:#b8aa93;
+        --zoom:1; --radius:0px; --radius-sm:0px;
+        --font:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+      }
+      [data-theme="dracula"] { --bg:#282a36; --surface:#44475a; --border:#ff79c6; --line:#565a72; --text:#f8f8f2; --accent:#bd93f9; --accent-txt:#282a36; --gray:#b3bce0; }
+      [data-theme="monokai"] { --bg:#272822; --surface:#3e3d32; --border:#f92672; --line:#57564a; --text:#f8f8f2; --accent:#a6e22e; --accent-txt:#272822; --gray:#c0bcae; }
+      [data-theme="nord"] { --bg:#2e3440; --surface:#3b4252; --border:#88c0d0; --line:#4b5567; --text:#e5e9f0; --accent:#88c0d0; --accent-txt:#2e3440; --gray:#aab6cc; }
+      [data-theme="purple"] { --bg:#ffffff; --surface:#f5f5f5; --border:#8e24aa; --line:#d7d7d7; --text:#1f1f1f; --accent:#8e24aa; --accent-txt:#ffffff; --gray:#5f5f5f; }
+      [data-theme="amoled"] { --bg:#000000; --surface:#121212; --border:#ffffff; --line:#333333; --text:#ffffff; --accent:#ffffff; --accent-txt:#000000; --gray:#c2c2c2; }
+      [data-theme="cupcake"] { --bg:#faf7f5; --surface:#efeae6; --border:#ffb6c1; --line:#dbd2cd; --text:#211d1f; --accent:#e07a93; --accent-txt:#ffffff; --gray:#6d6265; }
+      [data-theme="catppuccin"] { --bg:#1e1e2e; --surface:#313244; --border:#cba6f7; --line:#45475a; --text:#e6ecff; --accent:#cba6f7; --accent-txt:#11111b; --gray:#a6adc8; }
+      [data-theme="catppuccin-frappe"] { --bg:#303446; --surface:#414559; --border:#ca9ee6; --line:#51576d; --text:#dbe3ff; --accent:#ca9ee6; --accent-txt:#232634; --gray:#a5adce; }
+      [data-theme="everforest"] { --bg:#2d353b; --surface:#3d484d; --border:#a7c080; --line:#4d585e; --text:#e0d5bb; --accent:#a7c080; --accent-txt:#232a2e; --gray:#aab7a4; }
+      [data-theme="everforest-light"] { --bg:#fdf6e3; --surface:#eee8d5; --border:#859900; --line:#d5cdb6; --text:#3f4d52; --accent:#6f7f00; --accent-txt:#fdf6e3; --gray:#63736f; }
+      [data-theme="tokyo-night"] { --bg:#1a1b26; --surface:#24283c; --border:#7aa2f7; --line:#333853; --text:#c8d0ee; --accent:#7aa2f7; --accent-txt:#1a1b26; --gray:#9aa5d0; }
+
+      * { box-sizing:border-box; margin:0; padding:0; user-select:none; -webkit-tap-highlight-color:transparent; font-family:var(--font); }
+      input, textarea { user-select:text; }
+      html { height:100%; background:var(--bg); }
+      body { background:var(--bg); color:var(--text); overflow:hidden; height:100vh; height:100dvh; display:flex; flex-direction:column; font-size:calc(14px * var(--zoom)); }
+
+      /* ---------- header tabs (no borders) ---------- */
+      header { flex:0 0 auto; display:flex; gap:calc(6px * var(--zoom)); padding:calc(12px * var(--zoom)) calc(14px * var(--zoom)); background:var(--bg); border-bottom:calc(1px * var(--zoom)) solid var(--line); z-index:10; }
+      header div { opacity:.7; transition:opacity .15s,background .15s,color .15s; padding:calc(9px * var(--zoom)) calc(16px * var(--zoom)); cursor:pointer; font-size:calc(12px * var(--zoom)); letter-spacing:calc(.9px * var(--zoom)); text-transform:uppercase; border:none; background:transparent; color:var(--text); }
+      header div.active { opacity:1; color:var(--accent-txt); background:var(--accent); }
+
+      #viewport { display:flex; flex:1 1 auto; min-height:0; width:200vw; transition:transform .25s cubic-bezier(.1,.9,.2,1); will-change:transform; }
+      .screen { flex:0 0 100vw; width:100vw; height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:calc(14px * var(--zoom)); }
+
+      /* ---------- fieldsets replace cards ---------- */
+      fieldset.card { background:var(--surface); border:calc(1px * var(--zoom)) solid var(--line); border-radius:0; padding:calc(12px * var(--zoom)) calc(14px * var(--zoom)) calc(16px * var(--zoom)); margin:0 0 calc(12px * var(--zoom)); min-width:0; }
+      fieldset.card > legend { font-size:calc(11px * var(--zoom)); color:var(--accent); text-transform:uppercase; letter-spacing:calc(1.6px * var(--zoom)); padding:0 calc(7px * var(--zoom)); margin-left:calc(-4px * var(--zoom)); font-weight:700; }
+
+      button { width:100%; padding:calc(11px * var(--zoom)); background:var(--accent); color:var(--accent-txt); border:calc(1px * var(--zoom)) solid var(--accent); border-radius:var(--radius-sm); font-size:calc(12.5px * var(--zoom)); cursor:pointer; text-transform:uppercase; letter-spacing:calc(.8px * var(--zoom)); transition:filter .12s,background .12s,color .12s; }
+      button:active { filter:brightness(.82); }
+      .btn-soft { background:transparent; color:var(--text); border:calc(1px * var(--zoom)) solid var(--line); }
+
+      .seg-ctrl { display:grid; grid-template-columns:repeat(3,1fr); gap:calc(6px * var(--zoom)); }
+      .seg-ctrl.four { grid-template-columns:repeat(4,1fr); }
+      .seg-ctrl + .seg-ctrl { margin-top:calc(8px * var(--zoom)); }
+      .seg-btn { padding:calc(11px * var(--zoom)) calc(4px * var(--zoom)); background:transparent; color:var(--gray); border:calc(1px * var(--zoom)) solid var(--line); border-radius:0; font-size:calc(12px * var(--zoom)); text-align:center; text-transform:uppercase; letter-spacing:calc(.8px * var(--zoom)); font-weight:600; }
+      .seg-btn.active { background:var(--accent); color:var(--accent-txt); border-color:var(--accent); }
+
+      .theme-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:calc(6px * var(--zoom)); }
+      .theme-chip { padding:calc(9px * var(--zoom)) calc(4px * var(--zoom)); background:transparent; color:var(--gray); border:calc(1px * var(--zoom)) solid var(--line); border-radius:0; font-size:calc(11px * var(--zoom)); text-align:center; text-transform:uppercase; letter-spacing:calc(.4px * var(--zoom)); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+      .theme-chip.active { background:var(--accent); color:var(--accent-txt); border-color:var(--accent); }
+
+      /* ---------- calendar header (no borders) ---------- */
+      .cal-head { display:flex; align-items:center; justify-content:center; gap:calc(14px * var(--zoom)); margin-bottom:calc(14px * var(--zoom)); }
+      .cal-arrow { width:calc(40px * var(--zoom)); height:calc(40px * var(--zoom)); padding:0; display:flex; align-items:center; justify-content:center; background:transparent; color:var(--text); border:none; border-radius:0; font-size:calc(20px * var(--zoom)); font-weight:700; line-height:1; cursor:pointer; transition:color .15s; }
+      .cal-arrow:active { color:var(--accent); }
+      .month-wrap { position:relative; display:inline-block; }
+      .month-lbl { font-size:calc(18px * var(--zoom)); background:none; border:none; color:var(--accent); cursor:pointer; padding:calc(6px * var(--zoom)) calc(10px * var(--zoom)); text-transform:none; letter-spacing:0; border-radius:0; font-weight:700; }
+      .month-pick { position:absolute; inset:0; opacity:0; cursor:pointer; border:none; background:none; width:100%; }
+
+      .week-head { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:calc(11px * var(--zoom)); color:var(--gray); letter-spacing:calc(1px * var(--zoom)); margin-bottom:calc(6px * var(--zoom)); font-weight:600; }
+      .week-head .sun-h { color:#ff5252; }
+      .week-head .sat-h { color:#00b0ff; }
+
+      .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:calc(3px * var(--zoom)); }
+      .cal-cell { padding:calc(5px * var(--zoom)); background:var(--surface); border:calc(1px * var(--zoom)) solid var(--line); display:flex; flex-direction:column; justify-content:space-between; min-height:calc(62px * var(--zoom)); cursor:pointer; border-radius:0; transition:background .12s; }
+      .cal-cell:active { filter:brightness(1.25); }
+      .cal-cell.empty { visibility:hidden; pointer-events:none; }
+      .cal-cell.today { border-color:var(--accent); box-shadow:inset 0 0 0 calc(1px * var(--zoom)) var(--accent); }
+      .cell-num { font-size:calc(13.5px * var(--zoom)); color:var(--text); line-height:1; font-weight:600; }
+      .cal-cell.sun .cell-num { color:#ff5252; }
+      .cal-cell.sat .cell-num { color:#00b0ff; }
+      .cell-dots { display:flex; gap:calc(3px * var(--zoom)); flex-wrap:wrap; align-items:center; margin-top:auto; padding-top:calc(4px * var(--zoom)); }
+      .cell-dot { width:calc(6px * var(--zoom)); height:calc(6px * var(--zoom)); border-radius:0; display:block; background:var(--gray); }
+      .cell-dot.hist { background:transparent; border:calc(1px * var(--zoom)) solid var(--gray); }
+      .cell-more { font-size:calc(9px * var(--zoom)); color:var(--gray); line-height:1; font-weight:700; }
+
+      .cal-legend { display:flex; gap:calc(16px * var(--zoom)); margin-top:calc(14px * var(--zoom)); font-size:calc(11px * var(--zoom)); color:var(--gray); letter-spacing:calc(.6px * var(--zoom)); text-transform:uppercase; font-weight:600; }
+      .cal-legend .lg { display:flex; align-items:center; gap:calc(6px * var(--zoom)); }
+      .cal-legend .cell-dot { background:var(--accent); }
+      .cal-legend .cell-dot.hist { background:transparent; border-color:var(--accent); }
+
+      /* ---------- GK modal ---------- */
+      #gk-modal { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:calc(16px * var(--zoom)); }
+      #gk-modal.open { display:flex; }
+      .gk-body { background:var(--bg); width:100%; max-width:calc(480px * var(--zoom)); max-height:82vh; overflow-y:auto; padding:calc(18px * var(--zoom)); display:flex; flex-direction:column; gap:calc(10px * var(--zoom)); -webkit-overflow-scrolling:touch; border-radius:0; border:calc(1px * var(--zoom)) solid var(--line); }
+      .gk-date { font-size:calc(14px * var(--zoom)); color:var(--accent); letter-spacing:calc(1px * var(--zoom)); text-transform:uppercase; font-weight:700; padding-bottom:calc(10px * var(--zoom)); border-bottom:calc(1px * var(--zoom)) solid var(--line); }
+      .gk-item { padding:calc(10px * var(--zoom)); background:var(--surface); border-left:calc(3px * var(--zoom)) solid var(--border); border-radius:0; }
+      .gk-item + .gk-item { margin-top:calc(8px * var(--zoom)); }
+      .gk-title { font-size:calc(14px * var(--zoom)); margin-bottom:calc(3px * var(--zoom)); line-height:1.35; }
+      .gk-year { display:inline-block; background:var(--accent); color:var(--accent-txt); padding:calc(1px * var(--zoom)) calc(6px * var(--zoom)); font-size:calc(11px * var(--zoom)); font-weight:700; letter-spacing:calc(.6px * var(--zoom)); margin-right:calc(6px * var(--zoom)); }
+      .gk-extra { font-size:calc(12.5px * var(--zoom)); color:var(--gray); line-height:1.45; }
+      .gk-empty { font-size:calc(12.5px * var(--zoom)); color:var(--gray); }
+      .gk-hist-title { font-size:calc(11px * var(--zoom)); color:var(--accent); letter-spacing:calc(1.2px * var(--zoom)); margin-top:calc(12px * var(--zoom)); margin-bottom:calc(10px * var(--zoom)); padding-top:calc(12px * var(--zoom)); border-top:calc(1px * var(--zoom)) dashed var(--line); text-transform:uppercase; font-weight:700; }
+      .gk-close { margin-top:calc(6px * var(--zoom)); }
+
+      /* ---------- files ---------- */
+      .file-meta { font-size:calc(12px * var(--zoom)); color:var(--gray); margin-top:calc(12px * var(--zoom)); letter-spacing:calc(.4px * var(--zoom)); line-height:1.5; }
+      .file-list { margin-top:calc(8px * var(--zoom)); background:var(--bg); border:calc(1px * var(--zoom)) solid var(--line); padding:calc(4px * var(--zoom)); max-height:calc(220px * var(--zoom)); overflow-y:auto; border-radius:0; }
+      .file-row { display:flex; align-items:center; gap:calc(8px * var(--zoom)); font-size:calc(12.5px * var(--zoom)); padding:calc(6px * var(--zoom)) calc(6px * var(--zoom)) calc(6px * var(--zoom)) calc(9px * var(--zoom)); border-bottom:calc(1px * var(--zoom)) solid var(--line); }
+      .file-row:last-child { border-bottom:none; }
+      .file-name { flex:1 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .file-del { width:auto; flex:0 0 auto; padding:calc(3px * var(--zoom)) calc(10px * var(--zoom)); background:transparent; color:var(--text); border:calc(1px * var(--zoom)) solid var(--line); font-size:calc(12px * var(--zoom)); line-height:1.3; letter-spacing:0; font-weight:700; }
+      .file-del:active { background:#ff5252; color:#fff; border-color:#ff5252; }
+      .file-empty { font-size:calc(12px * var(--zoom)); color:var(--gray); padding:calc(10px * var(--zoom)); text-align:center; letter-spacing:calc(.5px * var(--zoom)); }
+
+      .about { font-size:calc(12.5px * var(--zoom)); line-height:1.75; color:var(--text); }
+      .about b { color:var(--accent); font-weight:700; }
+    </style>
+
+    <!-- Apply saved theme/size/font BEFORE first paint (no FOUC / no theme flash) -->
+    <script>
+      (function () {
+        var sizes = { s: 0.8, m: 1, l: 1.25, xl: 1.5 };
+        var fonts = {
+          mono: "ui-monospace,'SF Mono',Menlo,Consolas,monospace",
+          serif: "Georgia,'Times New Roman','Noto Serif',serif",
+          sans: "system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
+        };
+        var theme = "gruvbox", size = "m", font = "mono";
+        try {
+          var raw = localStorage.getItem("app_state");
+          if (raw) {
+            var s = JSON.parse(raw) || {};
+            if (s.theme) theme = s.theme;
+            if (sizes[s.uiSize]) size = s.uiSize;
+            if (fonts[s.fontFamily]) font = s.fontFamily;
+          }
+        } catch (e) {}
+        var root = document.documentElement;
+        root.setAttribute("data-theme", theme);
+        root.style.setProperty("--zoom", sizes[size]);
+        root.style.setProperty("--font", fonts[font]);
+      })();
+    </script>
+  </head>
+  <body>
+    <header>
+      <div id="tab-home" class="active" onclick="switchScreen(0)">Home</div>
+      <div id="tab-settings" onclick="switchScreen(1)">Settings</div>
+    </header>
+
+    <div id="viewport">
+      <div class="screen" id="home-screen">
+        <div class="cal-head">
+          <button class="cal-arrow" onclick="changeMonth(-1)" aria-label="Previous month">←</button>
+          <div class="month-wrap">
+            <button class="month-lbl" id="month-label-btn">—</button>
+            <input type="month" id="calendar-month-picker" class="month-pick" aria-label="Pick month" />
+          </div>
+          <button class="cal-arrow" onclick="changeMonth(1)" aria-label="Next month">→</button>
+        </div>
+        <div class="week-head">
+          <div class="sun-h">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat-h">SAT</div>
+        </div>
+        <div class="cal-grid" id="calendar-matrix"></div>
+        <div class="cal-legend">
+          <span class="lg"><span class="cell-dot"></span> Exact date</span>
+          <span class="lg"><span class="cell-dot hist"></span> Anniversary</span>
+        </div>
+      </div>
+
+      <div class="screen" id="settings-screen">
+        <fieldset class="card">
+          <legend>Display</legend>
+          <div class="seg-ctrl" id="font-btns">
+            <button class="seg-btn" data-font="mono" onclick="setFont('mono')">Mono</button>
+            <button class="seg-btn" data-font="serif" onclick="setFont('serif')">Serif</button>
+            <button class="seg-btn" data-font="sans" onclick="setFont('sans')">Sans</button>
+          </div>
+          <div class="seg-ctrl four" id="size-btns">
+            <button class="seg-btn" data-size="s" onclick="setUiSize('s')">S</button>
+            <button class="seg-btn" data-size="m" onclick="setUiSize('m')">M</button>
+            <button class="seg-btn" data-size="l" onclick="setUiSize('l')">L</button>
+            <button class="seg-btn" data-size="xl" onclick="setUiSize('xl')">XL</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Theme</legend>
+          <div class="theme-grid" id="theme-btns">
+            <button class="theme-chip" data-th="gruvbox" onclick="setTheme('gruvbox')">Gruvbox</button>
+            <button class="theme-chip" data-th="dracula" onclick="setTheme('dracula')">Dracula</button>
+            <button class="theme-chip" data-th="monokai" onclick="setTheme('monokai')">Monokai</button>
+            <button class="theme-chip" data-th="nord" onclick="setTheme('nord')">Nord</button>
+            <button class="theme-chip" data-th="purple" onclick="setTheme('purple')">Purple</button>
+            <button class="theme-chip" data-th="amoled" onclick="setTheme('amoled')">Amoled</button>
+            <button class="theme-chip" data-th="cupcake" onclick="setTheme('cupcake')">Cupcake</button>
+            <button class="theme-chip" data-th="catppuccin" onclick="setTheme('catppuccin')">Catppuccin</button>
+            <button class="theme-chip" data-th="catppuccin-frappe" onclick="setTheme('catppuccin-frappe')">Frappe</button>
+            <button class="theme-chip" data-th="everforest" onclick="setTheme('everforest')">Everforest</button>
+            <button class="theme-chip" data-th="everforest-light" onclick="setTheme('everforest-light')">Ev-Light</button>
+            <button class="theme-chip" data-th="tokyo-night" onclick="setTheme('tokyo-night')">Tokyo</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>Data</legend>
+          <input type="file" id="csv-file-loader" accept=".csv,.txt,text/csv" multiple style="display:none" onchange="importFiles(event)" />
+          <input type="file" id="csv-directory-loader" webkitdirectory directory multiple style="display:none" onchange="importFiles(event)" />
+          <div class="seg-ctrl">
+            <button class="seg-btn" onclick="document.getElementById('csv-file-loader').click()">Files</button>
+            <button class="seg-btn" onclick="document.getElementById('csv-directory-loader').click()">Folder</button>
+            <button class="seg-btn" onclick="clearAllFiles()">Clear</button>
+          </div>
+          <div class="file-meta" id="file-meta">—</div>
+          <div class="file-list" id="csv-menu-box">
+            <div id="csv-serial-list"></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>CSV Format</legend>
+          <div class="about">
+            <b>date, color, event, extra</b><br>
+            1947-08-15, #ff9933, India Independence, Historic Shift 1947<br>
+            2026-06-08, #2196f3, World Oceans Day, Theme: Protect Ocean<br><br>
+            A header row is optional. Dates must be <b>YYYY-MM-DD</b>.
+            Any event on a past date is re-shown automatically on that same
+            day in every later year as an anniversary.
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend>About</legend>
+          <div class="about" id="project-description-box"></div>
+        </fieldset>
+      </div>
+    </div>
+
+    <div id="gk-modal">
+      <div class="gk-body">
+        <div class="gk-date" id="gk-target-date"></div>
+        <div id="gk-current-events"></div>
+        <div id="gk-history-section">
+          <div class="gk-hist-title">On this day in history</div>
+          <div id="gk-history-events"></div>
+        </div>
+        <button class="btn-soft gk-close" onclick="closeGk()">Close</button>
+      </div>
+    </div>
+
+    <script>
+      "use strict";
+
+      const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const UI_SIZES = { s:0.8, m:1, l:1.25, xl:1.5 };
+      const FONTS = {
+        mono: "ui-monospace,'SF Mono',Menlo,Consolas,monospace",
+        serif: "Georgia,'Times New Roman','Noto Serif',serif",
+        sans: "system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif"
+      };
+      const DEFAULT_EVENTS = [
+        { date:"2026-06-08", color:"#2196f3", event:"World Oceans Day", extra:"Theme: Protect Ocean" },
+        { date:"1776-07-04", color:"#ff5252", event:"USA Independence", extra:"Historic Day Declaration" },
+        { date:"1947-08-15", color:"#ff9933", event:"India Independence", extra:"Historic Shift 1947" },
+        { date:"2026-06-13", color:"#4caf50", event:"Project Release", extra:"" }
+      ];
+
+      /* ---------- persistent file store (IndexedDB, localStorage fallback) ---------- */
+      const Storage = (function () {
+        const DB_NAME = "rekishi_teki_db", STORE = "csv_files", VERSION = 1;
+        const LS_KEY = "rt_csv_files_v1";
+        let db = null, mode = "idb";
+
+        function open() {
+          return new Promise(function (resolve) {
+            if (typeof indexedDB === "undefined") { mode = "ls"; return resolve(null); }
+            let req;
+            try { req = indexedDB.open(DB_NAME, VERSION); }
+            catch (e) { mode = "ls"; return resolve(null); }
+            req.onupgradeneeded = function () {
+              const d = req.result;
+              if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE, { keyPath: "name" });
+            };
+            req.onsuccess = function () { resolve(req.result); };
+            req.onerror = function () { mode = "ls"; resolve(null); };
+            req.onblocked = function () { mode = "ls"; resolve(null); };
+          });
+        }
+
+        function tx(m, fn) {
+          return new Promise(function (resolve, reject) {
+            let t;
+            try { t = db.transaction(STORE, m); } catch (e) { return reject(e); }
+            const store = t.objectStore(STORE);
+            const req = fn(store);
+            t.oncomplete = function () { resolve(req ? req.result : undefined); };
+            t.onerror = function () { reject(t.error); };
+            t.onabort = function () { reject(t.error); };
+          });
+        }
+
+        function lsRead() {
+          try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]") || []; } catch (e) { return []; }
+        }
+        function lsWrite(arr) {
+          try { localStorage.setItem(LS_KEY, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        return {
+          init: async function () { db = await open(); },
+          list: async function () {
+            if (mode === "idb" && db) {
+              try { return (await tx("readonly", function (s) { return s.getAll(); })) || []; }
+              catch (e) { mode = "ls"; }
+            }
+            return lsRead();
+          },
+          put: async function (name, content) {
+            if (mode === "idb" && db) {
+              try { return await tx("readwrite", function (s) { return s.put({ name: name, content: content }); }); }
+              catch (e) { mode = "ls"; }
+            }
+            const arr = lsRead();
+            const i = arr.findIndex(function (f) { return f.name === name; });
+            if (i >= 0) arr[i] = { name: name, content: content };
+            else arr.push({ name: name, content: content });
+            lsWrite(arr);
+          },
+          remove: async function (name) {
+            if (mode === "idb" && db) {
+              try { return await tx("readwrite", function (s) { return s.delete(name); }); }
+              catch (e) { mode = "ls"; }
+            }
+            lsWrite(lsRead().filter(function (f) { return f.name !== name; }));
+          },
+          clear: async function () {
+            if (mode === "idb" && db) {
+              try { return await tx("readwrite", function (s) { return s.clear(); }); }
+              catch (e) { mode = "ls"; }
+            }
+            lsWrite([]);
+          }
+        };
+      })();
+
+      /* ---------- app state ---------- */
+      let state = { theme:"gruvbox", uiSize:"m", fontFamily:"mono" };
+      let eventsDatabase = [];
+      let fileRegistry = [];
+      let eventIndex = { byDate:new Map(), byMD:new Map() };
+      let currentYear = 0;
+      let currentMonth = 0;
+      const el = {};
+
+      const $ = (id) => document.getElementById(id);
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const isoOf = (y, m, d) => y + "-" + pad2(m) + "-" + pad2(d);
+      const ESC = { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" };
+      const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ESC[c]);
+      const baseName = (p) => String(p || "").split("/").pop();
+
+      function cacheElements() {
+        el.viewport = $("viewport");
+        el.tabHome = $("tab-home");
+        el.tabSettings = $("tab-settings");
+        el.monthLabel = $("month-label-btn");
+        el.monthPicker = $("calendar-month-picker");
+        el.matrix = $("calendar-matrix");
+        el.themeBtns = $("theme-btns");
+        el.sizeBtns = $("size-btns");
+        el.fontBtns = $("font-btns");
+        el.fileMenuBox = $("csv-menu-box");
+        el.fileList = $("csv-serial-list");
+        el.fileMeta = $("file-meta");
+        el.gkModal = $("gk-modal");
+        el.gkDate = $("gk-target-date");
+        el.gkCurrent = $("gk-current-events");
+        el.gkHistSection = $("gk-history-section");
+        el.gkHistory = $("gk-history-events");
+      }
+
+      function init() {
+        cacheElements();
+
+        try {
+          const saved = localStorage.getItem("app_state");
+          if (saved) Object.assign(state, JSON.parse(saved));
+        } catch (e) {}
+        migrateState();
+
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth();
+
+        setTheme(state.theme);
+        setFont(state.fontFamily);
+        setUiSize(state.uiSize);
+        writeAboutText();
+        bindEvents();
+
+        // immediate first paint with built-in samples
+        applyEvents(DEFAULT_EVENTS.slice(), []);
+
+        // then hydrate from IndexedDB
+        bootStorage();
+      }
+
+      async function bootStorage() {
+        try { await Storage.init(); } catch (e) {}
+        await loadFromStorage();
+      }
+
+      function migrateState() {
+        if (!state.uiSize) state.uiSize = { 1:"s", 2:"m", 3:"l" }[state.scaleLevel] || "m";
+        delete state.scaleLevel;
+        if (!UI_SIZES[state.uiSize]) state.uiSize = "m";
+        if (!FONTS[state.fontFamily]) state.fontFamily = "mono";
+        if (!state.theme) state.theme = "gruvbox";
+      }
+
+      function saveState() {
+        try { localStorage.setItem("app_state", JSON.stringify(state)); } catch (e) {}
+      }
+
+      function writeAboutText() {
+        $("project-description-box").innerHTML =
+          "Goals of this project is to help remember historical events and keep track of " +
+          "events of importance through csv based note tracking. It can be also used to track " +
+          "personal journal entries and upcoming events accurately inside mobile webview frameworks.<br><br>" +
+          "Import single files or a whole folder — everything is stored on-device and reloaded " +
+          "automatically. An event that happened on 15 Aug 1947 shows up again on 15 Aug of every " +
+          "later year as an anniversary, so the same date keeps teaching you its history.";
+      }
+
+      /* ---------- indexing ---------- */
+      function buildEventIndex() {
+        const byDate = new Map();
+        const byMD = new Map();
+        for (const ev of eventsDatabase) {
+          if (!ev || !ev.date) continue;
+          let b = byDate.get(ev.date);
+          if (!b) byDate.set(ev.date, (b = []));
+          b.push(ev);
+          const md = ev.date.slice(-5);
+          let m = byMD.get(md);
+          if (!m) byMD.set(md, (m = []));
+          m.push(ev);
+        }
+        eventIndex = { byDate, byMD };
+      }
+
+      function applyEvents(events, files) {
+        eventsDatabase = events;
+        fileRegistry = files;
+        buildEventIndex();
+        updateFileMenuDisplay();
+        renderCalendar();
+      }
+
+      /* ---------- screens / chrome ---------- */
+      function switchScreen(idx) {
+        el.viewport.style.transform = "translateX(-" + (idx * 100) + "vw)";
+        el.tabHome.classList.toggle("active", idx === 0);
+        el.tabSettings.classList.toggle("active", idx === 1);
+      }
+
+      function bindEvents() {
+        el.matrix.addEventListener("click", (e) => {
+          const cell = e.target.closest(".cal-cell");
+          if (!cell || !cell.dataset.iso) return;
+          launchGkViewer(cell.dataset.iso, cell.dataset.md);
+        });
+
+        el.monthPicker.addEventListener("change", (e) => {
+          if (!e.target.value) return;
+          const parts = e.target.value.split("-");
+          currentYear = parseInt(parts[0], 10);
+          currentMonth = parseInt(parts[1], 10) - 1;
+          renderCalendar();
+        });
+
+        el.gkModal.addEventListener("click", (e) => {
+          if (e.target === el.gkModal) closeGk();
+        });
+
+        // per-file remove buttons (delegated, survives re-render)
+        el.fileList.addEventListener("click", (e) => {
+          const btn = e.target.closest(".file-del");
+          if (!btn) return;
+          removeFile(btn.dataset.del);
+        });
+
+        let sx = 0, sy = 0, active = false;
+        window.addEventListener("touchstart", (e) => {
+          if (e.touches.length !== 1) { active = false; return; }
+          if (e.target.closest("input, button, #gk-modal")) { active = false; return; }
+          sx = e.touches[0].clientX;
+          sy = e.touches[0].clientY;
+          active = true;
+        }, { passive: true });
+        window.addEventListener("touchmove", (e) => {
+          if (!active) return;
+          const dx = e.touches[0].clientX - sx;
+          const dy = e.touches[0].clientY - sy;
+          const adx = Math.abs(dx), ady = Math.abs(dy);
+          if (adx > ady && adx > 40) { switchScreen(dx > 0 ? 0 : 1); active = false; }
+          else if (ady > adx && ady > 50) { if (el.tabHome.classList.contains("active")) changeMonth(dy > 0 ? -1 : 1); active = false; }
+        }, { passive: true });
+      }
+
+      function setTheme(t) {
+        state.theme = t;
+        document.documentElement.setAttribute("data-theme", t);
+        for (const b of el.themeBtns.querySelectorAll(".theme-chip")) b.classList.toggle("active", b.dataset.th === t);
+        saveState();
+      }
+
+      function setFont(f) {
+        if (!FONTS[f]) f = "mono";
+        state.fontFamily = f;
+        document.documentElement.style.setProperty("--font", FONTS[f]);
+        for (const b of el.fontBtns.querySelectorAll(".seg-btn")) b.classList.toggle("active", b.dataset.font === f);
+        saveState();
+      }
+
+      function setUiSize(size) {
+        if (!UI_SIZES[size]) size = "m";
+        state.uiSize = size;
+        document.documentElement.style.setProperty("--zoom", UI_SIZES[size]);
+        for (const b of el.sizeBtns.querySelectorAll(".seg-btn")) b.classList.toggle("active", b.dataset.size === size);
+        saveState();
+      }
+
+      /* ---------- calendar ---------- */
+      function renderCalendar() {
+        const firstDow = new Date(currentYear, currentMonth, 1).getDay();
+        const totalDays = new Date(currentYear, currentMonth + 1, 0).getDate();
+        el.monthLabel.textContent = MONTHS[currentMonth] + " " + currentYear;
+        el.monthPicker.value = currentYear + "-" + pad2(currentMonth + 1);
+
+        const now = new Date();
+        const todayISO = isoOf(now.getFullYear(), now.getMonth() + 1, now.getDate());
+        const ym = currentYear + "-" + pad2(currentMonth + 1) + "-";
+        const out = [];
+
+        for (let i = 0; i < firstDow; i++) out.push('<div class="cal-cell empty"></div>');
+
+        for (let d = 1; d <= totalDays; d++) {
+          const iso = ym + pad2(d);
+          const md = iso.slice(5);
+          const dow = (firstDow + d - 1) % 7;
+          let cls = "cal-cell";
+          if (dow === 0) cls += " sun";
+          else if (dow === 6) cls += " sat";
+          if (iso === todayISO) cls += " today";
+
+          // exact-date events for this year + anniversaries from every other year
+          const direct = eventIndex.byDate.get(iso) || [];
+          const hist = (eventIndex.byMD.get(md) || []).filter((ev) => ev.date !== iso);
+
+          const marks = [];
+          const seenMarks = new Set();
+          for (const e of direct) {
+            const k = "d|" + (e.color || "");
+            if (seenMarks.has(k)) continue;
+            seenMarks.add(k);
+            marks.push({ c: e.color || "var(--gray)", hist: false });
+          }
+          for (const e of hist) {
+            const k = "h|" + (e.color || "");
+            if (seenMarks.has(k)) continue;
+            seenMarks.add(k);
+            marks.push({ c: e.color || "var(--gray)", hist: true });
+          }
+
+          const MAXD = 4;
+          let dots = "";
+          for (let i = 0; i < Math.min(marks.length, MAXD); i++) {
+            const m = marks[i];
+            dots += m.hist
+              ? '<span class="cell-dot hist" style="border-color:' + esc(m.c) + '"></span>'
+              : '<span class="cell-dot" style="background:' + esc(m.c) + '"></span>';
+          }
+          if (marks.length > MAXD) dots += '<span class="cell-more">+' + (marks.length - MAXD) + '</span>';
+
+          out.push(
+            '<div class="' + cls + '" data-iso="' + iso + '" data-md="' + md + '">' +
+              '<div class="cell-num">' + d + '</div>' +
+              '<div class="cell-dots">' + dots + '</div>' +
+            '</div>'
+          );
+        }
+        el.matrix.innerHTML = out.join("");
+      }
+
+      function changeMonth(delta) {
+        let m = currentMonth + delta, y = currentYear;
+        if (m > 11) { m = 0; y++; }
+        else if (m < 0) { m = 11; y--; }
+        currentMonth = m;
+        currentYear = y;
+        renderCalendar();
+      }
+
+      /* ---------- GK modal ---------- */
+      function closeGk() { el.gkModal.classList.remove("open"); }
+
+      function gkItemHTML(ev, color, titleHTML) {
+        return '<div class="gk-item" style="border-color:' + color + '">' +
+          '<div class="gk-title">' + titleHTML + '</div>' +
+          (ev.extra ? '<div class="gk-extra">' + esc(ev.extra) + '</div>' : "") +
+        '</div>';
+      }
+
+      function launchGkViewer(isoDate, mdString) {
+        const p = isoDate.split("-");
+        el.gkDate.textContent = parseInt(p[2], 10) + " " + MONTHS[parseInt(p[1], 10) - 1] + " " + p[0];
+
+        const direct = (eventIndex.byDate.get(isoDate) || []).slice()
+          .sort((a, b) => a.event.localeCompare(b.event));
+
+        const hist = (eventIndex.byMD.get(mdString) || [])
+          .filter((ev) => ev.date !== isoDate)
+          .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+
+        if (direct.length === 0) {
+          el.gkCurrent.innerHTML = "";
+        } else {
+          el.gkCurrent.innerHTML = direct.map((ev) => {
+            const c = esc(ev.color || "var(--gray)");
+            return gkItemHTML(ev, c, '<span style="color:' + c + '">' + esc(ev.event) + '</span>');
+          }).join("");
+        }
+
+        if (hist.length === 0) {
+          if (direct.length === 0) {
+            el.gkHistSection.style.display = "block";
+            el.gkHistory.innerHTML = '<div class="gk-empty">Nothing recorded for this date yet.</div>';
+          } else {
+            el.gkHistSection.style.display = "none";
+            el.gkHistory.innerHTML = "";
+          }
+        } else {
+          el.gkHistSection.style.display = "block";
+          el.gkHistory.innerHTML = hist.map((ev) => {
+            const year = ev.date.slice(0, 4);
+            const c = esc(ev.color || "var(--accent)");
+            return gkItemHTML(
+              ev,
+              c,
+              '<span class="gk-year">' + esc(year) + '</span><span style="color:' + c + '">' + esc(ev.event) + '</span>'
+            );
+          }).join("");
+        }
+
+        el.gkModal.classList.add("open");
+      }
+
+      /* ---------- CSV ---------- */
+      function parseCSVLine(line) {
+        const out = [];
+        let cur = "", inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (inQuotes) {
+            if (ch === '"') {
+              if (line[i + 1] === '"') { cur += '"'; i++; }
+              else inQuotes = false;
+            } else cur += ch;
+          } else if (ch === '"') inQuotes = true;
+          else if (ch === ",") { out.push(cur); cur = ""; }
+          else cur += ch;
+        }
+        out.push(cur);
+        return out;
+      }
+
+      function normDate(raw) {
+        let s = String(raw == null ? "" : raw).trim().replace(/[./]/g, "-");
+        const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (!m) return "";
+        const y = +m[1], mo = +m[2], d = +m[3];
+        if (mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+        const dt = new Date(y, mo - 1, d);
+        if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return "";
+        return y + "-" + pad2(mo) + "-" + pad2(d);
+      }
+
+      function parseCSVInto(text, target) {
+        if (!text) return;
+        const lines = String(text).split(/\r?\n/);
+        if (!lines.length) return;
+
+        let start = 0;
+        const first = (lines[0] || "").trim();
+        if (first) {
+          const head = (parseCSVLine(first)[0] || "").trim();
+          if (!normDate(head)) start = 1; // header row
+        }
+
+        for (let i = start; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line || !line.trim()) continue;
+          const seg = parseCSVLine(line);
+          const date = normDate(seg[0]);
+          if (!date) continue;
+          const event = (seg[2] || "").trim();
+          if (!event) continue;
+          target.push({
+            date: date,
+            color: (seg[1] || "").trim(),
+            event: event,
+            extra: (seg[3] || "").trim()
+          });
+        }
+      }
+
+      function readText(file) {
+        return new Promise(function (resolve, reject) {
+          const r = new FileReader();
+          r.onload = function (e) { resolve(e.target.result); };
+          r.onerror = function () { reject(r.error); };
+          r.readAsText(file);
+        });
+      }
+
+      /* ---------- import / remove ---------- */
+      async function importFiles(evt) {
+        const input = evt.target;
+        const picked = Array.from(input.files || []).filter((f) => /\.(csv|txt)$/i.test(f.name));
+        input.value = ""; // allow re-picking the same file later
+
+        if (!picked.length) {
+          el.fileMeta.textContent = "No .csv / .txt files found in that selection.";
+          return;
+        }
+
+        el.fileMeta.textContent = "Importing " + picked.length + " file(s)…";
+
+        for (const f of picked) {
+          const key = f.webkitRelativePath || f.name;
+          try {
+            const text = await readText(f);
+            await Storage.put(key, text);
+          } catch (e) {
+            console.warn("Import failed:", key, e);
+          }
+        }
+
+        await loadFromStorage();
+        switchScreen(0);
+      }
+
+      async function removeFile(name) {
+        try { await Storage.remove(name); } catch (e) {}
+        await loadFromStorage();
+      }
+
+      async function clearAllFiles() {
+        try { await Storage.clear(); } catch (e) {}
+        await loadFromStorage();
+      }
+
+      async function loadFromStorage() {
+        let files = [];
+        try { files = await Storage.list(); } catch (e) { files = []; }
+        files = files.filter((f) => f && f.name).sort((a, b) => a.name.localeCompare(b.name));
+
+        if (!files.length) {
+          applyEvents(DEFAULT_EVENTS.slice(), []);
+          return;
+        }
+
+        const all = [];
+        const seen = new Set();
+        for (const f of files) {
+          const rows = [];
+          parseCSVInto(f.content, rows);
+          for (const r of rows) {
+            const k = r.date + "|" + r.event;
+            if (seen.has(k)) continue;
+            seen.add(k);
+            all.push(r);
+          }
+        }
+        applyEvents(all, files.map((f) => f.name));
+      }
+
+      function updateFileMenuDisplay() {
+        const n = fileRegistry.length;
+        const total = eventsDatabase.length;
+
+        el.fileMeta.textContent = n === 0
+          ? "Sample data in use · " + total + " event" + (total === 1 ? "" : "s")
+          : n + " file" + (n === 1 ? "" : "s") + " saved on device · " + total + " event" + (total === 1 ? "" : "s");
+
+        if (n === 0) {
+          el.fileList.innerHTML = '<div class="file-empty">No files imported yet.</div>';
+          return;
+        }
+
+        el.fileList.innerHTML = fileRegistry.map((name) => (
+          '<div class="file-row">' +
+            '<span class="file-name" title="' + esc(name) + '">' + esc(baseName(name)) + '</span>' +
+            '<button class="file-del" data-del="' + esc(name) + '" aria-label="Remove file">✕</button>' +
+          '</div>'
+        )).join("");
+      }
+
+      init();
+    </script>
+  </body>
+</html>

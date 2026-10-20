@@ -6,12 +6,12 @@
 <title>Shinten - Progress Bar</title>
 <script>
 (function(){
-  var themes = ['nord','themeforest-light','catppuccin-frappe','gruvbox','amoled'];
+  var themes = ['paper','mint','nord','catppuccin-frappe','gruvbox','amoled'];
   var fonts = ['sans','monospace','serif'];
-  var t = 'catppuccin-frappe', f = 'sans';
+  var t = 'paper', f = 'sans';
   try { t = localStorage.getItem('progress-theme') || t; } catch(e){}
   try { f = localStorage.getItem('progress-font') || f; } catch(e){}
-  if (themes.indexOf(t) === -1) t = 'catppuccin-frappe';
+  if (themes.indexOf(t) === -1) t = 'paper';
   if (fonts.indexOf(f) === -1) f = 'sans';
   var r = document.documentElement;
   r.setAttribute('data-theme', t);
@@ -21,214 +21,263 @@
 <style>
 :root{
   --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bw: 2px;
 }
 html[data-font="monospace"]{ --font: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
 html[data-font="serif"]{ --font: Georgia, Cambria, "Times New Roman", Times, serif; }
 
-html[data-theme="nord"]{
-  --bg:#2e3440; --panel:#3b4252; --panel2:#434c5e; --border:#4c566a;
-  --text:#eceff4; --muted:#a0aab8; --accent:#88c0d0; --accent2:#81a1c1;
-  --glow:136,192,208; --track:#3b4252; --danger:#bf616a;
+/* ---------- THEMES ---------- */
+
+/* Light + loud (default) */
+html[data-theme="paper"]{
+  --bg:#f4efe4; --panel:#ffffff; --panel2:#ebe4d5;
+  --line:#151310; --hard:#151310;
+  --text:#151310; --muted:#6d6455;
+  --accent:#ff3d00; --accent2:#1d4ed8; --on-accent:#fffdf7;
+  --track:#ded5c2; --danger:#d61b3c;
 }
-html[data-theme="themeforest-light"]{
-  --bg:#f2f3f5; --panel:#e8ebee; --panel2:#dfe3e8; --border:#d0d6dd;
-  --text:#23282d; --muted:#7b858f; --accent:#16a085; --accent2:#f39c12;
-  --glow:22,160,133; --track:#dfe3e8; --danger:#d64545;
+/* Light + fresh */
+html[data-theme="mint"]{
+  --bg:#e6f6ee; --panel:#ffffff; --panel2:#d3eede;
+  --line:#062a20; --hard:#062a20;
+  --text:#062a20; --muted:#3f6f5f;
+  --accent:#008a55; --accent2:#0b4fd8; --on-accent:#ffffff;
+  --track:#c3e6d4; --danger:#d61b3c;
+}
+html[data-theme="nord"]{
+  --bg:#242933; --panel:#2e3440; --panel2:#3b4252;
+  --line:#0d1017; --hard:#0d1017;
+  --text:#eceff4; --muted:#9aa7bd;
+  --accent:#88c0d0; --accent2:#a3be8c; --on-accent:#10141b;
+  --track:#1b1f27; --danger:#ff5c72;
 }
 html[data-theme="catppuccin-frappe"]{
-  --bg:#303446; --panel:#414559; --panel2:#51576d; --border:#51576d;
-  --text:#c6d0f5; --muted:#a5adce; --accent:#ca9ee6; --accent2:#8caaee;
-  --glow:202,158,230; --track:#414559; --danger:#e78284;
+  --bg:#232634; --panel:#303446; --panel2:#414559;
+  --line:#12141c; --hard:#12141c;
+  --text:#c6d0f5; --muted:#a5adce;
+  --accent:#ca9ee6; --accent2:#8caaee; --on-accent:#1b1226;
+  --track:#1a1c26; --danger:#e78284;
 }
 html[data-theme="gruvbox"]{
-  --bg:#282828; --panel:#3c3836; --panel2:#504945; --border:#504945;
-  --text:#ebdbb2; --muted:#a89984; --accent:#fabd2f; --accent2:#fe8019;
-  --glow:250,189,47; --track:#3c3836; --danger:#fb4934;
+  --bg:#1d2021; --panel:#282828; --panel2:#3c3836;
+  --line:#0a0a0a; --hard:#0a0a0a;
+  --text:#fbf1c7; --muted:#bdae93;
+  --accent:#fabd2f; --accent2:#fe8019; --on-accent:#1d2021;
+  --track:#161616; --danger:#fb4934;
 }
 html[data-theme="amoled"]{
-  --bg:#000000; --panel:#0e0e10; --panel2:#18181b; --border:#242428;
-  --text:#ffffff; --muted:#909090; --accent:#ffffff; --accent2:#c0c0c0;
-  --glow:255,255,255; --track:#141414; --danger:#ff4d6d;
+  --bg:#000000; --panel:#0b0b0d; --panel2:#17171a;
+  --line:#3a3a40; --hard:#2e2e35;
+  --text:#ffffff; --muted:#9a9aa2;
+  --accent:#ffffff; --accent2:#8ab4ff; --on-accent:#000000;
+  --track:#111114; --danger:#ff4d6d;
 }
 
+/* ---------- BASE ---------- */
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 html{background:var(--bg);color:var(--text)}
 body{
   background:var(--bg);color:var(--text);
   font-family:var(--font);
-  font-size:14px;line-height:1.45;
-  min-height:100vh;padding:18px 16px 40px;
+  font-size:13px;line-height:1.4;font-weight:500;
+  min-height:100vh;padding:14px 12px 32px;
   -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
 }
-.app{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.app{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
 
 fieldset{
-  border:1px solid var(--border);
-  background:var(--bg);
-  border-radius:4px;
+  border:var(--bw) solid var(--line);
+  background:var(--panel);
+  border-radius:5px;
   padding:14px 12px 12px;
   margin:0;
   min-width:0;
+  box-shadow:3px 3px 0 var(--hard);
 }
 legend{
-  font-size:10px;font-weight:600;
+  font-size:9px;font-weight:900;
   text-transform:uppercase;letter-spacing:.18em;
-  color:var(--muted);padding:0 7px;margin-left:4px;
+  color:var(--on-accent);
+  background:var(--accent);
+  border:var(--bw) solid var(--line);
+  border-radius:3px;
+  padding:2px 8px;
+  margin-left:2px;
 }
 
+/* ---------- ABOUT / TITLE ---------- */
 .title{
-  font-size:17px;letter-spacing:.24em;text-transform:uppercase;
-  font-weight:600;margin:0;
+  font-size:clamp(24px,5vw,40px);
+  font-weight:900;
+  letter-spacing:-.03em;
+  line-height:.98;
+  margin:0;
+  text-transform:uppercase;
 }
-/*.title b{color:var(--accent);--text-shadow:0 0 12px rgba(var(--glow),.75)}*/
-.sub{margin:5px 0 0;color:var(--muted);font-size:12px}
+.title .mark{color:var(--accent)}
+.sub{
+  margin:8px 0 0;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:600;
+  max-width:70ch;
+}
+.sub b{color:var(--text)}
 
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.row + .row{margin-top:8px}
+/* ---------- CONTROLS ---------- */
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.row + .row{margin-top:6px}
 
-.btn{
-  font:inherit;font-size:11px;font-weight:600;
+.btn, .ubtn{
+  font:inherit;
+  font-size:10px;font-weight:900;
   letter-spacing:.1em;text-transform:uppercase;
-  padding:9px 14px;border-radius:3px;cursor:pointer;
-  border:1px solid var(--border);
+  padding:7px 11px;
+  border:var(--bw) solid var(--line);
+  border-radius:4px;
   background:var(--panel);color:var(--text);
-  transition:border-color .16s,box-shadow .16s,background-color .16s,color .16s,text-shadow .16s;
+  cursor:pointer;
+  box-shadow:2px 2px 0 var(--hard);
+  transition:transform .1s ease, box-shadow .1s ease,
+             background-color .14s ease, color .14s ease, border-color .14s ease;
 }
-.btn:hover{border-color:rgba(var(--glow),.65);box-shadow:0 0 10px rgba(var(--glow),.28)}
-.btn:active{transform:translateY(1px)}
+.btn:hover, .ubtn:hover{transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--hard)}
+.btn:active, .ubtn:active{transform:translate(2px,2px);box-shadow:0 0 0 var(--hard)}
 
-.ubtn{
-  font:inherit;font-size:11px;font-weight:600;
-  letter-spacing:.1em;text-transform:uppercase;
-  padding:9px 13px;border-radius:3px;cursor:pointer;
-  border:1px solid var(--border);
-  background:var(--panel);color:var(--muted);
-  transition:border-color .18s,box-shadow .18s,background-color .18s,color .18s,text-shadow .18s;
-}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+
+.ubtn{background:var(--panel2);color:var(--muted)}
 .ubtn.on{
-  color:var(--text);
-  border-color:rgba(var(--glow),.8);
-  background:rgba(var(--glow),.13);
-  box-shadow:
-    0 0 6px rgba(var(--glow),.55),
-    0 0 20px rgba(var(--glow),.30),
-    inset 0 0 12px rgba(var(--glow),.14);
-  text-shadow:0 0 9px rgba(var(--glow),.85);
+  background:var(--accent);
+  color:var(--on-accent);
+  border-color:var(--line);
 }
-.ubtn:hover{border-color:rgba(var(--glow),.6)}
 
 .btn.del{
-  padding:5px 10px;font-size:10px;
-  color:var(--danger);
-  border-color:rgba(255,255,255,.10);
-  background:transparent;
-}
-.btn.del:hover{
+  padding:4px 8px;font-size:9px;
+  background:transparent;color:var(--danger);
   border-color:var(--danger);
-  box-shadow:0 0 12px rgba(255,80,80,.28);
+  box-shadow:none;
 }
+.btn.del:hover{background:var(--danger);color:#fff;border-color:var(--line);transform:none;box-shadow:none}
 
-.events{display:flex;flex-direction:column;gap:9px}
+/* ---------- EVENTS ---------- */
+.events{display:flex;flex-direction:column;gap:8px}
+
 .card{
-  border:1px solid var(--border);
-  border-left:3px solid var(--src,var(--accent));
-  background:var(--bg);
-  border-radius:4px;
-  padding:11px 12px;
-  display:flex;flex-direction:column;gap:9px;
+  border:var(--bw) solid var(--line);
+  background:var(--panel);
+  border-radius:5px;
+  padding:9px 11px;
+  display:flex;flex-direction:column;gap:7px;
+  box-shadow:3px 3px 0 var(--hard);
 }
-.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.ev-name{font-size:14px;font-weight:600;letter-spacing:.02em}
-.ev-right{display:flex;gap:9px;align-items:baseline;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
-.ev-pct{color:var(--accent);font-variant-numeric:tabular-nums;font-weight:600}
+.card-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  gap:8px 12px;flex-wrap:wrap;
+}
+.ev-name{
+  font-size:15px;font-weight:900;
+  letter-spacing:-.01em;line-height:1.15;
+  overflow-wrap:anywhere;
+}
+.ev-right{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ev-label{
+  font-size:9px;font-weight:900;text-transform:uppercase;
+  letter-spacing:.14em;color:var(--muted);
+}
+.ev-pct{
+  font-size:16px;font-weight:900;line-height:1;
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em;
+}
 
-.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
 .chip{
-  display:flex;align-items:baseline;gap:5px;
-  padding:4px 9px;border:1px solid var(--border);
-  border-radius:3px;background:var(--panel);
+  display:flex;align-items:baseline;gap:4px;
+  padding:3px 7px;
+  border:var(--bw) solid var(--line);
+  border-radius:3px;
+  background:var(--panel2);
 }
-.chip b{font-size:15px;font-variant-numeric:tabular-nums;font-weight:600;line-height:1.1}
+.chip b{
+  font-size:13px;font-weight:900;line-height:1.05;
+  font-variant-numeric:tabular-nums;
+}
 .chip i{
-  font-style:normal;font-size:9px;text-transform:uppercase;
-  letter-spacing:.12em;color:var(--muted);
+  font-style:normal;font-size:8px;font-weight:900;
+  text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);
 }
 
 progress.bar{
-  -webkit-appearance:none;
-  appearance:none;
-  width:100%;height:10px;
-  border:1px solid var(--border);
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:11px;
+  border:var(--bw) solid var(--line);
   border-radius:3px;
   background:var(--track);
   overflow:hidden;
   display:block;
 }
-progress.bar::-webkit-progress-bar{
-  background:var(--track);
-  border-radius:2px;
-}
+progress.bar::-webkit-progress-bar{background:var(--track);border-radius:0}
 progress.bar::-webkit-progress-value{
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  box-shadow:0 0 14px rgba(var(--glow),.65);
-  border-radius:2px;
+  background:var(--accent);
+  border-radius:0;
 }
 progress.bar::-moz-progress-bar{
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
-  box-shadow:0 0 14px rgba(var(--glow),.65);
-  border-radius:2px;
+  background:var(--accent);
+  border-radius:0;
 }
 
-.ev-meta{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.ev-meta{
+  font-size:10px;font-weight:700;
+  color:var(--muted);
+  letter-spacing:.03em;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+}
 
+/* ---------- SOURCES ---------- */
 .src{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 10px;border:1px solid var(--border);
-  background:var(--panel);border-radius:3px;
+  display:flex;align-items:center;gap:8px;
+  padding:6px 9px;
+  border:var(--bw) solid var(--line);
+  background:var(--panel2);
+  border-radius:4px;
 }
-.src + .src{margin-top:6px}
-.src .dot{width:9px;height:9px;border-radius:2px;background:var(--src,var(--accent));flex:none}
-.src .fname{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.src .count{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.src + .src{margin-top:5px}
+.src .dot{
+  width:11px;height:11px;border-radius:2px;
+  background:var(--src,var(--accent));
+  border:var(--bw) solid var(--line);
+  flex:none;
+}
+.src .fname{
+  flex:1;min-width:0;
+  font-size:12px;font-weight:800;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.src .count{
+  font-size:9px;font-weight:900;color:var(--text);
+  text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;
+  border:var(--bw) solid var(--line);
+  padding:2px 6px;border-radius:3px;
+  background:var(--panel);
+}
 
-.empty{color:var(--muted);font-size:12px;padding:5px 2px}
-
-html.theming,
-html.theming body,
-html.theming fieldset,
-html.theming .card,
-html.theming .chip,
-html.theming .src,
-html.theming .btn,
-html.theming .ubtn{
-  transition:background-color .2s ease,color .2s ease,border-color .2s ease,box-shadow .2s ease;
+.empty{
+  color:var(--muted);font-size:12px;font-weight:700;
+  padding:12px;text-align:center;
+  border:2px dashed var(--line);
+  border-radius:4px;
 }
 </style>
 </head>
 <body>
 <div class="app">
-
-  <fieldset>
-    <legend>Progress</legend>
-    <h1 class="title"> 進展 (shinten) <b></b></h1>
-    <p class="sub">Import CSV files with columns: event, startdate, enddate, starttime, endtime</p>
-  </fieldset>
-
-  <fieldset>
-    <legend>Units</legend>
-    <div class="row" id="unitBtns"></div>
-  </fieldset>
-
-  <fieldset>
-    <legend>Import</legend>
-    <div class="row">
-      <button class="btn" id="fileBtn">Import CSV File</button>
-      <button class="btn" id="folderBtn">Import Folder</button>
-      <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden>
-      <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
-    </div>
-  </fieldset>
 
   <fieldset>
     <legend>Events</legend>
@@ -241,6 +290,22 @@ html.theming .ubtn{
   </fieldset>
 
   <fieldset>
+    <legend>Import</legend>
+    <div class="row">
+      <button class="btn primary" id="fileBtn">Import CSV File</button>
+      <button class="btn" id="folderBtn">Import Folder</button>
+      <button class="btn del" id="clearBtn">Clear All</button>
+      <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden>
+      <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Units</legend>
+    <div class="row" id="unitBtns"></div>
+  </fieldset>
+
+  <fieldset>
     <legend>Theme</legend>
     <div class="row" id="themeBtns"></div>
   </fieldset>
@@ -248,6 +313,12 @@ html.theming .ubtn{
   <fieldset>
     <legend>Font</legend>
     <div class="row" id="fontBtns"></div>
+  </fieldset>
+
+  <fieldset class="about">
+    <legend>About</legend>
+    <h1 class="title">進展 <span class="mark">(shinten)</span></h1>
+    <p class="sub">Import CSV files with columns: <b>event, startdate, enddate, starttime, endtime</b>. Dates and times are optional per event, and the header row is detected automatically.</p>
   </fieldset>
 
 </div>
@@ -293,6 +364,7 @@ const UNIT_LABEL = {
   hours:'hour', minutes:'minute', seconds:'second'
 };
 const PALETTE = ['#5e81ac','#a3be8c','#b48ead','#d08770','#ebcb8b','#88c0d0','#bf616a','#8fbcbb'];
+const CSV_FIELDS = ['event','startdate','enddate','starttime','endtime'];
 
 const units = signal({
   years:true, months:true, weeks:true, days:true,
@@ -302,7 +374,7 @@ const events = signal([]);
 const sources = signal([]);
 const now = signal(Date.now());
 
-const theme = signal(document.documentElement.getAttribute('data-theme') || 'catppuccin-frappe');
+const theme = signal(document.documentElement.getAttribute('data-theme') || 'paper');
 const font = signal(document.documentElement.getAttribute('data-font') || 'sans');
 
 setInterval(() => { now.value = Date.now(); }, 1000);
@@ -356,18 +428,21 @@ function computeEvent(ev, nowMs, u){
   const nowDate = new Date(nowMs);
   let from, to, label, pct = null;
 
-  if (ev.start && ev.end){
-    const s = ev.start.getTime();
-    const e = ev.end.getTime();
+  const s = ev.start ? ev.start.getTime() : null;
+  const e = ev.end ? ev.end.getTime() : null;
+
+  if (s != null && e != null){
     const total = e - s;
     pct = total > 0 ? Math.min(100, Math.max(0, ((nowMs - s) / total) * 100)) : 100;
     if (nowMs < s){ from = nowDate; to = ev.start; label = 'starts in'; }
-    else if (nowMs > e){ from = ev.end; to = nowDate; label = 'ended'; }
-    else { from = nowDate; to = ev.end; label = 'remaining'; }
-  } else if (ev.start){
-    from = ev.start; to = nowDate; label = 'elapsed';
+    else if (nowMs > e){ from = ev.end; to = nowDate; label = 'days since'; }
+    else { from = nowDate; to = ev.end; label = 'progress'; }
+  } else if (s != null){
+    if (nowMs < s){ from = nowDate; to = ev.start; label = 'starts in'; }
+    else { from = ev.start; to = nowDate; label = 'elapsed'; }
   } else {
-    from = nowDate; to = ev.end; label = 'remaining';
+    if (nowMs > e){ from = ev.end; to = nowDate; label = 'days since'; }
+    else { from = nowDate; to = ev.end; label = 'progress'; }
   }
 
   const parts = decompose(from, to, u);
@@ -387,6 +462,12 @@ function computeEvent(ev, nowMs, u){
 function pad(n){ return n < 10 ? '0' + n : '' + n; }
 function fmtDate(d){
   return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+function fmtStamp(d){
+  if (d.getHours() || d.getMinutes() || d.getSeconds()){
+    return fmtDate(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  return fmtDate(d);
 }
 
 function parseCSV(text){
@@ -411,6 +492,12 @@ function parseCSV(text){
   return rows.filter(r => r.some(c => String(c).trim() !== ''));
 }
 
+/* Normalise a header cell: strip BOM, drop spaces/underscores/dashes, lowercase.
+   Turns "Start Date", "start_date" and "STARTDATE" all into "startdate". */
+function normKey(s){
+  return String(s).replace(/^\uFEFF/, '').replace(/[\s_\-]+/g, '').toLowerCase();
+}
+
 function parseDatePart(s){
   if (!s) return null;
   s = String(s).trim();
@@ -428,15 +515,18 @@ function parseDatePart(s){
 
 function parseTimePart(s){
   if (!s) return { h:0, mi:0, s:0 };
-  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(String(s).trim());
+  const m = /^(\d{1,2})(?::(\d{1,2}))?(?::(\d{1,2}))?\s*(am|pm)?$/i.exec(String(s).trim());
   if (!m) return { h:0, mi:0, s:0 };
   let h = +m[1];
+  const mi = m[2] ? +m[2] : 0;
+  const sec = m[3] ? +m[3] : 0;
+  if (h > 23 || mi > 59 || sec > 59) return { h:0, mi:0, s:0 };
   if (m[4]){
     const ap = m[4].toLowerCase();
     if (ap === 'pm' && h < 12) h += 12;
     if (ap === 'am' && h === 12) h = 0;
   }
-  return { h:h, mi:+m[2], s:m[3] ? +m[3] : 0 };
+  return { h:h, mi:mi, s:sec };
 }
 
 function combine(dateStr, timeStr){
@@ -447,13 +537,13 @@ function combine(dateStr, timeStr){
 }
 
 function buildEventsFromCSV(text){
-  const rows = parseCSV(text);
+  const rows = parseCSV(String(text).replace(/^\uFEFF/, ''));
   if (!rows.length) return [];
 
-  const header = rows[0].map(h => String(h).trim().toLowerCase());
+  const header = rows[0].map(normKey);
   const idx = {};
-  ['event','startdate','enddate','starttime','endtime'].forEach(k => { idx[k] = header.indexOf(k); });
-  const hasHeader = idx.event !== -1 || idx.startdate !== -1 || idx.enddate !== -1;
+  CSV_FIELDS.forEach(k => { idx[k] = header.indexOf(k); });
+  const hasHeader = CSV_FIELDS.some(k => idx[k] !== -1);
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
   const get = (r, k, pos) => {
@@ -464,13 +554,80 @@ function buildEventsFromCSV(text){
   const out = [];
   dataRows.forEach((r, n) => {
     const name = get(r, 'event', 0) || ('Row ' + (n + 1));
-    const start = combine(get(r, 'startdate', 1), get(r, 'starttime', 3));
-    const end = combine(get(r, 'enddate', 2), get(r, 'endtime', 4));
+    let start = combine(get(r, 'startdate', 1), get(r, 'starttime', 3));
+    let end = combine(get(r, 'enddate', 2), get(r, 'endtime', 4));
     if (!start && !end) return;
+    // Guard against reversed input so percentages stay sane.
+    if (start && end && start.getTime() > end.getTime()){
+      const tmp = start; start = end; end = tmp;
+    }
     out.push({ id: uid(), name: name, start: start, end: end });
   });
   return out;
 }
+
+/* ------------------------------------------------------------------
+   Persistence: raw CSV text is kept per source in localStorage.
+   Events are re-derived from that text on every load.
+------------------------------------------------------------------ */
+const STORE_KEY = 'progress-sources-v1';
+
+function saveSources(list){
+  try{
+    const payload = list.map(s => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
+      text: s.text || ''
+    }));
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+  }catch(e){
+    /* storage unavailable, disabled, or over quota */
+    console.warn('Shinten: could not save sources to localStorage.', e);
+  }
+}
+
+function loadStoredSources(){
+  let arr = [];
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) arr = JSON.parse(raw);
+  }catch(e){ arr = []; }
+  if (!Array.isArray(arr)) arr = [];
+
+  return arr
+    .filter(s => s && typeof s === 'object' && typeof s.name === 'string')
+    .map(s => ({
+      id: typeof s.id === 'string' && s.id ? s.id : uid(),
+      name: s.name,
+      color: typeof s.color === 'string' ? s.color : PALETTE[0],
+      text: typeof s.text === 'string' ? s.text : ''
+    }));
+}
+
+function eventsFromSources(list){
+  const out = [];
+  list.forEach(src => {
+    const parsed = src.text ? buildEventsFromCSV(src.text) : [];
+    src.count = parsed.length;
+    parsed.forEach(e => {
+      out.push({
+        id: e.id, name: e.name, start: e.start, end: e.end,
+        srcId: src.id, color: src.color
+      });
+    });
+  });
+  return out;
+}
+
+function restoreFromStorage(){
+  const list = loadStoredSources();
+  if (!list.length) return;
+  sources.value = list;
+  events.value = eventsFromSources(list);
+}
+
+restoreFromStorage();
 
 const unitBtnsEl = document.getElementById('unitBtns');
 const themeBtnsEl = document.getElementById('themeBtns');
@@ -482,9 +639,11 @@ const folderInput = document.getElementById('folderInput');
 
 UNIT_ORDER.forEach(key => {
   const b = document.createElement('button');
+  b.type = 'button';
   b.className = 'ubtn';
   b.textContent = UNIT_LABEL[key] + 's';
   b.dataset.key = key;
+  b.setAttribute('aria-pressed', 'true');
   b.addEventListener('click', () => {
     const cur = units.peek();
     const enabledCount = UNIT_ORDER.filter(k => cur[k]).length;
@@ -499,14 +658,17 @@ UNIT_ORDER.forEach(key => {
 effect(() => {
   const u = units.value;
   Array.from(unitBtnsEl.children).forEach(b => {
-    b.classList.toggle('on', !!u[b.dataset.key]);
+    const on = !!u[b.dataset.key];
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 });
 
 const THEMES = [
+  { key:'paper', label:'Paper' },
+  { key:'mint', label:'Mint' },
   { key:'nord', label:'Nord' },
-  { key:'themeforest-light', label:'ThemeForest Light' },
-  { key:'catppuccin-frappe', label:'Catppuccin Frappe' },
+  { key:'catppuccin-frappe', label:'Catppuccin' },
   { key:'gruvbox', label:'Gruvbox' },
   { key:'amoled', label:'Amoled' }
 ];
@@ -519,18 +681,22 @@ const FONTS = [
 
 THEMES.forEach(t => {
   const b = document.createElement('button');
+  b.type = 'button';
   b.className = 'ubtn';
   b.textContent = t.label;
   b.dataset.key = t.key;
+  b.setAttribute('aria-pressed', 'false');
   b.addEventListener('click', () => { theme.value = t.key; });
   themeBtnsEl.appendChild(b);
 });
 
 FONTS.forEach(f => {
   const b = document.createElement('button');
+  b.type = 'button';
   b.className = 'ubtn';
   b.textContent = f.label;
   b.dataset.key = f.key;
+  b.setAttribute('aria-pressed', 'false');
   b.addEventListener('click', () => { font.value = f.key; });
   fontBtnsEl.appendChild(b);
 });
@@ -540,7 +706,9 @@ effect(() => {
   document.documentElement.setAttribute('data-theme', t);
   try { localStorage.setItem('progress-theme', t); } catch(e){}
   Array.from(themeBtnsEl.children).forEach(b => {
-    b.classList.toggle('on', b.dataset.key === t);
+    const on = b.dataset.key === t;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 });
 
@@ -549,7 +717,9 @@ effect(() => {
   document.documentElement.setAttribute('data-font', f);
   try { localStorage.setItem('progress-font', f); } catch(e){}
   Array.from(fontBtnsEl.children).forEach(b => {
-    b.classList.toggle('on', b.dataset.key === f);
+    const on = b.dataset.key === f;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 });
 
@@ -563,21 +733,39 @@ folderInput.addEventListener('change', () => {
 });
 document.getElementById('fileBtn').addEventListener('click', () => fileInput.click());
 document.getElementById('folderBtn').addEventListener('click', () => folderInput.click());
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (!sources.peek().length) return;
+  if (!window.confirm('Delete all imported sources and clear saved data?')) return;
+  sources.value = [];
+  events.value = [];
+  try { localStorage.removeItem(STORE_KEY); } catch(e){}
+});
 
 async function handleFiles(list){
   const files = Array.from(list || []).filter(f => /\.csv$/i.test(f.name));
+  if (!files.length) return;
+
+  const nextSources = sources.peek().slice();
+  const nextEvents = events.peek().slice();
+
   for (const f of files){
     let text = '';
     try { text = await f.text(); } catch(e){ continue; }
     const parsed = buildEventsFromCSV(text);
-    const color = PALETTE[sources.peek().length % PALETTE.length];
-    const src = { id: uid(), name: f.name, count: parsed.length, color: color };
-    sources.value = sources.value.concat(src);
-    events.value = events.value.concat(parsed.map(e => ({
-      id: e.id, name: e.name, start: e.start, end: e.end,
-      srcId: src.id, color: color
-    })));
+    const color = PALETTE[nextSources.length % PALETTE.length];
+    const src = { id: uid(), name: f.name, count: parsed.length, color: color, text: text };
+    nextSources.push(src);
+    parsed.forEach(e => {
+      nextEvents.push({
+        id: e.id, name: e.name, start: e.start, end: e.end,
+        srcId: src.id, color: color
+      });
+    });
   }
+
+  sources.value = nextSources;
+  events.value = nextEvents;
+  saveSources(nextSources);
 }
 
 let cardEntries = [];
@@ -585,7 +773,6 @@ let cardEntries = [];
 function buildCard(ev){
   const el = document.createElement('div');
   el.className = 'card';
-  el.style.setProperty('--src', ev.color || 'var(--accent)');
 
   const head = document.createElement('div');
   head.className = 'card-head';
@@ -613,27 +800,45 @@ function buildCard(ev){
 
   const meta = document.createElement('div');
   meta.className = 'ev-meta';
-  meta.textContent = (ev.start ? fmtDate(ev.start) : 'now') + ' \u2192 ' + (ev.end ? fmtDate(ev.end) : 'now');
+  meta.textContent = (ev.start ? fmtStamp(ev.start) : 'now') + ' \u2192 ' + (ev.end ? fmtStamp(ev.end) : 'now');
 
   el.appendChild(head);
   el.appendChild(chips);
   el.appendChild(bar);
   el.appendChild(meta);
 
-  return { el: el, refs: { name, label, pct, chips, bar, meta } };
+  return {
+    el: el,
+    refs: {
+      name, label, pct, chips, bar, meta,
+      lastChips: null, lastLabel: null, lastPctText: null
+    }
+  };
 }
 
 function updateCard(ev, refs, nowMs, u){
   const r = computeEvent(ev, nowMs, u);
-  refs.chips.innerHTML = r.chips;
-  refs.label.textContent = r.label;
+
+  if (r.chips !== refs.lastChips){
+    refs.chips.innerHTML = r.chips;
+    refs.lastChips = r.chips;
+  }
+  if (r.label !== refs.lastLabel){
+    refs.label.textContent = r.label;
+    refs.lastLabel = r.label;
+  }
+
+  const pctText = r.pct == null ? '' : r.pct.toFixed(1) + '%';
+  if (pctText !== refs.lastPctText){
+    refs.pct.textContent = pctText;
+    refs.lastPctText = pctText;
+  }
+
   if (r.pct == null){
     refs.bar.style.display = 'none';
-    refs.pct.textContent = '';
   } else {
     refs.bar.style.display = '';
     refs.bar.value = r.pct;
-    refs.pct.textContent = r.pct.toFixed(1) + '%';
   }
 }
 
@@ -692,17 +897,21 @@ effect(() => {
     const name = document.createElement('span');
     name.className = 'fname';
     name.textContent = src.name;
+    name.title = src.name;
 
     const count = document.createElement('span');
     count.className = 'count';
     count.textContent = src.count + (src.count === 1 ? ' event' : ' events');
 
     const del = document.createElement('button');
+    del.type = 'button';
     del.className = 'btn del';
     del.textContent = 'Delete';
     del.addEventListener('click', () => {
-      sources.value = sources.value.filter(s => s.id !== src.id);
+      const nextSources = sources.value.filter(s => s.id !== src.id);
+      sources.value = nextSources;
       events.value = events.value.filter(e => e.srcId !== src.id);
+      saveSources(nextSources);
     });
 
     row.appendChild(dot);

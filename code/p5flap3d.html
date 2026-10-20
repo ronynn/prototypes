@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Flappy 3D</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#07090f;touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none;font-family:"Trebuchet MS",system-ui,sans-serif;user-select:none}
+  #score{position:absolute;top:14px;left:0;right:0;text-align:center;font-size:clamp(44px,9vw,96px);font-weight:900;color:#fff;letter-spacing:2px;text-shadow:0 4px 0 rgba(0,0,0,.45),0 0 45px rgba(90,200,255,.8)}
+  #msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#d7ecff;letter-spacing:3px;text-transform:uppercase;text-shadow:0 2px 18px #000;line-height:1.8}
+  #msg .big{font-size:clamp(26px,5vw,54px);font-weight:900;color:#fff;letter-spacing:5px;margin-bottom:10px}
+  #msg .sub{opacity:.78;font-size:clamp(11px,1.6vw,17px);letter-spacing:2px}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="score">0</div>
+  <div id="msg"></div>
+</div>
+<script src="lib/p5.js"></script>
+<script>
+const CFG = {
+  gravity: 0.62, flap: -11.5, maxFall: 17,
+  birdR: 32, pipeR: 72, gap: 260, gapMin: -130, gapMax: 130,
+  spawnZ: -2600, spacing: 800, speed: 8, despawnZ: 420,
+  floorY: 400, ceilY: -400,
+  camX: 850, camY: 30, camZ: 400, pipeReach: 1500
+};
+
+let birdY, birdVy, birdTilt, pipes, score, best = 0, state, speed,
+    scrollZ, wingT, camShake, deadAt, lastInput = 0, stars;
+let scoreEl, msgEl;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  setAttributes('antialias', true);
+  perspective(PI / 3, width / height, 50, 12000);
+  noStroke();
+  scoreEl = document.getElementById('score');
+  msgEl = document.getElementById('msg');
+  makeStars();
+  resetGame();
+}
+
+function makeStars() {
+  stars = [];
+  for (let i = 0; i < 80; i++) {
+    const a = random(TWO_PI), b = random(-PI / 2, PI / 2), r = random(2800, 4500);
+    stars.push({
+      x: cos(b) * cos(a) * r, y: sin(b) * r, z: cos(b) * sin(a) * r,
+      s: random(4, 12),
+      c: [random(140, 255), random(180, 255), 255]
+    });
+  }
+}
+
+function resetGame() {
+  birdY = 0; birdVy = 0; birdTilt = 0;
+  pipes = [makePipe(-1400)];
+  score = 0; speed = CFG.speed; scrollZ = 0; camShake = 0; state = 'ready';
+  updateHUD();
+}
+
+function makePipe(z) {
+  return { z, gapY: random(CFG.gapMin, CFG.gapMax), scored: false };
+}
+
+function die() {
+  if (state === 'over') return;
+  state = 'over'; camShake = 18; deadAt = millis();
+  if (score > best) best = score;
+  updateHUD();
+}
+
+function updateHUD() {
+  scoreEl.textContent = score;
+  if (state === 'ready')
+    msgEl.innerHTML = '<div class="big">FLAPPY 3D</div><div class="sub">click / tap / space to flap</div>';
+  else if (state === 'play')
+    msgEl.innerHTML = '';
+  else
+    msgEl.innerHTML = '<div class="big">GAME OVER</div><div class="sub">score ' + score +
+      ' • best ' + best + '<br><br>click to play again</div>';
+}
+
+function flap() {
+  const now = millis();
+  if (now - lastInput < 130) return;
+  lastInput = now;
+  if (state === 'over') { if (now - deadAt > 650) resetGame(); return; }
+  if (state === 'ready') state = 'play';
+  birdVy = CFG.flap; wingT = -1.6;
+}
+
+function mousePressed() { flap(); }
+function keyPressed() {
+  if (key === ' ' || keyCode === UP_ARROW || key === 'w' || key === 'W') { flap(); return false; }
+}
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  perspective(PI / 3, width / height, 50, 12000);
+}
+
+function update(dt) {
+  wingT += dt * (0.26 + Math.abs(birdVy) * 0.02);
+  if (camShake > 0) camShake = Math.max(0, camShake - dt * 1.1);
+
+  if (state === 'ready') {
+    birdY = Math.sin(frameCount * 0.055) * 16;
+    birdTilt = Math.sin(frameCount * 0.055 + 1.2) * 0.13;
+    scrollZ += 2.5 * dt;
+    return;
+  }
+
+  if (state === 'play') {
+    birdVy = Math.min(birdVy + CFG.gravity * dt, CFG.maxFall);
+    birdY += birdVy * dt;
+    const targetTilt = constrain(birdVy * 0.05, -0.5, 1.15);
+    birdTilt += (targetTilt - birdTilt) * Math.min(1, 0.18 * dt);
+    speed = CFG.speed + Math.min(score * 0.15, 3.5);
+    scrollZ += speed * dt;
+
+    for (const p of pipes) p.z += speed * dt;
+    for (const p of pipes)
+      if (!p.scored && p.z > CFG.pipeR + CFG.birdR) { p.scored = true; score++; updateHUD(); }
+
+    while (pipes.length && pipes[0].z > CFG.despawnZ) pipes.shift();
+    if (!pipes.length || pipes[pipes.length - 1].z > CFG.spawnZ + CFG.spacing)
+      pipes.push(makePipe(CFG.spawnZ));
+
+    checkCollisions();
+    return;
+  }
+
+  birdVy = Math.min(birdVy + CFG.gravity * 1.35 * dt, 24);
+  birdY += birdVy * dt;
+  if (birdY > CFG.floorY - CFG.birdR) { birdY = CFG.floorY - CFG.birdR; birdVy = 0; }
+  birdTilt += (1.55 - birdTilt) * Math.min(1, 0.09 * dt);
+}
+
+function checkCollisions() {
+  if (birdY + CFG.birdR > CFG.floorY || birdY - CFG.birdR < CFG.ceilY) { die(); return; }
+  const hitZ = CFG.pipeR + CFG.birdR;
+  for (const p of pipes) {
+    if (Math.abs(p.z) < hitZ) {
+      const gapTop = p.gapY - CFG.gap / 2, gapBot = p.gapY + CFG.gap / 2;
+      if (birdY - CFG.birdR < gapTop || birdY + CFG.birdR > gapBot) { die(); return; }
+    }
+  }
+}
+
+function draw() {
+  const dt = constrain(deltaTime / 16.6667, 0, 3);
+  update(dt);
+
+  background(8, 12, 28);
+
+  const shakeX = camShake > 0.2 ? random(-camShake, camShake) * 0.7 : 0;
+  const shakeY = camShake > 0.2 ? random(-camShake, camShake) : 0;
+  const follow = birdY * 0.15;
+
+  camera(CFG.camX + shakeX, CFG.camY + follow + shakeY, CFG.camZ,
+         0, follow, 0, 0, 1, 0);
+
+  noLights();
+  drawStars();
+
+  ambientLight(58, 68, 95);
+  directionalLight(255, 238, 205, -0.5, 0.85, 0.4);
+  directionalLight(60, 110, 210, 0.8, -0.3, -0.6);
+  pointLight(255, 150, 60, 400, -300, 600);
+
+  noStroke();
+  drawGround();
+  drawPipes();
+  drawBird();
+}
+
+function drawStars() {
+  for (const s of stars) {
+    push(); translate(s.x, s.y, s.z);
+    fill(s.c[0], s.c[1], s.c[2]);
+    sphere(s.s, 6, 4);
+    pop();
+  }
+}
+
+function drawGround() {
+  push();
+  translate(0, CFG.floorY + 80, -2000);
+  fill(16, 24, 44);
+  box(6000, 160, 9000);
+  pop();
+
+  const SP = 300, off = scrollZ % SP;
+  for (let z = -4500 + off; z < 600; z += SP) {
+    push();
+    translate(0, CFG.floorY - 5, z);
+    fill(70, 200, 255);
+    box(6000, 6, 12);
+    pop();
+  }
+}
+
+function drawPipes() {
+  const R = CFG.pipeR, half = CFG.gap / 2, reach = CFG.pipeReach;
+  for (const p of pipes) {
+    const gapTop = p.gapY - half, gapBot = p.gapY + half;
+    push();
+    translate(0, 0, p.z);
+
+    const topH = gapTop + reach;
+    push(); translate(0, gapTop - topH / 2, 0);
+    fill(36, 196, 128); cylinder(R, topH, 20, 1); pop();
+    push(); translate(0, gapTop - 14, 0);
+    fill(120, 255, 190); cylinder(R + 12, 28, 20, 1); pop();
+
+    const botH = reach - gapBot;
+    push(); translate(0, gapBot + botH / 2, 0);
+    fill(36, 196, 128); cylinder(R, botH, 20, 1); pop();
+    push(); translate(0, gapBot + 14, 0);
+    fill(120, 255, 190); cylinder(R + 12, 28, 20, 1); pop();
+
+    pop();
+  }
+}
+
+function drawBird() {
+  push();
+  translate(0, birdY, 0);
+  rotateX(birdTilt);
+
+  push(); translate(0, -4, 30); rotateX(-0.4);
+  fill(255, 168, 40); scale(0.85, 0.32, 1.5); sphere(15, 10, 8); pop();
+
+  const wa = Math.sin(wingT) * 0.9;
+  push(); translate(-24, -2, 0); rotateZ(wa); translate(-16, 0, 0);
+  fill(255, 184, 52); scale(1.5, 0.28, 1.15); sphere(14, 12, 8); pop();
+  push(); translate(24, -2, 0); rotateZ(-wa); translate(16, 0, 0);
+  fill(255, 184, 52); scale(1.5, 0.28, 1.15); sphere(14, 12, 8); pop();
+
+  push(); fill(255, 210, 70); sphere(30, 22, 16); pop();
+
+  push(); translate(0, 9, -4);
+  fill(255, 236, 150); scale(1, 0.72, 0.85); sphere(21, 14, 10); pop();
+
+  push(); translate(0, -16, -16);
+  fill(255, 222, 92); sphere(19, 18, 12); pop();
+
+  push(); translate(0, -13, -38); rotateX(-0.12);
+  fill(255, 138, 28); scale(0.55, 0.45, 1.55); sphere(12, 12, 10); pop();
+
+  const dirs = [[0.5, -0.62, -0.6], [-0.5, -0.62, -0.6]];
+  for (const d of dirs) {
+    const n = Math.hypot(d[0], d[1], d[2]);
+    const ux = d[0] / n, uy = d[1] / n, uz = d[2] / n;
+    push(); translate(ux * 17, -16 + uy * 17, -16 + uz * 17);
+    fill(255); sphere(6.5, 12, 10); pop();
+    push(); translate(ux * 21, -16 + uy * 21, -16 + uz * 21);
+    fill(24, 30, 52); sphere(3.6, 10, 8); pop();
+  }
+
+  pop();
+}
+</script>
+</body>
+</html>
